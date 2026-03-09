@@ -1,0 +1,10 @@
+# Game files (downloaded via download.py from GitHub release)
+game/cd/
+game/installed/
+
+# Disc image (available as release artifact)
+recovery/disc_image/alex_palm_island.iso
+
+# Build artifacts
+game-files.zip
+.claude/
