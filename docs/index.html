@@ -10,16 +10,70 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; }
     #dos { width: 100%; height: 100%; cursor: none; }
+    #loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      color: #f0c040; font-family: sans-serif; font-size: 1.2rem; text-align: center; }
+    #loading .bar { width: 300px; height: 8px; background: #333; border-radius: 4px; margin-top: 1rem; }
+    #loading .fill { height: 100%; background: #f0c040; border-radius: 4px; transition: width 0.3s; }
   </style>
 </head>
 <body>
+  <div id="loading">
+    Loading game data...
+    <div class="bar"><div class="fill" id="progress" style="width: 0%"></div></div>
+    <div id="pct" style="margin-top: 0.5rem; font-size: 0.9rem; color: #aaa;">0%</div>
+  </div>
   <div id="dos"></div>
   <script>
-    Dos(document.getElementById("dos"), {
-      url: "https://archive.org/download/alex_palm_island/alex.jsdos",
-      autoStart: true,
-      backend: "dosboxX",
-    });
+    const R2 = "https://pub-fefab33b6ba44b7086f44da81b232696.r2.dev";
+    const PARTS = ["alex.jsdos.part00", "alex.jsdos.part01"];
+
+    async function fetchChunk(name, onProgress) {
+      const res = await fetch(`${R2}/${name}`);
+      const total = +res.headers.get("Content-Length") || 0;
+      const reader = res.body.getReader();
+      const chunks = [];
+      let loaded = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        loaded += value.length;
+        onProgress(loaded, total);
+      }
+      const buf = new Uint8Array(loaded);
+      let offset = 0;
+      for (const c of chunks) { buf.set(c, offset); offset += c.length; }
+      return buf;
+    }
+
+    (async () => {
+      const sizes = [193986560, 175911328]; // part00, part01
+      const totalSize = sizes.reduce((a, b) => a + b, 0);
+      let downloaded = 0;
+      const progress = document.getElementById("progress");
+      const pct = document.getElementById("pct");
+
+      const buffers = [];
+      for (let i = 0; i < PARTS.length; i++) {
+        const base = downloaded;
+        buffers.push(await fetchChunk(PARTS[i], (loaded) => {
+          const pctVal = Math.round(((base + loaded) / totalSize) * 100);
+          progress.style.width = pctVal + "%";
+          pct.textContent = pctVal + "%";
+        }));
+        downloaded += sizes[i];
+      }
+
+      const blob = new Blob(buffers, { type: "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+
+      document.getElementById("loading").remove();
+      Dos(document.getElementById("dos"), {
+        url: url,
+        autoStart: true,
+        backend: "dosboxX",
+      });
+    })();
   </script>
 </body>
 </html>
