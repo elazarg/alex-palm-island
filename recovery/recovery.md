@@ -61,7 +61,7 @@ SHA256: `8fe8738fcad102b284c81951de798418df658c19d51a7312877b3c69c214cd9d`
 ### Engine
 Custom game engine built with Borland Pascal 7.0. The main executable (alex1.ex~, renamed to alex1.exe at install time) is a packed MZ DOS executable. Game logic is loaded from alex1.ovr (FBOV overlay format) containing scene modules.
 
-### File categories (304 game files, all intact)
+### File categories (305 files total)
 
 | Category | Count | Role |
 |----------|-------|------|
@@ -74,6 +74,7 @@ Custom game engine built with Borland Pascal 7.0. The main executable (alex1.ex~
 | Sound data (sd*.dat) | 38 | Digitized audio per scene |
 | Sound indexes (sd*.ndx) | 38 | Audio indexes |
 | Config/support | 5 | PRJ, LST, etc. |
+| Resource archive | 1 | TRANS.BIG (encrypted, 234.5 MB) |
 
 ### Resource system
 - alex1.prj: master resource list referencing 9 resource packs
@@ -81,26 +82,45 @@ Custom game engine built with Borland Pascal 7.0. The main executable (alex1.ex~
 - Sound data similarly paired as sd*.ndx/sd*.dat per scene
 - Scene scripts and data are encrypted (entropy ~7.8-7.96 bits/byte)
 
-## 6. TRANS.BIG: Copy-Protection Padding
+## 6. TRANS.BIG: Encrypted Resource Archive with Anti-Copy Properties
 
-TRANS.BIG is a 245,905,459-byte (234.5 MB) file occupying 67% of the disc. Analysis determined it is copy-protection padding, not game content:
+TRANS.BIG is a 245,905,459-byte (234.5 MB) file occupying 67% of the disc. Initial static analysis suggested it was copy-protection padding, but runtime testing revealed it is a **required game resource file** that also serves an anti-copy function.
 
-1. **Not referenced** by any executable (alex1.ex~, alex1.ovr, install.exe)
-2. **Not listed** in FILES.LST (installer copy list) or ALEX1.PRJ (resource list)
-3. **Uniformly high entropy** (7.997 bits/byte) -- indistinguishable from random data
-4. **No file format header** or companion index file
-5. **Runtime confirmed**: game launches and runs without TRANS.BIG present
+### Static analysis (misleading)
 
-This was a common 1990s technique to make CD-ROM copying impractical by filling unused disc space with random data.
+1. Not referenced by name in any executable (alex1.ex~, alex1.ovr, install.exe)
+2. Not listed in FILES.LST (installer copy list) or ALEX1.PRJ (resource list)
+3. Uniformly high entropy (7.997 bits/byte) — indistinguishable from random data
+4. No recognizable file format header or companion index file
 
-TRANS.BIG is excluded from the playable game files but remains in the raw disc image (`recovery/disc_image/alex_palm_island.iso`) for archival purposes.
+These properties initially led to the conclusion that TRANS.BIG was inert padding.
+
+### Runtime evidence (definitive)
+
+Testing in DOSBox revealed that TRANS.BIG is actively required:
+
+1. **Without TRANS.BIG**: The game fails at startup with the error `"a" could not be converted to a number!` — a deliberately obscure error message typical of 1990s copy protection.
+2. **With a 0-byte TRANS.BIG**: The game fails with `Index entry "WaitCursor" not found!` — proving the file contains named resources accessed through the engine's resource system.
+3. **With the full recovered TRANS.BIG** (including 60 KB of read errors): The game starts and plays correctly.
+
+### Interpretation
+
+TRANS.BIG serves a dual purpose:
+- **Game resource archive**: Contains resources (cursors, possibly other assets) accessed indirectly by the engine at runtime. The access mechanism is not through the standard .ndx/.dat pairs but through an internal index, likely embedded within TRANS.BIG itself.
+- **Anti-copy measure**: Its large size (234.5 MB, filling most of the disc) and encrypted/compressed content make casual disc copying impractical — a common 1990s technique. The presence check at startup acts as a form of disc-in-drive verification.
+
+The high entropy and lack of recognizable headers suggest the file's contents are encrypted or use a custom compression scheme, consistent with the game's use of encrypted scene data (.scx/.dcx files, entropy ~7.8-7.96 bits/byte).
+
+### Damage assessment
+
+The 60 KB of unreadable data (30 sectors, 26 non-contiguous ranges) represents 0.025% of TRANS.BIG. Since the game starts and runs correctly with the recovered file, the damaged sectors likely fall in unused space, redundant data, or resources for rarely-accessed game content. A complete playthrough would be needed to determine if any specific scenes or assets are affected.
 
 ## 7. Damage Summary
 
 | Scope | Status |
 |-------|--------|
-| 304 game-functional files | Bit-perfect, zero bad sectors |
-| TRANS.BIG (padding) | 234.44 MB of 234.50 MB recovered; 60 KB in 30 scattered sectors unreadable |
+| 304 standard game files | Bit-perfect, zero bad sectors |
+| TRANS.BIG (resource archive) | 234.44 MB of 234.50 MB recovered; 60 KB in 30 scattered sectors unreadable |
 | Filesystem structures | Intact |
 | Overall disc | 99.98% recovered |
 
@@ -108,8 +128,8 @@ No bytes were substituted, invented, or reconstructed. All recovered data is exa
 
 ## 8. Runtime Test
 
-Tested in DOSBox 0.74-3 on Linux:
+Tested in DOSBox 0.74-3 and DOSBox-X on Linux:
 - Original INSTALL.EXE used to create ALEX1.CFG (correct DOS line endings)
 - Game launches, displays logo, reaches main menu, gameplay functional
-- TRANS.BIG was present on CD mount but never accessed by the game
-- Hebrew text requires codepage 862 for correct rendering; game uses internal font resources (FONTS.DAT) for in-game text
+- TRANS.BIG must be present on the CD mount — without it, the game refuses to start (copy-protection check). With the recovered file (60 KB damaged), the game runs correctly.
+- Game uses internal font resources (FONTS.DAT) for in-game text rendering

@@ -1,6 +1,6 @@
 # Game files (downloaded via download.py from GitHub release)
 game/cd/
-game/installed/
+game/ALEX/
 
 # Disc image (available as release artifact)
 recovery/disc_image/alex_palm_island.iso

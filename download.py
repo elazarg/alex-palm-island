@@ -12,7 +12,7 @@ import zipfile
 
 REPO = "elazarg/alex-palm-island"
 ASSET_NAME = "game-files.zip"
-ASSET_SHA256 = "d2ead469b5ab5a84c61f51341ebb04a532c1ee8842cd52e9df09404e010b9a7d"
+ASSET_SHA256 = "4c791814c6df9f02b374c955b437c8607e8f53169d1dcba763843e164ddc4cd4"
 
 ISO_ASSET = "alex_palm_island.iso"
 ISO_SHA256 = "8fe8738fcad102b284c81951de798418df658c19d51a7312877b3c69c214cd9d"
@@ -114,7 +114,12 @@ def main():
             zf.extractall(game_dir)
 
         n = len(os.listdir(cd_dir))
-        print(f"Done. {n} files in game/cd/.")
+        alex_dir = os.path.join(game_dir, "ALEX")
+        if os.path.isdir(alex_dir):
+            n_alex = len(os.listdir(alex_dir))
+            print(f"Done. {n} files in game/cd/, {n_alex} files in game/ALEX/.")
+        else:
+            print(f"Done. {n} files in game/cd/.")
 
     if want_iso:
         iso_dir = os.path.join(script_dir, "recovery", "disc_image")
