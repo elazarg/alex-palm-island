@@ -30,11 +30,13 @@
   </div>
   <div id="dos"></div>
   <script>
-    const R2 = "https://pub-fefab33b6ba44b7086f44da81b232696.r2.dev";
-    const PARTS = ["alex.jsdos.part00", "alex.jsdos.part01"];
+    const JSDOS_URL = "https://pub-fefab33b6ba44b7086f44da81b232696.r2.dev/alex-compact.jsdos";
 
-    async function fetchChunk(name, onProgress) {
-      const res = await fetch(`${R2}/${name}`);
+    (async () => {
+      const progress = document.getElementById("progress");
+      const pct = document.getElementById("pct");
+
+      const res = await fetch(JSDOS_URL);
       const total = +res.headers.get("Content-Length") || 0;
       const reader = res.body.getReader();
       const chunks = [];
@@ -44,33 +46,14 @@
         if (done) break;
         chunks.push(value);
         loaded += value.length;
-        onProgress(loaded, total);
-      }
-      const buf = new Uint8Array(loaded);
-      let offset = 0;
-      for (const c of chunks) { buf.set(c, offset); offset += c.length; }
-      return buf;
-    }
-
-    (async () => {
-      const sizes = [193986560, 175911328]; // part00, part01
-      const totalSize = sizes.reduce((a, b) => a + b, 0);
-      let downloaded = 0;
-      const progress = document.getElementById("progress");
-      const pct = document.getElementById("pct");
-
-      const buffers = [];
-      for (let i = 0; i < PARTS.length; i++) {
-        const base = downloaded;
-        buffers.push(await fetchChunk(PARTS[i], (loaded) => {
-          const pctVal = Math.round(((base + loaded) / totalSize) * 100);
+        if (total > 0) {
+          const pctVal = Math.round((loaded / total) * 100);
           progress.style.width = pctVal + "%";
           pct.textContent = pctVal + "%";
-        }));
-        downloaded += sizes[i];
+        }
       }
 
-      const blob = new Blob(buffers, { type: "application/octet-stream" });
+      const blob = new Blob(chunks, { type: "application/octet-stream" });
       const url = URL.createObjectURL(blob);
 
       document.getElementById("loading").remove();

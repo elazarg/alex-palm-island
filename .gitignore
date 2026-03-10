@@ -5,6 +5,24 @@ game/ALEX/
 # Disc image (available as release artifact)
 recovery/disc_image/alex_palm_island.iso
 
-# Build artifacts
+# Generated directories
+game_decrypted/
+game_rundir/
 game-files.zip
+
+# RE historical research (uncommitted)
+re/historical/
+re/__pycache__/
+
+# Build outputs
+alex-compact.jsdos
+alex-compact.zip
+.wrangler/
+
+# Tool artifacts
 .claude/
+.mcp.json
+__pycache__/
+node_modules/
+package-lock.json
+local_backup/
