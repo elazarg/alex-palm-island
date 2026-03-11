@@ -74,8 +74,3 @@ python3 re/generate_pseudo_save.py --base stripair --money 250 /tmp/stripair_250
 This preserves the original scene-specific record layout and only patches fields
 that are already understood. It is suitable for "start near this scene with
 modified state", not arbitrary full-game save synthesis.
-
-## Historical
-
-The `historical/` subdirectory (uncommitted) contains earlier research notes,
-Ghidra scripts, and experimental tools from the analysis process.
