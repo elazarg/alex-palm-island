@@ -1,0 +1,69 @@
+
+============================================================
+  Custom range
+  File offset: 0x06200 - 0x062a0
+============================================================
+  06200: 54                   push sp
+  06201: 14 83                adc al, 0x83
+  06203: ec                   in al, dx  <<< SUSPECT
+  06204: 0a b0 01 50          or dh, byte ptr [bx + si + 0x5001]
+  06208: c4 7e 06             les di, ptr [bp + 6]
+  0620b: 26 c4 bd 83 00       les di, ptr es:[di + 0x83]
+  06210: 06                   push es
+  06211: b1 26                mov cl, 0x26
+  06213: 8b 7d 55             mov di, word ptr [di + 0x55]
+  06216: ff 5d 08             lcall [di + 8]
+  06219: b0 01                mov al, 1
+  0621b: 50                   push ax
+  0621c: d4 8e                aam 0x8e
+  0621e: 06                   push es
+  0621f: 26 c4 bd 8b 00       les di, ptr es:[di + 0x8b]
+  06224: 06                   push es
+  06225: b1 26                mov cl, 0x26
+  06227: 8b 7d 55             mov di, word ptr [di + 0x55]
+  0622a: ff 5d 08             lcall [di + 8]
+  0622d: b0 01                mov al, 1
+  0622f: 50                   push ax
+  06230: c4 7e 06             les di, ptr [bp + 6]
+  06233: 26 c4 bd 8f 01       les di, ptr es:[di + 0x18f]
+  06238: 06                   push es
+  06239: b1 26                mov cl, 0x26
+  0623b: 8b 7d 55             mov di, word ptr [di + 0x55]
+  0623e: ff 5d 08             lcall [di + 8]
+  06241: b0 01                mov al, 1
+  06243: 50                   push ax
+  06244: c4 7e 06             les di, ptr [bp + 6]
+  06247: 26 c4 bd c7 01       les di, ptr es:[di + 0x1c7]
+  0624c: 06                   push es
+  0624d: b1 26                mov cl, 0x26
+  0624f: 8b 7d 55             mov di, word ptr [di + 0x55]
+  06252: ff 5d 08             lcall [di + 8]
+  06255: b0 01                mov al, 1
+  06257: 50                   push ax
+  06258: c4 7e 06             les di, ptr [bp + 6]
+  0625b: 26 c4 bd c3 01       les di, ptr es:[di + 0x1c3]
+  06260: 06                   push es
+  06261: b1 26                mov cl, 0x26
+  06263: 8b 7d 55             mov di, word ptr [di + 0x55]
+  06266: ff 5d 08             lcall [di + 8]
+  06269: b0 01                mov al, 1
+  0626b: 50                   push ax
+  0626c: c4 7e 06             les di, ptr [bp + 6]
+  0626f: 26 c4 7d 7b          les di, ptr es:[di + 0x7b]
+  06273: 06                   push es
+  06274: b1 26                mov cl, 0x26
+  06276: 8b 7d 55             mov di, word ptr [di + 0x55]
+  06279: ff 5d 08             lcall [di + 8]
+  0627c: c4 7e 06             les di, ptr [bp + 6]
+  0627f: 26 8b 85 dc 01       mov ax, word ptr es:[di + 0x1dc]
+  06284: 26 0b 85 de 01       or ax, word ptr es:[di + 0x1de]
+  06289: 74 51                je 0x62dc
+  0628b: 26 c4 bd dc 01       les di, ptr es:[di + 0x1dc]
+  06290: 26 8b 45 1e          mov ax, word ptr es:[di + 0x1e]
+  06294: 26 8b 55 20          mov dx, word ptr es:[di + 0x20]
+  06298: 89 46 fc             mov word ptr [bp - 4], ax
+  0629b: 89 56 fe             mov word ptr [bp - 2], dx
+  0629e: c4                    db 0xc4
+  0629f: 7e                    db 0x7e
+
+  [0 inline data blocks skipped]

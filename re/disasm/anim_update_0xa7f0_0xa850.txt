@@ -1,0 +1,46 @@
+
+============================================================
+  Custom range
+  File offset: 0x0a7f0 - 0x0a850
+============================================================
+  0a7f0: b1 9a                mov cl, 0x9a
+  0a7f2: 9d                   popf 
+  0a7f3: 0b ce                or cx, si
+  0a7f5: 0b c4                or ax, sp
+  0a7f7: 7e 06                jle 0xa7ff
+  0a7f9: 26 8b 45 3c          mov ax, word ptr es:[di + 0x3c]
+  0a7fd: 25 00 01             and ax, 0x100
+  0a800: 09 c0                or ax, ax
+  0a802: 75 36                jne 0xa83a
+  0a804: 36 83 bd 6f 03 00    cmp word ptr ss:[di + 0x36f], 0
+  0a80a: 75 1e                jne 0xa82a
+  0a80c: 26 8b 45 3a          mov ax, word ptr es:[di + 0x3a]
+  0a810: 35 12 00             xor ax, 0x12
+  0a813: 09 c0                or ax, ax
+  0a815: 74 10                je 0xa827
+  0a817: c6 06 33 36 00       mov byte ptr [0x3633], 0
+  0a81c: 6a 02                push 2
+  0a81e: 6a 00                push 0
+  0a820: 06                   push es
+  0a821: b1 1c                mov cl, 0x1c
+  0a823: 60                   pushaw 
+  0a824: 0c ce                or al, 0xce
+  0a826: 0b e9                or bp, cx
+  0a828: 0d 01 c4             or ax, 0xc401
+  0a82b: 7e 06                jle 0xa833
+  0a82d: 81 c7 76 03          add di, 0x376
+  0a831: 06                   push es
+  0a832: b1 c4                mov cl, 0xc4
+  0a834: 7e 06                jle 0xa83c
+  0a836: 26 8a 85 75 03       mov al, byte ptr es:[di + 0x375]
+  0a83b: 50                   push ax
+  0a83c: 9a 68 04 e8 10       lcall 0x10e8, 0x468
+  0a841: 18 d0                sbb al, dl
+  0a843: 75 03                jne 0xa848
+  0a845: e9 ef 00             jmp 0xa937
+  0a848: c4 7e 06             les di, ptr [bp + 6]
+  0a84b: 26                    db 0x26
+  0a84c: 83                    db 0x83
+  0a84d: bd 6f 03             mov bp, 0x36f
+
+  [0 inline data blocks skipped]

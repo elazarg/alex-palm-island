@@ -1,0 +1,40 @@
+
+============================================================
+  Custom range
+  File offset: 0x06270 - 0x062e0
+============================================================
+  06270: c4 7d 7b             les di, ptr [di + 0x7b]
+  06273: 06                   push es
+  06274: b1 26                mov cl, 0x26
+  06276: 8b 7d 55             mov di, word ptr [di + 0x55]
+  06279: ff 5d 08             lcall [di + 8]
+  0627c: c4 7e 06             les di, ptr [bp + 6]
+  0627f: 26 8b 85 dc 01       mov ax, word ptr es:[di + 0x1dc]
+  06284: 26 0b 85 de 01       or ax, word ptr es:[di + 0x1de]
+  06289: 74 51                je 0x62dc
+  0628b: 26 c4 bd dc 01       les di, ptr es:[di + 0x1dc]
+  06290: 26 8b 45 1e          mov ax, word ptr es:[di + 0x1e]
+  06294: 26 8b 55 20          mov dx, word ptr es:[di + 0x20]
+  06298: 89 46 fc             mov word ptr [bp - 4], ax
+  0629b: 89 56 fe             mov word ptr [bp - 2], dx
+  0629e: c4 7e 06             les di, ptr [bp + 6]
+  062a1: 26 c4 bd dc 01       les di, ptr es:[di + 0x1dc]
+  062a6: 26 ff 75 17          push word ptr es:[di + 0x17]
+  062aa: 26 ff 75 15          push word ptr es:[di + 0x15]
+  062ae: 9a 67 06 7b 14       lcall 0x147b, 0x667
+  062b3: c4 7e 06             les di, ptr [bp + 6]
+  062b6: 26 ff b5 de 01       push word ptr es:[di + 0x1de]
+  062bb: 26 ff b5 dc 01       push word ptr es:[di + 0x1dc]
+  062c0: 6a 22                push 0x22
+  062c2: 9a 9f 02 6f 7e       lcall 0x7e6f, 0x29f
+  062c7: 8b 46 fc             mov ax, word ptr [bp - 4]
+  062ca: 8b 56 fe             mov dx, word ptr [bp - 2]
+  062cd: d4 8e                aam 0x8e
+  062cf: 06                   push es
+  062d0: 26 89 85 dc 01       mov word ptr es:[di + 0x1dc], ax
+  062d5: 26 89 95 de 01       mov word ptr es:[di + 0x1de], dx
+  062da: eb a0                jmp 0x627c
+  062dc: c9                   leave 
+  062dd: ca 04 00             retf 4
+
+  [0 inline data blocks skipped]

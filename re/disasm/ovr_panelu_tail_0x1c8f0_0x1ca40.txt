@@ -1,0 +1,119 @@
+
+============================================================
+  Custom range
+  File offset: 0x1c8f0 - 0x1ca40
+============================================================
+  1c8f0: 7e f8                jle 0x1c8ea
+  1c8f2: 16                   push ss
+  1c8f3: 57                   push di
+  1c8f4: ff 36 84 35          push word ptr [0x3584]
+  1c8f8: ff 36 82 35          push word ptr [0x3582]
+  1c8fc: 8d be f7 fe          lea di, [bp - 0x109]
+  1c900: 16                   push ss
+  1c901: 57                   push di
+  1c902: 9a b7 01 6d 10       lcall 0x106d, 0x1b7
+  1c907: 6a 00                push 0
+  1c909: 6a 00                push 0
+  1c90b: b8 b4 2b             mov ax, 0x2bb4
+  1c90e: 50                   push ax
+  1c90f: 31 c0                xor ax, ax
+  1c911: 50                   push ax
+  1c912: 50                   push ax
+  1c913: 9a 99 2a ce 0b       lcall 0xbce, 0x2a99
+  1c918: c4 7e 06             les di, ptr [bp + 6]
+  1c91b: 26 89 85 85 01       mov word ptr es:[di + 0x185], ax
+  1c920: 26 89 95 87 01       mov word ptr es:[di + 0x187], dx
+  1c925: 68 82 00             push 0x82
+  1c928: 6a 7e                push 0x7e
+  1c92a: 68 be 00             push 0xbe
+  1c92d: 68 8d 00             push 0x8d
+  1c930: 8d 7e f8             lea di, [bp - 8]
+  1c933: 16                   push ss
+  1c934: 57                   push di
+  1c935: 9a 00 00 c4 10       lcall 0x10c4, 0
+  1c93a: 8d 7e f8             lea di, [bp - 8]
+  1c93d: 16                   push ss
+  1c93e: 57                   push di
+  1c93f: ff 36 84 35          push word ptr [0x3584]
+  1c943: ff 36 82 35          push word ptr [0x3582]
+  1c947: 8d be f7 fe          lea di, [bp - 0x109]
+  1c94b: 16                   push ss
+  1c94c: 57                   push di
+  1c94d: 9a b7 01 6d 10       lcall 0x106d, 0x1b7
+  1c952: 6a 00                push 0
+  1c954: 6a 00                push 0
+  1c956: b8 b4 2b             mov ax, 0x2bb4
+  1c959: 50                   push ax
+  1c95a: 31 c0                xor ax, ax
+  1c95c: 50                   push ax
+  1c95d: 50                   push ax
+  1c95e: 9a 99 2a ce 0b       lcall 0xbce, 0x2a99
+  1c963: c4 7e 06             les di, ptr [bp + 6]
+  1c966: 26 89 85 89 01       mov word ptr es:[di + 0x189], ax
+  1c96b: 26 89 95 8b 01       mov word ptr es:[di + 0x18b], dx
+  1c970: 68 e9 00             push 0xe9
+  1c973: 6a 7e                push 0x7e
+  1c975: 68 25 01             push 0x125
+  1c978: 68 8d 00             push 0x8d
+  1c97b: 8d 7e f8             lea di, [bp - 8]
+  1c97e: 16                   push ss
+  1c97f: 57                   push di
+  1c980: 9a 00 00 c4 10       lcall 0x10c4, 0
+  1c985: 8d 7e f8             lea di, [bp - 8]
+  1c988: 16                   push ss
+  1c989: 57                   push di
+  1c98a: ff 36 84 35          push word ptr [0x3584]
+  1c98e: ff 36 82 35          push word ptr [0x3582]
+  1c992: 8d be f7 fe          lea di, [bp - 0x109]
+  1c996: 16                   push ss
+  1c997: 57                   push di
+  1c998: 9a b7 01 6d 10       lcall 0x106d, 0x1b7
+  1c99d: 6a 00                push 0
+  1c99f: 6a 00                push 0
+  1c9a1: b8 b4 2b             mov ax, 0x2bb4
+  1c9a4: 50                   push ax
+  1c9a5: 31 c0                xor ax, ax
+  1c9a7: 50                   push ax
+  1c9a8: 50                   push ax
+  1c9a9: 9a 99 2a ce 0b       lcall 0xbce, 0x2a99
+  1c9ae: c4 7e 06             les di, ptr [bp + 6]
+  1c9b1: 26 89 85 8d 01       mov word ptr es:[di + 0x18d], ax
+  1c9b6: 26 89 95 8f 01       mov word ptr es:[di + 0x18f], dx
+  1c9bb: c6 46 f7 01          mov byte ptr [bp - 9], 1
+  1c9bf: eb 03                jmp 0x1c9c4
+  1c9c1: fe 46 f7             inc byte ptr [bp - 9]
+  1c9c4: 8a 46 f7             mov al, byte ptr [bp - 9]
+  1c9c7: 30 e4                xor ah, ah
+  1c9c9: c1 e0 02             shl ax, 2
+  1c9cc: c4 7e 06             les di, ptr [bp + 6]
+  1c9cf: 03 f8                add di, ax
+  1c9d1: 26 ff b5 6b 01       push word ptr es:[di + 0x16b]
+  1c9d6: 26 ff b5 69 01       push word ptr es:[di + 0x169]
+  1c9db: c4 7e 06             les di, ptr [bp + 6]
+  1c9de: 06                   push es
+  1c9df: 57                   push di
+  1c9e0: 26 8b 7d 55          mov di, word ptr es:[di + 0x55]
+  1c9e4: ff 5d 14             lcall [di + 0x14]
+  1c9e7: 8a 46 f7             mov al, byte ptr [bp - 9]
+  1c9ea: 30 e4                xor ah, ah
+  1c9ec: 05 20 03             add ax, 0x320
+  1c9ef: 8b d0                mov dx, ax
+  1c9f1: 8a 46 f7             mov al, byte ptr [bp - 9]
+  1c9f4: 30 e4                xor ah, ah
+  1c9f6: c1 e0 02             shl ax, 2
+  1c9f9: c4 7e 06             les di, ptr [bp + 6]
+  1c9fc: 03 f8                add di, ax
+  1c9fe: 26 c4 bd 69 01       les di, ptr es:[di + 0x169]
+  1ca03: 26 89 95 5e 02       mov word ptr es:[di + 0x25e], dx
+  1ca08: 80 7e f7 09          cmp byte ptr [bp - 9], 9
+  1ca0c: 75 b3                jne 0x1c9c1
+  1ca0e: c4 46 06             les ax, ptr [bp + 6]
+  1ca11: 8c c2                mov dx, es
+  1ca13: c9                   leave 
+  1ca14: ca 06 00             retf 6
+  --- RETF reached, 41 bytes remaining ---
+  1ca17: 55 89 e5 31 c0 9a 30 05 12 18 31 c0 50 c4 7e 06  U..1..0...1.P.~.
+  1ca27: 06 57 9a 21 01 ce 0b bf 55 00 9a 0a 33 12 18 c9  .W.!....U...3...
+  1ca37: ca 06 00 55 89 e5 b8 04 00                       ...U.....
+
+  [0 inline data blocks skipped]

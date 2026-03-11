@@ -1,0 +1,55 @@
+
+============================================================
+  Custom range
+  File offset: 0x01450 - 0x014d0
+============================================================
+  01450: 05 0e 5c             add ax, 0x5c0e
+  01453: 9a 8b 6e 6f 7e       lcall 0x7e6f, 0x6e8b
+  01458: ff 36 88 35          push word ptr [0x3588]
+  0145c: ff 36 96 45          push word ptr [0x4596]
+  01460: 6a bc                push -0x44
+  01462: 71 64                jno 0x14c8
+  01464: b8 da 17             mov ax, 0x17da
+  01467: 50                   push ax
+  01468: e3 a4                jcxz 0x140e
+  0146a: 50                   push ax
+  0146b: 50                   push ax
+  0146c: 9a 0d 01 3b 03       lcall 0x33b, 0x10d
+  01471: a3 0a 40             mov word ptr [0x400a], ax
+  01474: 89 16 fc 2f          mov word ptr [0x2ffc], dx
+  01478: ff 36 fc 2f          push word ptr [0x2ffc]
+  0147c: ff 36 fa 2f          push word ptr [0x2ffa]
+  01480: c4 7e f4             les di, ptr [bp - 0xc]
+  01483: 06                   push es
+  01484: b1 26                mov cl, 0x26
+  01486: 8b 7d 55             mov di, word ptr [di + 0x55]
+  01489: ff 5d 24             lcall [di + 0x24]
+  0148c: d4 3e                aam 0x3e
+  0148e: f6 2f                imul byte ptr [bx]
+  01490: 89 7e f0             mov word ptr [bp - 0x10], di
+  01493: 8c 46 f2             mov word ptr [bp - 0xe], es
+  01496: b8 e6 16             mov ax, 0x16e6
+  01499: 50                   push ax
+  0149a: e3 a4                jcxz 0x1440
+  0149c: 50                   push ax
+  0149d: 50                   push ax
+  0149e: 9a c0 46 3b 03       lcall 0x33b, 0x46c0
+  014a3: c4 7e f0             les di, ptr [bp - 0x10]
+  014a6: 26 89 45 59          mov word ptr es:[di + 0x59], ax
+  014aa: 26 89 55 5b          mov word ptr es:[di + 0x5b], dx
+  014ae: 26 ff 75 5b          push word ptr es:[di + 0x5b]
+  014b2: 26 ff 75 59          push word ptr es:[di + 0x59]
+  014b6: 06                   push es
+  014b7: b1 26                mov cl, 0x26
+  014b9: 8b 7d 55             mov di, word ptr [di + 0x55]
+  014bc: ff 6d 24             ljmp [di + 0x24]
+  014bf: 6a 14                push 0x14
+  014c1: 6a 09                push 9
+  014c3: 68 f2 bc             push 0xbcf2
+  014c6: 71 17                jno 0x14df
+  014c8: f7 7e f8             idiv word ptr [bp - 8]
+  014cb: cb                   retf 
+  --- RETF reached, 4 bytes remaining ---
+  014cc: 3c 9a 00 00                                      <...
+
+  [0 inline data blocks skipped]

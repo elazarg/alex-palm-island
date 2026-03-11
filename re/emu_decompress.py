@@ -18,15 +18,19 @@ to fill LOAD_SEG:0100 onwards.
 """
 
 import struct
+from pathlib import Path
 import sys
 sys.path.insert(0, '/tmp')
 from unicorn import *
 from unicorn.x86_const import *
 
+DEFAULT_EXE_PATH = Path('game/ALEX/ALEX1.EXE')
+DEFAULT_DECRYPTED_PATH = Path('game_decrypted/bin/ALEX1_decrypted.bin')
+DEFAULT_UNPACKED_PATH = Path('game_decrypted/bin/ALEX1_unpacked.bin')
 
-def load_original_and_decrypted():
+def load_original_and_decrypted(exe_path, decrypted_path):
     """Load both the original EXE code and HackStop-decrypted data."""
-    with open('/home/elazarg/workspace/alex/game/ALEX/ALEX1.EXE', 'rb') as f:
+    with open(exe_path, 'rb') as f:
         exe = f.read()
 
     # MZ header
@@ -35,7 +39,7 @@ def load_original_and_decrypted():
     code_image = exe[header_size:]
     print(f"Original EXE code image: {len(code_image)} bytes")
 
-    with open('/home/elazarg/workspace/alex/game/ALEX/ALEX1_decrypted.bin', 'rb') as f:
+    with open(decrypted_path, 'rb') as f:
         decrypted = f.read()
     print(f"HackStop-decrypted data: {len(decrypted)} bytes")
 
@@ -122,8 +126,9 @@ def load_original_and_decrypted():
     return code_image, decrypted, dst_start_code
 
 
-def emulate():
-    code_image, decrypted, dst_start_code = load_original_and_decrypted()
+def emulate(exe_path=DEFAULT_EXE_PATH, decrypted_path=DEFAULT_DECRYPTED_PATH,
+            out_file=DEFAULT_UNPACKED_PATH):
+    code_image, decrypted, dst_start_code = load_original_and_decrypted(exe_path, decrypted_path)
 
     LOAD_SEG = 0x1000
     LOAD_ADDR = LOAD_SEG << 4
@@ -275,7 +280,8 @@ def emulate():
         print(f"  {i:04x}: {hex_str:48s} {asc}")
 
     # Write output
-    out_file = '/home/elazarg/workspace/alex/game/ALEX/ALEX1_unpacked.bin'
+    out_file = Path(out_file)
+    out_file.parent.mkdir(parents=True, exist_ok=True)
     with open(out_file, 'wb') as f:
         f.write(output)
     print(f"\nWritten to: {out_file} ({len(output)} bytes)")
@@ -284,4 +290,13 @@ def emulate():
 
 
 if __name__ == '__main__':
-    emulate()
+    exe_path = DEFAULT_EXE_PATH
+    decrypted_path = DEFAULT_DECRYPTED_PATH
+    out_path = DEFAULT_UNPACKED_PATH
+    if len(sys.argv) > 1:
+        exe_path = Path(sys.argv[1])
+    if len(sys.argv) > 2:
+        decrypted_path = Path(sys.argv[2])
+    if len(sys.argv) > 3:
+        out_path = Path(sys.argv[3])
+    emulate(exe_path, decrypted_path, out_path)

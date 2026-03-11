@@ -1,0 +1,66 @@
+
+============================================================
+  Custom range
+  File offset: 0x05b40 - 0x05be0
+============================================================
+  05b40: 20 02                and byte ptr [bp + si], al
+  05b42: 54                   push sp
+  05b43: 18 01                sbb byte ptr [bx + di], al
+  05b45: 54                   push sp
+  05b46: 14 01                adc al, 1
+  05b48: 54                   push sp
+  05b49: 20 02                and byte ptr [bp + si], al
+  05b4b: c4 7e 06             les di, ptr [bp + 6]
+  05b4e: e3 a4                jcxz 0x5af4
+  05b50: 26 89 85 d4 01       mov word ptr es:[di + 0x1d4], ax
+  05b55: 26 c6 85 cf 01 00    mov byte ptr es:[di + 0x1cf], 0
+  05b5b: 81 c7 b7 01          add di, 0x1b7
+  05b5f: 06                   push es
+  05b60: b1 7a                mov cl, 0x7a
+  05b62: 1c 6a                sbb al, 0x6a
+  05b64: 00 54 e4             add byte ptr [si - 0x1c], dl
+  05b67: 46                   inc si
+  05b68: 54                   push sp
+  05b69: 14 c4                adc al, 0xc4
+  05b6b: 3e a8 30             test al, 0x30
+  05b6e: 81 c7 66 00          add di, 0x66
+  05b72: 06                   push es
+  05b73: b1 9a                mov cl, 0x9a
+  05b75: 3e 02 6d 10          add ch, byte ptr ds:[di + 0x10]
+  05b79: ff 76 0a             push word ptr [bp + 0xa]
+  05b7c: 9a c6 04 6d 10       lcall 0x106d, 0x4c6
+  05b81: 9a 36 01 7d 20       lcall 0x207d, 0x136
+  05b86: c4 7e 06             les di, ptr [bp + 6]
+  05b89: 26 89 85 d6 01       mov word ptr es:[di + 0x1d6], ax
+  05b8e: 26 83 bd d6 01 10    cmp word ptr es:[di + 0x1d6], 0x10
+  05b94: 84 1e 26 ff          test byte ptr [0xff26], bl
+  05b98: b5 d6                mov ch, 0xd6
+  05b9a: 01 d4                add sp, dx
+  05b9c: 4e                   dec si
+  05b9d: 1e                   push ds
+  05b9e: 36 06                push es
+  05ba0: c1 2c 26             shr word ptr [si], 0x26
+  05ba3: 01 2d                add word ptr [di], bp
+  05ba5: 10 08                adc byte ptr [bx + si], cl
+  05ba7: c0 74 0a c4          sal byte ptr [si + 0xa], 0xc4
+  05bab: 7e 06                jle 0x5bb3
+  05bad: e3 a4                jcxz 0x5b53
+  05baf: 26 89 85 d6 01       mov word ptr es:[di + 0x1d6], ax
+  05bb4: c4 7e 06             les di, ptr [bp + 6]
+  05bb7: 26 83 bd d6 01 00    cmp word ptr es:[di + 0x1d6], 0
+  05bbd: 75 10                jne 0x5bcf
+  05bbf: 26 d4 cd             aam 0xcd
+  05bc2: d8 01                fadd dword ptr [bx + di]
+  05bc4: 06                   push es
+  05bc5: b1 26                mov cl, 0x26
+  05bc7: 8b 7d 55             mov di, word ptr [di + 0x55]
+  05bca: ff 5d 30             lcall [di + 0x30]
+  05bcd: eb 11                jmp 0x5be0
+  05bcf: c4 7e 06             les di, ptr [bp + 6]
+  05bd2: 26 c4 bd d8 01       les di, ptr es:[di + 0x1d8]
+  05bd7: 06                   push es
+  05bd8: b1 26                mov cl, 0x26
+  05bda: 8b 7d 55             mov di, word ptr [di + 0x55]
+  05bdd: ff 5d 34             lcall [di + 0x34]
+
+  [0 inline data blocks skipped]

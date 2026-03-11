@@ -1,0 +1,95 @@
+
+============================================================
+  Custom range
+  File offset: 0x02460 - 0x02520
+============================================================
+  02460: 11 0c                adc word ptr [si], cx
+  02462: 81 75 65 dd 0e       xor word ptr [di + 0x65], 0xedd
+  02467: e8 ad da             call 0xffffff17
+  0246a: d3 fa                sar dx, cl
+  0246c: 76 98                jbe 0x2406
+  0246e: 3d 2d ae             cmp ax, 0xae2d
+  02471: 88 0b                mov byte ptr [bp + di], cl
+  02473: 0d f8 0b             or ax, 0xbf8
+  02476: ae                   scasb al, byte ptr es:[di]
+  02477: 8c 0d                mov word ptr [di], cs
+  02479: fd                   std 
+  0247a: 5d                   pop bp
+  0247b: 0d fc da             or ax, 0xdafc
+  0247e: 34 5f                xor al, 0x5f
+  02480: 72 98                jb 0x241a
+  02482: 0c 0d                or al, 0xd
+  02484: f8                   clc 
+  02485: 4c                   dec sp
+  02486: 5f                   pop di
+  02487: 0d f8 24             or ax, 0x24f8
+  0248a: 5d                   pop bp
+  0248b: 0d e0 f9             or ax, 0xf9e0
+  0248e: fd                   std 
+  0248f: ff 0d                dec word ptr [di]
+  02491: 0e                   push cs
+  02492: 53                   push bx
+  02493: 75 73                jne 0x2508
+  02495: 70 69                jo 0x2500
+  02497: 63 69 6f             arpl word ptr [bx + di + 0x6f], bp  <<< SUSPECT
+  0249a: 6e                   outsb dx, byte ptr [si]  <<< SUSPECT
+  0249b: 4d                   dec bp
+  0249c: 65 74 5f             je 0x24fe
+  0249f: f7 65 72             mul word ptr [di + 0x72]
+  024a2: 03 42 61             add ax, word ptr [bp + si + 0x61]
+  024a5: 72 dd                jb 0x2484
+  024a7: 90                   nop 
+  024a8: 0d 72 60             or ax, 0x6072
+  024ab: 09 6a 06             or word ptr [bp + si + 6], bp
+  024ae: c5 19                lds bx, ptr [bx + di]
+  024b0: 04 01                add al, 1
+  024b2: d9 f9                fyl2xp1 
+  024b4: 6a 13                push 0x13
+  024b6: 14 91                adc al, 0x91
+  024b8: a1 c4 10             mov ax, word ptr [0x10c4]
+  024bb: f6 bf 93 75          idiv byte ptr [bx + 0x7593]
+  024bf: a1 13 0e             mov ax, word ptr [0xe13]
+  024c2: 81 90 0d 37 fc 3c    adc word ptr [bx + si + 0x370d], 0x3cfc
+  024c8: 0d 3d 39             or ax, 0x393d
+  024cb: 0b 3c                or di, word ptr [si]
+  024cd: f1                   int1 
+  024ce: bb db fc             mov bx, 0xfcdb
+  024d1: a2 db 6a             mov byte ptr [0x6adb], al
+  024d4: b4 b8                mov ah, 0xb8
+  024d6: 34 2a                xor al, 0x2a
+  024d8: 1f                   pop ds
+  024d9: ec                   in al, dx  <<< SUSPECT
+  024da: d0 10                rcl byte ptr [bx + si]
+  024dc: 22 a9 d9 fc          and ch, byte ptr [bx + di - 0x327]
+  024e0: 27                   daa   <<< SUSPECT
+  024e1: a5                   movsw word ptr es:[di], word ptr [si]
+  024e2: 6b fc e5             imul di, sp, -0x1b
+  024e5: c1 b9 60 09 5b       sar word ptr [bx + di + 0x960], 0x5b
+  024ea: 75 57                jne 0x2543
+  024ec: 7a 45                jp 0x2533
+  024ee: 57                   push di
+  024ef: d3 ba ab 64          sar word ptr [bp + si + 0x64ab], cl
+  024f3: 6e                   outsb dx, byte ptr [si]  <<< SUSPECT
+  024f4: ff                    db 0xff
+  024f5: 7b 54                jnp 0x254b
+  024f7: c5 8e ff 21          lds cx, ptr [bp + 0x21ff]
+  024fb: 01 dd                add bp, bx
+  024fd: d6                   salc   <<< SUSPECT
+  024fe: a6                   cmpsb byte ptr [si], byte ptr es:[di]
+  024ff: 60                   pushaw 
+  02500: 0d 9a 68             or ax, 0x689a
+  02503: 14 60                adc al, 0x60
+  02505: 03 9a 68 0b          add bx, word ptr [bp + si + 0xb68]
+  02509: 57                   push di
+  0250a: 28 9a 02 41          sub byte ptr [bp + si + 0x4102], bl
+  0250e: 68 0f 67             push 0x670f
+  02511: bb 5d d5             mov bx, 0xd55d
+  02514: 3f                   aas   <<< SUSPECT
+  02515: 00 56 68             add byte ptr [bp + 0x68], dl
+  02518: 18 2f                sbb byte ptr [bx], ch
+  0251a: 04 bc                add al, 0xbc
+  0251c: f8                   clc 
+  0251d: 16                   push ss
+  0251e: 74 68                je 0x2588
+
+  [0 inline data blocks skipped]

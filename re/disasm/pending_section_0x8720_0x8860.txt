@@ -1,0 +1,146 @@
+
+============================================================
+  Custom range
+  File offset: 0x08720 - 0x08860
+============================================================
+  08720: 83 ec 08             sub sp, 8
+  08723: 83 3e df 29 00       cmp word ptr [0x29df], 0
+  08728: 74 07                je 0x8731
+  0872a: 80 3e 32 46 10       cmp byte ptr [0x4632], 0x10
+  0872f: 74 03                je 0x8734
+  08731: e9 17 01             jmp 0x884b
+  08734: 9a 9f 03 2d 10       lcall 0x102d, 0x39f
+  08739: a1 25 46             mov ax, word ptr [0x4625]
+  0873c: 0b 06 17 36          or ax, word ptr [0x3617]
+  08740: 74 60                je 0x87a2
+  08742: a1 df 29             mov ax, word ptr [0x29df]
+  08745: 31 d2                xor dx, dx
+  08747: b9 10 27             mov cx, 0x2710
+  0874a: f7 f1                div cx
+  0874c: 92                   xchg dx, ax
+  0874d: 3d f4 01             cmp ax, 0x1f4
+  08750: 76 50                jbe 0x87a2
+  08752: c4 4e 25             les cx, ptr [bp + 0x25]
+  08755: 36 89 7e f8          mov word ptr ss:[bp - 8], di
+  08759: 8c 46 fa             mov word ptr [bp - 6], es
+  0875c: 26 80 7d 53 00       cmp byte ptr es:[di + 0x53], 0
+  08761: 74 3f                je 0x87a2
+  08763: 6a 00                push 0
+  08765: 6a 00                push 0
+  08767: 6a 00                push 0
+  08769: 26 ff 75 4f          push word ptr es:[di + 0x4f]
+  0876d: 26 ff 75 51          push word ptr es:[di + 0x51]
+  08771: b8 62 21             mov ax, 0x2162
+  08774: 50                   push ax
+  08775: e3 a4                jcxz 0x871b
+  08777: 50                   push ax
+  08778: 50                   push ax
+  08779: 9a 38 2e bb 08       lcall 0x8bb, 0x2e38
+  0877e: 89 46 fc             mov word ptr [bp - 4], ax
+  08781: 89 56 fe             mov word ptr [bp - 2], dx
+  08784: 6a 00                push 0
+  08786: 6a 00                push 0
+  08788: c4 7e f8             les di, ptr [bp - 8]
+  0878b: 26 8a 45 53          mov al, byte ptr es:[di + 0x53]
+  0878f: 50                   push ax
+  08790: b8 ea 1a             mov ax, 0x1aea
+  08793: 50                   push ax
+  08794: e3 a4                jcxz 0x873a
+  08796: 50                   push ax
+  08797: 50                   push ax
+  08798: 1e                   push ds
+  08799: f8                   clc 
+  0879a: fc                   cld 
+  0879b: e1 89                loope 0x8726
+  0879d: 46                   inc si
+  0879e: fc                   cld 
+  0879f: 89 56 fe             mov word ptr [bp - 2], dx
+  087a2: e3 a4                jcxz 0x8748
+  087a4: a3 15 36             mov word ptr [0x3615], ax
+  087a7: a3 17 36             mov word ptr [0x3617], ax
+  087aa: a1 df 29             mov ax, word ptr [0x29df]
+  087ad: 31 d2                xor dx, dx
+  087af: b9 10 27             mov cx, 0x2710
+  087b2: f7 f1                div cx
+  087b4: 92                   xchg dx, ax
+  087b5: 3d f4 01             cmp ax, 0x1f4
+  087b8: 72 21                jb 0x87db
+  087ba: 3d e7 03             cmp ax, 0x3e7
+  087bd: 77 1c                ja 0x87db
+  087bf: 6a 00                push 0
+  087c1: 6a 00                push 0
+  087c3: ff 36 df 29          push word ptr [0x29df]
+  087c7: b8 9a 1a             mov ax, 0x1a9a
+  087ca: 50                   push ax
+  087cb: e3 a4                jcxz 0x8771
+  087cd: 50                   push ax
+  087ce: 50                   push ax
+  087cf: 0e                   push cs
+  087d0: e8 be de             call 0x6691
+  087d3: 89 46 fc             mov word ptr [bp - 4], ax
+  087d6: 89 56 fe             mov word ptr [bp - 2], dx
+  087d9: eb 66                jmp 0x8841
+  087db: 3d e8 03             cmp ax, 0x3e8
+  087de: 72 21                jb 0x8801
+  087e0: 3d cf 07             cmp ax, 0x7cf
+  087e3: 77 1c                ja 0x8801
+  087e5: 6a 00                push 0
+  087e7: 6a 00                push 0
+  087e9: ff 36 df 29          push word ptr [0x29df]
+  087ed: b8 ba 1a             mov ax, 0x1aba
+  087f0: 50                   push ax
+  087f1: e3 a4                jcxz 0x8797
+  087f3: 50                   push ax
+  087f4: 50                   push ax
+  087f5: 0e                   push cs
+  087f6: e8 65 df             call 0x675e
+  087f9: 89 46 fc             mov word ptr [bp - 4], ax
+  087fc: 89 56 fe             mov word ptr [bp - 2], dx
+  087ff: eb 40                jmp 0x8841
+  08801: 3d d0 07             cmp ax, 0x7d0
+  08804: 72 21                jb 0x8827
+  08806: 3d b7 0b             cmp ax, 0xbb7
+  08809: 77 1c                ja 0x8827
+  0880b: 6a 00                push 0
+  0880d: 6a 00                push 0
+  0880f: ff 36 df 29          push word ptr [0x29df]
+  08813: b8 aa 1a             mov ax, 0x1aaa
+  08816: 50                   push ax
+  08817: e3 a4                jcxz 0x87bd
+  08819: 50                   push ax
+  0881a: 50                   push ax
+  0881b: 0e                   push cs
+  0881c: e8 d9 de             call 0x66f8
+  0881f: 89 46 fc             mov word ptr [bp - 4], ax
+  08822: 89 56 fe             mov word ptr [bp - 2], dx
+  08825: eb 1a                jmp 0x8841
+  08827: 6a 00                push 0
+  08829: 6a 00                push 0
+  0882b: ff 36 df 29          push word ptr [0x29df]
+  0882f: b8 ca 1a             mov ax, 0x1aca
+  08832: 50                   push ax
+  08833: e3 a4                jcxz 0x87d9
+  08835: 50                   push ax
+  08836: 50                   push ax
+  08837: 0e                   push cs
+  08838: e8 89 df             call 0x67c4
+  0883b: 89 46 fc             mov word ptr [bp - 4], ax
+  0883e: 89 56 fe             mov word ptr [bp - 2], dx
+  08841: c6 06 0a 30 00       mov byte ptr [0x300a], 0
+  08846: e3 a4                jcxz 0x87ec
+  08848: a3 df 29             mov word ptr [0x29df], ax
+  0884b: c9                   leave 
+  0884c: c3                   ret 
+  0884d: 65 64 20 e3          and bl, ah
+  08851: a4                   movsb byte ptr es:[di], byte ptr [si]
+  08852: 54                   push sp
+  08853: 18 01                sbb byte ptr [bx + di], al
+  08855: 54                   push sp
+  08856: 14 c6                adc al, 0xc6
+  08858: 06                   push es
+  08859: 5f                   pop di
+  0885a: 35 00 9a             xor ax, 0x9a00
+  0885d: 4c                   dec sp
+  0885e: 01 e8                add ax, bp
+
+  [0 inline data blocks skipped]

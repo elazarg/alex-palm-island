@@ -1,0 +1,19 @@
+
+============================================================
+  Custom range
+  File offset: 0x07b00 - 0x07c20
+============================================================
+  07b00: 0a c4                or al, ah
+  07b02: 7e 06                jle 0x7b0a
+  07b04: 06                   push es
+  07b05: b1 1c                mov cl, 0x1c
+  07b07: 51                   push cx
+  07b08: 23 bb 08 c9          and di, word ptr [bp + di - 0x36f8]
+  07b0c: ca 06 00             retf 6
+  --- RETF reached, 273 bytes remaining ---
+  07b0f: 65 64 20 b8 06 00 54 18 01 54 14 83 ec 06 c6 06  ed ...T..T......
+  07b1f: 33 36 00 a1 26 36 9b 26 28 36 a3 2e 36 89 16 30  36..&6.&(6..6..0
+  07b2f: 36 c6 46 ff 01 d4 4e 26 36 89 7e fb 8c 46 fd 26  6.F...N&6.~..F.&
+  07b3f: 83 7d 0a 00 74 2c 26 ff 75 0a c4 3e 1e 36 06 b1  .}..t,&.u..>.6..
+
+  [0 inline data blocks skipped]

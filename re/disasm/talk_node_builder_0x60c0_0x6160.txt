@@ -1,0 +1,61 @@
+
+============================================================
+  Custom range
+  File offset: 0x060c0 - 0x06160
+============================================================
+  060c0: 10 88 46 e9          adc byte ptr [bx + si - 0x16ba], cl
+  060c4: c4 8e 16 e3          les cx, ptr [bp - 0x1cea]
+  060c8: a4                   movsb byte ptr es:[di], byte ptr [si]
+  060c9: 26 89 85 dc 01       mov word ptr es:[di + 0x1dc], ax
+  060ce: 26 89 85 de 01       mov word ptr es:[di + 0x1de], ax
+  060d3: 8a 46 e9             mov al, byte ptr [bp - 0x17]
+  060d6: 88 86 e4 fe          mov byte ptr [bp - 0x11c], al
+  060da: b0 11                mov al, 0x11
+  060dc: 4a                   dec dx
+  060dd: 86 e4                xchg ah, ah
+  060df: fe                    db 0xfe
+  060e0: 76 03                jbe 0x60e5
+  060e2: e9 ca 00             jmp 0x61af
+  060e5: 88 46 ea             mov byte ptr [bp - 0x16], al
+  060e8: eb 03                jmp 0x60ed
+  060ea: fe 46 ea             inc byte ptr [bp - 0x16]
+  060ed: 6a 22                push 0x22
+  060ef: 9a 8a 02 6f 7e       lcall 0x7e6f, 0x28a
+  060f4: 89 46 e5             mov word ptr [bp - 0x1b], ax
+  060f7: 89 56 e7             mov word ptr [bp - 0x19], dx
+  060fa: c4 7e e5             les di, ptr [bp - 0x1b]
+  060fd: 89 be e0 fe          mov word ptr [bp - 0x120], di
+  06101: 8c 86 e2 fe          mov word ptr [bp - 0x11e], es
+  06105: 9a 36 01 6d 10       lcall 0x106d, 0x136
+  0610a: c4 be e0 fe          les di, ptr [bp - 0x120]
+  0610e: 36 98                cwde 
+  06110: 45                   inc bp
+  06111: 1d 9a 36             sbb ax, 0x369a
+  06114: 01 6d 10             add word ptr [di + 0x10], bp
+  06117: c4 be e0 fe          les di, ptr [bp - 0x120]
+  0611b: 26 89 45 19          mov word ptr es:[di + 0x19], ax
+  0611f: 9a 36 01 6d 10       lcall 0x106d, 0x136
+  06124: d4 ce                aam 0xce
+  06126: e0 fe                loopne 0x6126
+  06128: 26 89 45 1b          mov word ptr es:[di + 0x1b], ax
+  0612c: 8d be e0 fd          lea di, [bp - 0x220]
+  06130: 16                   push ss
+  06131: c1 aa 7f 00 6d       shr word ptr [bp + si + 0x7f], 0x6d
+  06136: 10 c4                adc ah, al
+  06138: be e0 fe             mov si, 0xfee0
+  0613b: 06                   push es
+  0613c: b1 6a                mov cl, 0x6a
+  0613e: 24 64                and al, 0x64
+  06140: 8e 6e 6f             mov gs, word ptr [bp + 0x6f]
+  06143: 7e c4                jle 0x6109
+  06145: 7e 06                jle 0x614d
+  06147: 26 8b 85 dc 01       mov ax, word ptr es:[di + 0x1dc]
+  0614c: 26 8b 95 de 01       mov dx, word ptr es:[di + 0x1de]
+  06151: d4 ce                aam 0xce
+  06153: e0 fe                loopne 0x6153
+  06155: 26 89 45 1e          mov word ptr es:[di + 0x1e], ax
+  06159: 26 89 55 20          mov word ptr es:[di + 0x20], dx
+  0615d: 9a                    db 0x9a
+  0615e: 10 10                adc byte ptr [bx + si], dl
+
+  [0 inline data blocks skipped]

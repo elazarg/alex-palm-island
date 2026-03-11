@@ -1,0 +1,22 @@
+
+============================================================
+  Custom range
+  File offset: 0x0a5f0 - 0x0a740
+============================================================
+  0a5f0: e3 a4                jcxz 0xa596
+  0a5f2: 50                   push ax
+  0a5f3: c4 7e 06             les di, ptr [bp + 6]
+  0a5f6: 06                   push es
+  0a5f7: c1 2c 21             shr word ptr [si], 0x21
+  0a5fa: 01 ce                add si, cx
+  0a5fc: 0b bf 55 00          or di, word ptr [bx + 0x55]
+  0a600: 9a 0a 33 54 14       lcall 0x1454, 0x330a
+  0a605: c9                   leave 
+  0a606: ca 06 00             retf 6
+  --- RETF reached, 311 bytes remaining ---
+  0a609: 65 64 20 e3 a4 54 18 01 54 14 c4 7e 0a 06 c1 d4  ed ..T..T..~....
+  0a619: 7e 06 06 b1 9a 60 13 de 0b c4 7e 0a 06 b1 c4 7e  ~....`....~....~
+  0a629: 06 81 c7 73 13 16 b1 6a 02 e3 a4 50 50 9a b3 39  ...s...j...PP..9
+  0a639: 6f 7e 9a 04 15 6f 7e c4 7e 0a 06 b1 c4 7e 06 81  o~...o~.~....~..
+
+  [0 inline data blocks skipped]

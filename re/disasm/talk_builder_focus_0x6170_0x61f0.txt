@@ -1,0 +1,56 @@
+
+============================================================
+  Custom range
+  File offset: 0x06170 - 0x061f0
+============================================================
+  06170: fe                    db 0xfe
+  06171: 16                   push ss
+  06172: 57                   push di
+  06173: 68 ff 00             push 0xff
+  06176: 54                   push sp
+  06177: 8e 6e 6f             mov gs, word ptr [bp + 0x6f]
+  0617a: 7e c4                jle 0x6140
+  0617c: ce                   into   <<< SUSPECT
+  0617d: f0 fe 81 c7 15       lock inc byte ptr [bx + di + 0x15c7]
+  06182: 00 06 b1 f7          add byte ptr [0xf7b1], al
+  06186: a9 f5 0e             test ax, 0xef5
+  06189: 16                   push ss
+  0618a: 57                   push di
+  0618b: 9a 09 06 7b 14       lcall 0x147b, 0x609
+  06190: 8b 46 e5             mov ax, word ptr [bp - 0x1b]
+  06193: 8b 56 f7             mov dx, word ptr [bp - 9]
+  06196: d4 7e                aam 0x7e
+  06198: 06                   push es
+  06199: 26 89 85 dc 01       mov word ptr es:[di + 0x1dc], ax
+  0619e: 26 89 95 de 01       mov word ptr es:[di + 0x1de], dx
+  061a3: 8a 46 ea             mov al, byte ptr [bp - 0x16]
+  061a6: 3a 86 e4 fe          cmp al, byte ptr [bp - 0x11c]
+  061aa: 84 13                test byte ptr [bp + di], dl
+  061ac: e9 3b ff             jmp 0x60ea
+  061af: 9a 36 01 6d 10       lcall 0x106d, 0x136
+  061b4: c4 7e 06             les di, ptr [bp + 6]
+  061b7: 26 89 85 d2 01       mov word ptr es:[di + 0x1d2], ax
+  061bc: 6a 6c                push 0x6c
+  061be: 6a 15                push 0x15
+  061c0: bf 9e 27             mov di, 0x279e
+  061c3: 0e                   push cs
+  061c4: b1 b8                mov cl, 0xb8
+  061c6: 80 2a 50             sub byte ptr [bp + si], 0x50
+  061c9: e3 a4                jcxz 0x616f
+  061cb: 50                   push ax
+  061cc: 50                   push ax
+  061cd: 9a 6e 22 ce 0b       lcall 0xbce, 0x226e
+  061d2: 52                   push dx
+  061d3: 50                   push ax
+  061d4: c4 7e 06             les di, ptr [bp + 6]
+  061d7: 26 c4 bd 8f 01       les di, ptr es:[di + 0x18f]
+  061dc: 06                   push es
+  061dd: b1 26                mov cl, 0x26
+  061df: 8b 7d 55             mov di, word ptr [di + 0x55]
+  061e2: ff 5d 14             lcall [di + 0x14]
+  061e5: c4 7e 06             les di, ptr [bp + 6]
+  061e8: 26 c6 85 e4 11 11    mov byte ptr es:[di + 0x11e4], 0x11
+  061ee: 26                    db 0x26
+  061ef: c6                    db 0xc6
+
+  [0 inline data blocks skipped]

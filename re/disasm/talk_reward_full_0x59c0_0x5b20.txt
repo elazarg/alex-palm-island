@@ -1,0 +1,130 @@
+
+============================================================
+  Custom range
+  File offset: 0x059c0 - 0x05b20
+============================================================
+  059c0: 00 54 18             add byte ptr [si + 0x18], dl
+  059c3: 01 54 14             add word ptr [si + 0x14], dx
+  059c6: 83 ec 0a             sub sp, 0xa
+  059c9: c4 7e 06             les di, ptr [bp + 6]
+  059cc: 26 8b 85 dc 01       mov ax, word ptr es:[di + 0x1dc]
+  059d1: 26 8b 95 de 01       mov dx, word ptr es:[di + 0x1de]
+  059d6: 89 46 fb             mov word ptr [bp - 5], ax
+  059d9: 89 56 fd             mov word ptr [bp - 3], dx
+  059dc: c6 46 ff 00          mov byte ptr [bp - 1], 0
+  059e0: 16                   push ss
+  059e1: c1 0e e8 7f ff       ror word ptr [0x7fe8], 0xff
+  059e6: c4 7e 06             les di, ptr [bp + 6]
+  059e9: 26 3a 85 cf 01       cmp al, byte ptr es:[di + 0x1cf]
+  059ee: 76 03                jbe 0x59f3
+  059f0: e9 1d 01             jmp 0x5b10
+  059f3: 8b 46 fb             mov ax, word ptr [bp - 5]
+  059f6: 0b 46 fd             or ax, word ptr [bp - 3]
+  059f9: 75 03                jne 0x59fe
+  059fb: e9 12 01             jmp 0x5b10
+  059fe: c4 7e fb             les di, ptr [bp - 5]
+  05a01: 89 7e f7             mov word ptr [bp - 9], di
+  05a04: 8c 46 f9             mov word ptr [bp - 7], es
+  05a07: c4 7e fb             les di, ptr [bp - 5]
+  05a0a: 26 c4 7d 15          les di, ptr es:[di + 0x15]
+  05a0e: 06                   push es
+  05a0f: b1 c4                mov cl, 0xc4
+  05a11: 7e 06                jle 0x5a19
+  05a13: 26 c4 bd 8b 00       les di, ptr es:[di + 0x8b]
+  05a18: 81 c7 59 00          add di, 0x59
+  05a1c: 06                   push es
+  05a1d: b1 9a                mov cl, 0x9a
+  05a1f: 65 3d 6f 7e          cmp ax, 0x7e6f
+  05a23: 74 10                je 0x5a35
+  05a25: c4 7e fb             les di, ptr [bp - 5]
+  05a28: 26 c4 7d 15          les di, ptr es:[di + 0x15]
+  05a2c: 26 80 3d 00          cmp byte ptr es:[di], 0
+  05a30: 74 03                je 0x5a35
+  05a32: e9 c7 00             jmp 0x5afc
+  05a35: c4 7e f7             les di, ptr [bp - 9]
+  05a38: 26 8a 45 1d          mov al, byte ptr es:[di + 0x1d]
+  05a3c: 88 56 0f             mov byte ptr [bp + 0xf], dl
+  05a3f: 26 80 7d 1d 01       cmp byte ptr es:[di + 0x1d], 1
+  05a44: 75 33                jne 0x5a79
+  05a46: 6a 00                push 0
+  05a48: c4 7e 06             les di, ptr [bp + 6]
+  05a4b: 26 c4 7d 7b          les di, ptr es:[di + 0x7b]
+  05a4f: 06                   push es
+  05a50: b1 26                mov cl, 0x26
+  05a52: 8b 7d 55             mov di, word ptr [di + 0x55]
+  05a55: ff 5d 4c             lcall [di + 0x4c]
+  05a58: c4 7e f7             les di, ptr [bp - 9]
+  05a5b: 06                   push es
+  05a5c: b1 9a                mov cl, 0x9a
+  05a5e: 83 08 e8             or word ptr [bx + si], 0xffe8
+  05a61: 10 c4                adc ah, al
+  05a63: 7e 06                jle 0x5a6b
+  05a65: 26 83 bd d6 01 00    cmp word ptr es:[di + 0x1d6], 0
+  05a6b: 74 0c                je 0x5a79
+  05a6d: 6a 0a                push 0xa
+  05a6f: c4 3e fa 2f          les di, ptr [0x2ffa]
+  05a73: 06                   push es
+  05a74: b1 0e                mov cl, 0xe
+  05a76: e8 ea dc             call 0x3763
+  05a79: c4 7e 06             les di, ptr [bp + 6]
+  05a7c: 36 93                xchg bx, ax
+  05a7e: bd d6 01             mov bp, 0x1d6
+  05a81: 00 74 35             add byte ptr [si + 0x35], dh
+  05a84: c4 7e f7             les di, ptr [bp - 9]
+  05a87: 26 80 7d 1d 00       cmp byte ptr es:[di + 0x1d], 0
+  05a8c: 74 2b                je 0x5ab9
+  05a8e: c4 7e 06             les di, ptr [bp + 6]
+  05a91: 26 ff b5 d6 01       push word ptr es:[di + 0x1d6]
+  05a96: c4 3e 1e 36          les di, ptr [0x361e]
+  05a9a: 06                   push es
+  05a9b: b1 1c                mov cl, 0x1c
+  05a9d: ee                   out dx, al  <<< SUSPECT
+  05a9e: 00 2d                add byte ptr [di], ch
+  05aa0: 10 c4                adc ah, al
+  05aa2: 7e 06                jle 0x5aaa
+  05aa4: e3 a4                jcxz 0x5a4a
+  05aa6: 26 89 85 d6 01       mov word ptr es:[di + 0x1d6], ax
+  05aab: 26 c4 bd d8 01       les di, ptr es:[di + 0x1d8]
+  05ab0: 06                   push es
+  05ab1: b1 26                mov cl, 0x26
+  05ab3: 8b 7d 55             mov di, word ptr [di + 0x55]
+  05ab6: ff 5d 30             lcall [di + 0x30]
+  05ab9: c4 7e 07             les di, ptr [bp + 7]
+  05abc: 37                   aaa   <<< SUSPECT
+  05abd: 81 7d 1b d0 07       cmp word ptr [di + 0x1b], 0x7d0
+  05ac2: 72 0e                jb 0x5ad2
+  05ac4: 26 8b 45 1b          mov ax, word ptr es:[di + 0x1b]
+  05ac8: c4 7e 06             les di, ptr [bp + 6]
+  05acb: 26 89 85 d2 01       mov word ptr es:[di + 0x1d2], ax
+  05ad0: eb 0f                jmp 0x5ae1
+  05ad2: c4 7e f7             les di, ptr [bp - 9]
+  05ad5: 26 8b 45 1b          mov ax, word ptr es:[di + 0x1b]
+  05ad9: c4 7e 06             les di, ptr [bp + 6]
+  05adc: 26 89 85 d4 01       mov word ptr es:[di + 0x1d4], ax
+  05ae1: c4 7e f7             les di, ptr [bp - 9]
+  05ae4: 26 83 7d 19 00       cmp word ptr es:[di + 0x19], 0
+  05ae9: 74 0f                je 0x5afa
+  05aeb: 26 ff 75 19          push word ptr es:[di + 0x19]
+  05aef: c4 3e 1e 36          les di, ptr [0x361e]
+  05af3: 06                   push es
+  05af4: b1 1c                mov cl, 0x1c
+  05af6: ee                   out dx, al  <<< SUSPECT
+  05af7: 00 2d                add byte ptr [di], ch
+  05af9: 10 eb                adc bl, ch
+  05afb: 14 c4                adc al, 0xc4
+  05afd: 7e fb                jle 0x5afa
+  05aff: 26 8b 45 1e          mov ax, word ptr es:[di + 0x1e]
+  05b03: 26 8b 55 20          mov dx, word ptr es:[di + 0x20]
+  05b07: 89 46 fb             mov word ptr [bp - 5], ax
+  05b0a: 89 56 fd             mov word ptr [bp - 3], dx
+  05b0d: e9 e3 fe             jmp 0x59f3
+  05b10: 8a 46 ff             mov al, byte ptr [bp - 1]
+  05b13: c9                   leave 
+  05b14: da 14                ficom dword ptr [si]
+  05b16: 00 00                add byte ptr [bx + si], al
+  05b18: 01 30                add word ptr [bx + si], si
+  05b1a: 01 40 08             add word ptr [bx + si + 8], ax
+  05b1d: 49                   dec cx
+  05b1e: 74 65                je 0x5b85
+
+  [0 inline data blocks skipped]

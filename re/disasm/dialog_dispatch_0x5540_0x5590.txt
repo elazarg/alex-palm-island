@@ -1,0 +1,39 @@
+
+============================================================
+  Custom range
+  File offset: 0x05540 - 0x05590
+============================================================
+  05540: c4 7e 0a             les di, ptr [bp + 0xa]
+  05543: 26 83 3d 64          cmp word ptr es:[di], 0x64
+  05547: 75 4b                jne 0x5594
+  05549: 26 8b 45 0c          mov ax, word ptr es:[di + 0xc]
+  0554d: 26 8b 55 0e          mov dx, word ptr es:[di + 0xe]
+  05551: c4 7e 06             les di, ptr [bp + 6]
+  05554: 26 3b 55 7d          cmp dx, word ptr es:[di + 0x7d]
+  05558: 75 3a                jne 0x5594
+  0555a: 36 4b                dec bx
+  0555c: 45                   inc bp
+  0555d: 7b 75                jnp 0x55d4
+  0555f: 34 26                xor al, 0x26
+  05561: 83 bd d2 01 00       cmp word ptr [di + 0x1d2], 0
+  05566: 75 06                jne 0x556e
+  05568: 55                   push bp
+  05569: e8 9a fa             call 0x5006
+  0556c: eb 17                jmp 0x5585
+  0556e: c4 7e 06             les di, ptr [bp + 6]
+  05571: 06                   push es
+  05572: b1 0e                mov cl, 0xe
+  05574: e8 80 0c             call 0x61f7
+  05577: c4 7e 06             les di, ptr [bp + 6]
+  0557a: 26 ff b5 d2 01       push word ptr es:[di + 0x1d2]
+  0557f: 06                   push es
+  05580: b1 0e                mov cl, 0xe
+  05582: e8 b7 05             call 0x5b3c
+  05585: c4 7e 0a             les di, ptr [bp + 0xa]
+  05588: 06                   push es
+  05589: b1 c4                mov cl, 0xc4
+  0558b: 7e 06                jle 0x5593
+  0558d: 06                   push es
+  0558e: b1 1c                mov cl, 0x1c
+
+  [0 inline data blocks skipped]

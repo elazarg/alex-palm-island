@@ -1,0 +1,43 @@
+
+============================================================
+  Custom range
+  File offset: 0x05a60 - 0x05ac0
+============================================================
+  05a60: e8 10 c4             call 0x1e73
+  05a63: 7e 06                jle 0x5a6b
+  05a65: 26 83 bd d6 01 00    cmp word ptr es:[di + 0x1d6], 0
+  05a6b: 74 0c                je 0x5a79
+  05a6d: 6a 0a                push 0xa
+  05a6f: c4 3e fa 2f          les di, ptr [0x2ffa]
+  05a73: 06                   push es
+  05a74: b1 0e                mov cl, 0xe
+  05a76: e8 ea dc             call 0x3763
+  05a79: c4 7e 06             les di, ptr [bp + 6]
+  05a7c: 36 93                xchg bx, ax
+  05a7e: bd d6 01             mov bp, 0x1d6
+  05a81: 00 74 35             add byte ptr [si + 0x35], dh
+  05a84: c4 7e f7             les di, ptr [bp - 9]
+  05a87: 26 80 7d 1d 00       cmp byte ptr es:[di + 0x1d], 0
+  05a8c: 74 2b                je 0x5ab9
+  05a8e: c4 7e 06             les di, ptr [bp + 6]
+  05a91: 26 ff b5 d6 01       push word ptr es:[di + 0x1d6]
+  05a96: c4 3e 1e 36          les di, ptr [0x361e]
+  05a9a: 06                   push es
+  05a9b: b1 1c                mov cl, 0x1c
+  05a9d: ee                   out dx, al  <<< SUSPECT
+  05a9e: 00 2d                add byte ptr [di], ch
+  05aa0: 10 c4                adc ah, al
+  05aa2: 7e 06                jle 0x5aaa
+  05aa4: e3 a4                jcxz 0x5a4a
+  05aa6: 26 89 85 d6 01       mov word ptr es:[di + 0x1d6], ax
+  05aab: 26 c4 bd d8 01       les di, ptr es:[di + 0x1d8]
+  05ab0: 06                   push es
+  05ab1: b1 26                mov cl, 0x26
+  05ab3: 8b 7d 55             mov di, word ptr [di + 0x55]
+  05ab6: ff 5d 30             lcall [di + 0x30]
+  05ab9: c4 7e 07             les di, ptr [bp + 7]
+  05abc: 37                   aaa   <<< SUSPECT
+  05abd: 81                    db 0x81
+  05abe: 7d 1b                jge 0x5adb
+
+  [0 inline data blocks skipped]

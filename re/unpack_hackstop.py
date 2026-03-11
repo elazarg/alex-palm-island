@@ -361,8 +361,13 @@ def main():
         # The destination tells us where the unpacked code goes in memory
         print(f"  Unpacked code destination: {dst_seg:04x}:{dst_off:04x}")
 
-    # Write full decrypted dump regardless
-    dump_file = input_file.replace('.EXE', '_decrypted.bin').replace('.exe', '_decrypted.bin')
+    # Write full decrypted dump regardless. If an output path was supplied,
+    # keep the dump beside that explicit output rather than silently writing
+    # back into the source game directory.
+    if output_file:
+        dump_file = output_file.replace('.exe', '.bin').replace('.EXE', '.BIN')
+    else:
+        dump_file = input_file.replace('.EXE', '_decrypted.bin').replace('.exe', '_decrypted.bin')
     with open(dump_file, 'wb') as f:
         f.write(all_decrypted)
     print(f"\n  Decrypted dump: {dump_file}")

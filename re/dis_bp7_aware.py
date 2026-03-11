@@ -8,22 +8,26 @@ Known inline data patterns:
   - AA XX XX 6F 7E XX  (6 bytes) — ~309 occurrences, likely I/O dispatch
   - AA XX XX            (3 bytes) — shorter variant (seen in transbig_assign)
   - F7 A9 XX XX         (4 bytes) — may also be inline data (~520 occurrences)
+  - B1 XX YY YY CE 0B  (6 bytes) — 237 occurrences, BP7 procedure call stubs.
+    XX = call type (0x1c: 187, 0x9a: 46, 0x2c: 4), YYYY = target reference.
+    These encode external/runtime calls resolved by BP7 startup code.
+    Not present in the pre-decompression binary; generated during LZSS unpack.
+    Cannot be resolved statically (EXE has 0 MZ relocations).
 
 This script disassembles functions while detecting and skipping these inline
 blocks, producing clean output that can be manually analyzed.
 
 Usage:
-    python3 re/dis_bp7_aware.py [start_offset] [end_offset]
+    python3 re/dis_bp7_aware.py [--bin PATH] [start_offset] [end_offset]
+    python3 re/dis_bp7_aware.py --key
     python3 re/dis_bp7_aware.py                    # defaults to transbig_reader
 """
+import argparse
 import struct
-import sys
 from capstone import Cs, CS_ARCH_X86, CS_MODE_16
 
-BIN_PATH = 'game/ALEX/ALEX1_unpacked.bin'
-
-with open(BIN_PATH, 'rb') as f:
-    data = f.read()
+DEFAULT_BIN_PATH = 'game_decrypted/bin/ALEX1_unpacked.bin'
+data = b''
 
 md = Cs(CS_ARCH_X86, CS_MODE_16)
 md.detail = False
@@ -202,11 +206,25 @@ def find_functions():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) >= 3:
-        start = int(sys.argv[1], 0)
-        end = int(sys.argv[2], 0)
+    parser = argparse.ArgumentParser(description="BP7-aware disassembler for the unpacked ALEX1 binary")
+    parser.add_argument('start', nargs='?', help='Start file offset')
+    parser.add_argument('end', nargs='?', help='End file offset')
+    parser.add_argument('--bin', dest='bin_path', default=DEFAULT_BIN_PATH,
+                        help=f'Path to unpacked binary (default: {DEFAULT_BIN_PATH})')
+    parser.add_argument('--all-clean', action='store_true',
+                        help='Disassemble functions that appear not to contain inline BP7 data')
+    parser.add_argument('--key', action='store_true',
+                        help='Disassemble key functions related to TRANS.BIG handling')
+    args = parser.parse_args()
+
+    with open(args.bin_path, 'rb') as f:
+        data = f.read()
+
+    if args.start and args.end:
+        start = int(args.start, 0)
+        end = int(args.end, 0)
         disassemble_bp7(start, end, f"Custom range")
-    elif len(sys.argv) == 2 and sys.argv[1] == '--all-clean':
+    elif args.all_clean:
         # Find and disassemble functions that have NO inline data
         functions = find_functions()
         print(f"Found {len(functions)} functions total\n")
@@ -233,7 +251,7 @@ if __name__ == '__main__':
                     if clean_count >= 20:
                         print(f"\n... showing first 20 clean functions")
                         break
-    elif len(sys.argv) == 2 and sys.argv[1] == '--key':
+    elif args.key:
         # Disassemble key functions related to TRANS.BIG
         functions = find_functions()
         key_funcs = [

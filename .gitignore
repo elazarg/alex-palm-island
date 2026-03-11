@@ -2,8 +2,9 @@
 game/cd/
 game/ALEX/
 
-# Disc image (available as release artifact)
+# Disc images (available as release artifacts)
 recovery/disc_image/alex_palm_island.iso
+alex-compact.iso
 
 # Generated directories
 game_decrypted/
@@ -13,6 +14,8 @@ game-files.zip
 # RE historical research (uncommitted)
 re/historical/
 re/__pycache__/
+re/renders/
+re/formats/__pycache__/
 
 # Build outputs
 alex-compact.jsdos

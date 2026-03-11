@@ -1,0 +1,107 @@
+
+============================================================
+  Custom range
+  File offset: 0x03ae0 - 0x03bc0
+============================================================
+  03ae0: 2d 10 08             sub ax, 0x810
+  03ae3: c0 75 0a 68          sal byte ptr [di + 0xa], 0x68
+  03ae7: e6 03                out 3, al  <<< SUSPECT
+  03ae9: 0e                   push cs
+  03aea: e8 ce 0d             call 0x48bb
+  03aed: e9 b4 10             jmp 0x4ba4
+  03af0: 68 f1 03             push 0x3f1
+  03af3: c4 3e 1e 36          les di, ptr [0x361e]
+  03af7: 06                   push es
+  03af8: b1 1c                mov cl, 0x1c
+  03afa: 26 01 3d             add word ptr es:[di], di
+  03afd: 20 08                and byte ptr [bx + si], cl
+  03aff: c0 75 0a 68          sal byte ptr [di + 0xa], 0x68
+  03b03: e7 03                out 3, ax  <<< SUSPECT
+  03b05: 0e                   push cs
+  03b06: e8 b2 0d             call 0x48bb
+  03b09: e9 88 00             jmp 0x3b94
+  03b0c: a1 6e 35             mov ax, word ptr [0x356e]
+  03b0f: 8b 16 70 35          mov dx, word ptr [0x3570]
+  03b13: c4 3e fe 2f          les di, ptr [0x2ffe]
+  03b17: 26 99                cdq 
+  03b19: 55                   push bp
+  03b1a: 64 26 89 55 66       mov word ptr es:[di + 0x66], dx
+  03b1f: c4 3e a8 30          les di, ptr [0x30a8]
+  03b23: 81 c7 66 00          add di, 0x66
+  03b27: 06                   push es
+  03b28: b1 c4                mov cl, 0xc4
+  03b2a: 3e                    db 0x3e
+  03b2b: fe                    db 0xfe
+  03b2c: 2f                   das   <<< SUSPECT
+  03b2d: 81 c7 5b 00          add di, 0x5b
+  03b31: 06                   push es
+  03b32: b1 6a                mov cl, 0x6a
+  03b34: 08 9a 8e 6e          or byte ptr [bp + si + 0x6e8e], bl
+  03b38: 6f                   outsw dx, word ptr [si]  <<< SUSPECT
+  03b39: 7e bf                jle 0x3afa
+  03b3b: 18 07                sbb byte ptr [bx], al
+  03b3d: 0e                   push cs
+  03b3e: b1 c4                mov cl, 0xc4
+  03b40: 3e a8 30             test al, 0x30
+  03b43: 81 c7 66 00          add di, 0x66
+  03b47: 06                   push es
+  03b48: b1 6a                mov cl, 0x6a
+  03b4a: 08 9a 8e 6e          or byte ptr [bp + si + 0x6e8e], bl
+  03b4e: 6f                   outsw dx, word ptr [si]  <<< SUSPECT
+  03b4f: 7e bf                jle 0x3b10
+  03b51: 1f                   pop ds
+  03b52: 07                   pop es
+  03b53: 0e                   push cs
+  03b54: c1 cf 92             ror di, 0x92
+  03b57: 21 1e b1 6a          and word ptr [0x6ab1], bx
+  03b5b: 0c 9a                or al, 0x9a
+  03b5d: 8e 6e 6f             mov gs, word ptr [bp + 0x6f]
+  03b60: 7e c6                jle 0x3b28
+  03b62: 06                   push es
+  03b63: 94                   xchg sp, ax
+  03b64: 35 08 bf             xor ax, 0xbf08
+  03b67: 8f                    db 0x8f
+  03b68: 35 1e c1             xor ax, 0xc11e
+  03b6b: cf                   iret 
+  03b6c: 2a 07                sub al, byte ptr [bx]
+  03b6e: 0e                   push cs
+  03b6f: b1 9a                mov cl, 0x9a
+  03b71: 4f                   dec di
+  03b72: 00 e8                add al, ch
+  03b74: 10 ff                adc bh, bh
+  03b76: 36 00 30             add byte ptr ss:[bx + si], dh
+  03b79: ff 36 0e 40          push word ptr [0x400e]
+  03b7d: 9a 00 00 ce 0b       lcall 0xbce, 0
+  03b82: c6 06 64 35 05       mov byte ptr [0x3564], 5
+  03b87: c4 3e fe 2f          les di, ptr [0x2ffe]
+  03b8b: 06                   push es
+  03b8c: b1 26                mov cl, 0x26
+  03b8e: 8b 8d 65 ff          mov cx, word ptr [di - 0x9b]
+  03b92: 5d                   pop bp
+  03b93: 40                   inc ax
+  03b94: c9                   leave 
+  03b95: c3                   ret 
+  03b96: 06                   push es
+  03b97: 4d                   dec bp
+  03b98: 61                   popaw 
+  03b99: 70 50                jo 0x3beb
+  03b9b: 61                   popaw 
+  03b9c: 7c 75                jl 0x3c13
+  03b9e: 64 20 e3             and bl, ah
+  03ba1: a4                   movsb byte ptr es:[di], byte ptr [si]
+  03ba2: 54                   push sp
+  03ba3: 18 01                sbb byte ptr [bx + di], al
+  03ba5: 54                   push sp
+  03ba6: 14 68                adc al, 0x68
+  03ba8: 08 07                or byte ptr [bx], al
+  03baa: c4 3e 1e 36          les di, ptr [0x361e]
+  03bae: 06                   push es
+  03baf: b1 1c                mov cl, 0x1c
+  03bb1: 26 01 2d             add word ptr es:[di], bp
+  03bb4: 10 08                adc byte ptr [bx + si], cl
+  03bb6: c0 75 09 68          sal byte ptr [di + 9], 0x68
+  03bba: f7 2a                imul word ptr [bp + si]
+  03bbc: 0e                   push cs
+  03bbd: e8 fb 0c             call 0x48bb
+
+  [0 inline data blocks skipped]

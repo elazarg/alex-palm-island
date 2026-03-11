@@ -1,0 +1,44 @@
+
+============================================================
+  Custom range
+  File offset: 0x08080 - 0x085c0
+============================================================
+  08080: fe                    db 0xfe
+  08081: 16                   push ss
+  08082: 57                   push di
+  08083: c4 3e fe 2f          les di, ptr [0x2ffe]
+  08087: 26 c4 7d 68          les di, ptr es:[di + 0x68]
+  0808b: 06                   push es
+  0808c: b1 9a                mov cl, 0x9a
+  0808e: 62 08                bound cx, dword ptr [bx + si]
+  08090: ce                   into   <<< SUSPECT
+  08091: 0b 6a 15             or bp, word ptr [bp + si + 0x15]
+  08094: 7a 09                jp 0x809f
+  08096: c4 3e a8 30          les di, ptr [0x30a8]
+  0809a: 26 ff 75 04          push word ptr es:[di + 4]
+  0809e: 26 ff 75 02          push word ptr es:[di + 2]
+  080a2: f7 a9 7f fe          ; LEA DI, [BP-385]  (0xfe7f)
+  ---- resume code ----
+  080a6: 16                   push ss
+  080a7: 57                   push di
+  080a8: c4 3e a8 30          les di, ptr [0x30a8]
+  080ac: 16                   push ss
+  080ad: c1 1c c6             rcr word ptr [si], 0xc6
+  080b0: 0b ce                or cx, si
+  080b2: 0b f7                or si, di
+  080b4: a9 7f fe             test ax, 0xfe7f
+  080b7: 16                   push ss
+  080b8: 57                   push di
+  080b9: 9a 49 39 6f 7e       lcall 0x7e6f, 0x3949
+  080be: 9a f4 04 6f 7e       lcall 0x7e6f, 0x4f4
+  080c3: c6 46 ff 01          mov byte ptr [bp - 1], 1
+  080c7: 8a 46 ff             mov al, byte ptr [bp - 1]
+  080ca: c9                   leave 
+  080cb: ca 04 10             retf 0x1004
+  --- RETF reached, 1266 bytes remaining ---
+  080ce: 11 2e 04 2e 47 41 4d 65 64 20 c8 f0 02 54 18 11  ....GAMed ...T..
+  080de: 64 14 01 54 e0 02 8c d3 8e c3 8c db fc f7 a9 ff  d..T............
+  080ee: fe c5 76 06 ac aa 91 30 ed f3 a4 8e eb d6 46 ff  ..v....0......F.
+  080fe: 00 80 a9 ff fe 00 75 03 e9 a0 02 f7 a9 ff fe 16  ......u.........
+
+  [1 inline data blocks skipped]

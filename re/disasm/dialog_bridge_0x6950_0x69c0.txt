@@ -1,0 +1,58 @@
+
+============================================================
+  Custom range
+  File offset: 0x06950 - 0x069c0
+============================================================
+  06950: 4e                   dec si
+  06951: 74 35                je 0x6988
+  06953: 06                   push es
+  06954: 75 05                jne 0x695b
+  06956: c6 06 64 35 05       mov byte ptr [0x3564], 5
+  0695b: c4 7e 06             les di, ptr [bp + 6]
+  0695e: 26 83 7d 30 00       cmp word ptr es:[di + 0x30], 0
+  06963: 74 14                je 0x6979
+  06965: 26 ff 75 30          push word ptr es:[di + 0x30]
+  06969: 26 8a 45 32          mov al, byte ptr es:[di + 0x32]
+  0696d: 50                   push ax
+  0696e: c4 3e 1e 36          les di, ptr [0x361e]
+  06972: 06                   push es
+  06973: b1 1c                mov cl, 0x1c
+  06975: 55                   push bp
+  06976: 00 2d                add byte ptr [di], ch
+  06978: 10 c4                adc ah, al
+  0697a: 7e 06                jle 0x6982
+  0697c: 81 c7 10 00          add di, 0x10
+  06980: 06                   push es
+  06981: b1 c4                mov cl, 0xc4
+  06983: 7e 06                jle 0x698b
+  06985: 26 8a 45 32          mov al, byte ptr es:[di + 0x32]
+  06989: 50                   push ax
+  0698a: c4 3e fe 2f          les di, ptr [0x2ffe]
+  0698e: 06                   push es
+  0698f: b1 0e                mov cl, 0xe
+  06991: e8 6d 18             call 0x8201
+  06994: d9 ca                fxch st(2)
+  06996: 04 00                add al, 0
+  06998: 65 64 20 e3          and bl, ah
+  0699c: a4                   movsb byte ptr es:[di], byte ptr [si]
+  0699d: 54                   push sp
+  0699e: 18 01                sbb byte ptr [bx + di], al
+  069a0: 54                   push sp
+  069a1: 14 bf                adc al, 0xbf
+  069a3: 0e                   push cs
+  069a4: 00 9a c6 32          add byte ptr [bp + si + 0x32c6], bl
+  069a8: 54                   push sp
+  069a9: 14 74                adc al, 0x74
+  069ab: 20 ff                and bh, bh
+  069ad: 76 10                jbe 0x69bf
+  069af: 8a 46 0e             mov al, byte ptr [bp + 0xe]
+  069b2: 50                   push ax
+  069b3: 6a 00                push 0
+  069b5: e3 a4                jcxz 0x695b
+  069b7: 50                   push ax
+  069b8: c4 7e 06             les di, ptr [bp + 6]
+  069bb: 06                   push es
+  069bc: c1 2c af             shr word ptr [si], 0xaf
+  069bf: 01                    db 0x01
+
+  [0 inline data blocks skipped]

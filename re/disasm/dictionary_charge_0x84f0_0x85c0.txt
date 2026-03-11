@@ -1,0 +1,92 @@
+
+============================================================
+  Custom range
+  File offset: 0x084f0 - 0x085c0
+============================================================
+  084f0: 8b 16 aa 30          mov dx, word ptr [0x30aa]
+  084f4: 3b 16 d3 33          cmp dx, word ptr [0x33d3]
+  084f8: 75 0d                jne 0x8507
+  084fa: 3b 06 d1 33          cmp ax, word ptr [0x33d1]
+  084fe: 75 07                jne 0x8507
+  08500: c6 46 ff 01          mov byte ptr [bp - 1], 1
+  08504: e9 aa 00             jmp 0x85b1
+  08507: c6 46 ff 00          mov byte ptr [bp - 1], 0
+  0850b: c4 3e fa 2f          les di, ptr [0x2ffa]
+  0850f: 26 83 bd 6c 02 00    cmp word ptr es:[di + 0x26c], 0
+  08515: 7c 0a                jl 0x8521
+  08517: 7f 1a                jg 0x8533
+  08519: 26 83 bd 6a 02 05    cmp word ptr es:[di + 0x26a], 5
+  0851f: 73 12                jae 0x8533
+  08521: bf 1c 50             mov di, 0x501c
+  08524: 0e                   push cs
+  08525: b1 6a                mov cl, 0x6a
+  08527: 01 6a 00             add word ptr [bp + si], bp
+  0852a: 6a 00                push 0
+  0852c: 54                   push sp
+  0852d: 93                   xchg bx, ax
+  0852e: 00 b1 08 eb          add byte ptr [bx + di - 0x14f8], dh
+  08532: 7e 68                jle 0x859c
+  08534: ce                   into   <<< SUSPECT
+  08535: 07                   pop es
+  08536: c4 3e 1e 36          les di, ptr [0x361e]
+  0853a: 06                   push es
+  0853b: b1 1c                mov cl, 0x1c
+  0853d: 26 01 2d             add word ptr es:[di], bp
+  08540: 10 08                adc byte ptr [bx + si], cl
+  08542: c0 75 26 bf          sal byte ptr [di + 0x26], 0xbf
+  08546: 4c                   dec sp
+  08547: 50                   push ax
+  08548: 0e                   push cs
+  08549: b1 6a                mov cl, 0x6a
+  0854b: 13 7a 04             adc di, word ptr [bp + si + 4]
+  0854e: 6a 00                push 0
+  08550: 54                   push sp
+  08551: 93                   xchg bx, ax
+  08552: 00 b1 08 3c          add byte ptr [bx + di + 0x3c08], dh
+  08556: 03 74 02             add si, word ptr [si + 2]
+  08559: eb 56                jmp 0x85b1
+  0855b: 78 de                js 0x853b
+  0855d: 07                   pop es
+  0855e: c4 3e 1e 36          les di, ptr [0x361e]
+  08562: 06                   push es
+  08563: b1 1c                mov cl, 0x1c
+  08565: ee                   out dx, al  <<< SUSPECT
+  08566: 00 2d                add byte ptr [di], ch
+  08568: 10 eb                adc bl, ch
+  0856a: 36 68 cf 07          push 0x7cf
+  0856e: c4 4e 2e             les cx, ptr [bp + 0x2e]
+  08571: 36 06                push es
+  08573: b1 1c                mov cl, 0x1c
+  08575: 26 01 2d             add word ptr es:[di], bp
+  08578: 10 08                adc byte ptr [bx + si], cl
+  0857a: c0 75 16 bf          sal byte ptr [di + 0x16], 0xbf
+  0857e: 91                   xchg cx, ax
+  0857f: 50                   push ax
+  08580: 0e                   push cs
+  08581: b1 6a                mov cl, 0x6a
+  08583: 13 7a 04             adc di, word ptr [bp + si + 4]
+  08586: 6a 00                push 0
+  08588: 54                   push sp
+  08589: 93                   xchg bx, ax
+  0858a: 00 b1 08 3c          add byte ptr [bx + di + 0x3c08], dh
+  0858e: 03 74 02             add si, word ptr [si + 2]
+  08591: eb 1e                jmp 0x85b1
+  08593: 78 df                js 0x8574
+  08595: 07                   pop es
+  08596: c4 3e 1e 36          les di, ptr [0x361e]
+  0859a: 06                   push es
+  0859b: b1 1c                mov cl, 0x1c
+  0859d: ee                   out dx, al  <<< SUSPECT
+  0859e: 00 2d                add byte ptr [di], ch
+  085a0: 10 6a fb             adc byte ptr [bp + si - 5], ch
+  085a3: c4 3e fa 2f          les di, ptr [0x2ffa]
+  085a7: 16                   push ss
+  085a8: c1 0e e8 b6 b1       ror word ptr [0xb6e8], 0xb1
+  085ad: c6 46 ff 01          mov byte ptr [bp - 1], 1
+  085b1: 8a 46 ff             mov al, byte ptr [bp - 1]
+  085b4: c9                   leave 
+  085b5: cb                   retf 
+  --- RETF reached, 10 bytes remaining ---
+  085b6: 43 54 68 65 20 80 82 6f 67 72                    CThe ..ogr
+
+  [0 inline data blocks skipped]

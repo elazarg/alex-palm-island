@@ -1,0 +1,32 @@
+
+============================================================
+  Custom range
+  File offset: 0x04040 - 0x04080
+============================================================
+  04040: 34 d4                xor al, 0xd4
+  04042: 8e 06 26 c4          mov es, word ptr [0xc426]
+  04046: 7d 5d                jge 0x40a5
+  04048: 06                   push es
+  04049: b1 1c                mov cl, 0x1c
+  0404b: 69 3e ce 0b d4 4e    imul di, word ptr [0xbce], 0x4ed4
+  04051: a8 30                test al, 0x30
+  04053: 26 8b 45 3c          mov ax, word ptr es:[di + 0x3c]
+  04057: 25 00 02             and ax, 0x200
+  0405a: 09 c0                or ax, ax
+  0405c: 74 36                je 0x4094
+  0405e: 6a 01                push 1
+  04060: 68 08 07             push 0x708
+  04063: c4 3e 1e 36          les di, ptr [0x361e]
+  04067: 06                   push es
+  04068: b1 2c                mov cl, 0x2c
+  0406a: 36 01 2d             add word ptr ss:[di], bp
+  0406d: 10 08                adc byte ptr [bx + si], cl
+  0406f: c0 b0 00 75 01       sal byte ptr [bx + si + 0x7500], 1
+  04074: 40                   inc ax
+  04075: 50                   push ax
+  04076: c4 7e 06             les di, ptr [bp + 6]
+  04079: 26 c4 7d 75          les di, ptr es:[di + 0x75]
+  0407d: 06                   push es
+  0407e: b1 1c                mov cl, 0x1c
+
+  [0 inline data blocks skipped]

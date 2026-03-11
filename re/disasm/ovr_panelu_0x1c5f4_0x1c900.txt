@@ -1,0 +1,323 @@
+
+============================================================
+  Custom range
+  File offset: 0x1c5f4 - 0x1c900
+============================================================
+  1c5f4: 0e                   push cs
+  1c5f5: 00 05                add byte ptr [di], al
+  1c5f7: 50                   push ax
+  1c5f8: 61                   popaw 
+  1c5f9: 6e                   outsb dx, byte ptr [si]  <<< SUSPECT
+  1c5fa: 65 6c                insb byte ptr es:[di], dx  <<< SUSPECT
+  1c5fc: 55                   push bp
+  1c5fd: 89 e5                mov bp, sp
+  1c5ff: b8 0a 01             mov ax, 0x10a
+  1c602: 9a 30 05 12 18       lcall 0x1812, 0x530
+  1c607: 81 ec 0a 01          sub sp, 0x10a
+  1c60b: bf 55 00             mov di, 0x55
+  1c60e: 9a c6 32 12 18       lcall 0x1812, 0x32c6
+  1c613: 75 03                jne 0x1c618
+  1c615: e9 f6 03             jmp 0x1ca0e
+  1c618: 6a 00                push 0
+  1c61a: 6a 00                push 0
+  1c61c: 68 40 01             push 0x140
+  1c61f: 68 c8 00             push 0xc8
+  1c622: 8d 7e f8             lea di, [bp - 8]
+  1c625: 16                   push ss
+  1c626: 57                   push di
+  1c627: 9a 00 00 c4 10       lcall 0x10c4, 0
+  1c62c: 8d 7e f8             lea di, [bp - 8]
+  1c62f: 16                   push ss
+  1c630: 57                   push di
+  1c631: 8d 7e f1             lea di, [bp - 0xf]
+  1c634: 16                   push ss
+  1c635: 57                   push di
+  1c636: bf 28 07             mov di, 0x728
+  1c639: 0e                   push cs
+  1c63a: 57                   push di
+  1c63b: 9a 74 3c 12 18       lcall 0x1812, 0x3c74
+  1c640: 31 c0                xor ax, ax
+  1c642: 50                   push ax
+  1c643: c4 7e 06             les di, ptr [bp + 6]
+  1c646: 06                   push es
+  1c647: 57                   push di
+  1c648: 9a 20 00 ce 0b       lcall 0xbce, 0x20
+  1c64d: c4 3e a8 30          les di, ptr [0x30a8]
+  1c651: 81 c7 66 00          add di, 0x66
+  1c655: 06                   push es
+  1c656: 57                   push di
+  1c657: 9a 3e 02 6d 10       lcall 0x106d, 0x23e
+  1c65c: 68 8e 03             push 0x38e
+  1c65f: 9a c6 04 6d 10       lcall 0x106d, 0x4c6
+  1c664: 8d be f7 fe          lea di, [bp - 0x109]
+  1c668: 16                   push ss
+  1c669: 57                   push di
+  1c66a: 9a 7f 00 6d 10       lcall 0x106d, 0x7f
+  1c66f: c4 7e 06             les di, ptr [bp + 6]
+  1c672: 81 c7 58 01          add di, 0x158
+  1c676: 06                   push es
+  1c677: 57                   push di
+  1c678: 6a 14                push 0x14
+  1c67a: 9a 8e 3c 12 18       lcall 0x1812, 0x3c8e
+  1c67f: 6a 41                push 0x41
+  1c681: 6a 07                push 7
+  1c683: 6a 0b                push 0xb
+  1c685: c4 7e 06             les di, ptr [bp + 6]
+  1c688: 06                   push es
+  1c689: 57                   push di
+  1c68a: 0e                   push cs
+  1c68b: e8 c4 05             call 0x1cc52
+  1c68e: 6a 42                push 0x42
+  1c690: 6a 6e                push 0x6e
+  1c692: 6a 0b                push 0xb
+  1c694: c4 7e 06             les di, ptr [bp + 6]
+  1c697: 06                   push es
+  1c698: 57                   push di
+  1c699: 0e                   push cs
+  1c69a: e8 b5 05             call 0x1cc52
+  1c69d: 6a 43                push 0x43
+  1c69f: 68 d5 00             push 0xd5
+  1c6a2: 6a 0b                push 0xb
+  1c6a4: c4 7e 06             les di, ptr [bp + 6]
+  1c6a7: 06                   push es
+  1c6a8: 57                   push di
+  1c6a9: 0e                   push cs
+  1c6aa: e8 a5 05             call 0x1cc52
+  1c6ad: 6a 44                push 0x44
+  1c6af: 6a 07                push 7
+  1c6b1: 6a 3d                push 0x3d
+  1c6b3: c4 7e 06             les di, ptr [bp + 6]
+  1c6b6: 06                   push es
+  1c6b7: 57                   push di
+  1c6b8: 0e                   push cs
+  1c6b9: e8 96 05             call 0x1cc52
+  1c6bc: 6a 45                push 0x45
+  1c6be: 6a 6e                push 0x6e
+  1c6c0: 6a 3d                push 0x3d
+  1c6c2: c4 7e 06             les di, ptr [bp + 6]
+  1c6c5: 06                   push es
+  1c6c6: 57                   push di
+  1c6c7: 0e                   push cs
+  1c6c8: e8 87 05             call 0x1cc52
+  1c6cb: 6a 46                push 0x46
+  1c6cd: 68 d5 00             push 0xd5
+  1c6d0: 6a 3d                push 0x3d
+  1c6d2: c4 7e 06             les di, ptr [bp + 6]
+  1c6d5: 06                   push es
+  1c6d6: 57                   push di
+  1c6d7: 0e                   push cs
+  1c6d8: e8 77 05             call 0x1cc52
+  1c6db: 6a 47                push 0x47
+  1c6dd: 6a 07                push 7
+  1c6df: 6a 6f                push 0x6f
+  1c6e1: c4 7e 06             les di, ptr [bp + 6]
+  1c6e4: 06                   push es
+  1c6e5: 57                   push di
+  1c6e6: 0e                   push cs
+  1c6e7: e8 68 05             call 0x1cc52
+  1c6ea: 6a 48                push 0x48
+  1c6ec: 6a 6e                push 0x6e
+  1c6ee: 6a 6f                push 0x6f
+  1c6f0: c4 7e 06             les di, ptr [bp + 6]
+  1c6f3: 06                   push es
+  1c6f4: 57                   push di
+  1c6f5: 0e                   push cs
+  1c6f6: e8 59 05             call 0x1cc52
+  1c6f9: 6a 49                push 0x49
+  1c6fb: 68 d5 00             push 0xd5
+  1c6fe: 6a 6f                push 0x6f
+  1c700: c4 7e 06             les di, ptr [bp + 6]
+  1c703: 06                   push es
+  1c704: 57                   push di
+  1c705: 0e                   push cs
+  1c706: e8 49 05             call 0x1cc52
+  1c709: c4 7e 06             les di, ptr [bp + 6]
+  1c70c: 26 c6 45 57 00       mov byte ptr es:[di + 0x57], 0
+  1c711: 26 c6 85 57 01 00    mov byte ptr es:[di + 0x157], 0
+  1c717: 68 20 03             push 0x320
+  1c71a: 9a c6 04 6d 10       lcall 0x106d, 0x4c6
+  1c71f: 9a 00 00 6d 10       lcall 0x106d, 0
+  1c724: 6a 1b                push 0x1b
+  1c726: 6a 1a                push 0x1a
+  1c728: 6a 57                push 0x57
+  1c72a: 6a 29                push 0x29
+  1c72c: 8d 7e f8             lea di, [bp - 8]
+  1c72f: 16                   push ss
+  1c730: 57                   push di
+  1c731: 9a 00 00 c4 10       lcall 0x10c4, 0
+  1c736: 8d 7e f8             lea di, [bp - 8]
+  1c739: 16                   push ss
+  1c73a: 57                   push di
+  1c73b: ff 36 84 35          push word ptr [0x3584]
+  1c73f: ff 36 82 35          push word ptr [0x3582]
+  1c743: 8d be f7 fe          lea di, [bp - 0x109]
+  1c747: 16                   push ss
+  1c748: 57                   push di
+  1c749: 9a b7 01 6d 10       lcall 0x106d, 0x1b7
+  1c74e: 6a 00                push 0
+  1c750: 6a 00                push 0
+  1c752: b8 b4 2b             mov ax, 0x2bb4
+  1c755: 50                   push ax
+  1c756: 31 c0                xor ax, ax
+  1c758: 50                   push ax
+  1c759: 50                   push ax
+  1c75a: 9a 99 2a ce 0b       lcall 0xbce, 0x2a99
+  1c75f: c4 7e 06             les di, ptr [bp + 6]
+  1c762: 26 89 85 6d 01       mov word ptr es:[di + 0x16d], ax
+  1c767: 26 89 95 6f 01       mov word ptr es:[di + 0x16f], dx
+  1c76c: 68 82 00             push 0x82
+  1c76f: 6a 1a                push 0x1a
+  1c771: 68 be 00             push 0xbe
+  1c774: 6a 29                push 0x29
+  1c776: 8d 7e f8             lea di, [bp - 8]
+  1c779: 16                   push ss
+  1c77a: 57                   push di
+  1c77b: 9a 00 00 c4 10       lcall 0x10c4, 0
+  1c780: 8d 7e f8             lea di, [bp - 8]
+  1c783: 16                   push ss
+  1c784: 57                   push di
+  1c785: ff 36 84 35          push word ptr [0x3584]
+  1c789: ff 36 82 35          push word ptr [0x3582]
+  1c78d: 8d be f7 fe          lea di, [bp - 0x109]
+  1c791: 16                   push ss
+  1c792: 57                   push di
+  1c793: 9a b7 01 6d 10       lcall 0x106d, 0x1b7
+  1c798: 6a 00                push 0
+  1c79a: 6a 00                push 0
+  1c79c: b8 b4 2b             mov ax, 0x2bb4
+  1c79f: 50                   push ax
+  1c7a0: 31 c0                xor ax, ax
+  1c7a2: 50                   push ax
+  1c7a3: 50                   push ax
+  1c7a4: 9a 99 2a ce 0b       lcall 0xbce, 0x2a99
+  1c7a9: c4 7e 06             les di, ptr [bp + 6]
+  1c7ac: 26 89 85 71 01       mov word ptr es:[di + 0x171], ax
+  1c7b1: 26 89 95 73 01       mov word ptr es:[di + 0x173], dx
+  1c7b6: 68 e9 00             push 0xe9
+  1c7b9: 6a 1a                push 0x1a
+  1c7bb: 68 25 01             push 0x125
+  1c7be: 6a 29                push 0x29
+  1c7c0: 8d 7e f8             lea di, [bp - 8]
+  1c7c3: 16                   push ss
+  1c7c4: 57                   push di
+  1c7c5: 9a 00 00 c4 10       lcall 0x10c4, 0
+  1c7ca: 8d 7e f8             lea di, [bp - 8]
+  1c7cd: 16                   push ss
+  1c7ce: 57                   push di
+  1c7cf: ff 36 84 35          push word ptr [0x3584]
+  1c7d3: ff 36 82 35          push word ptr [0x3582]
+  1c7d7: 8d be f7 fe          lea di, [bp - 0x109]
+  1c7db: 16                   push ss
+  1c7dc: 57                   push di
+  1c7dd: 9a b7 01 6d 10       lcall 0x106d, 0x1b7
+  1c7e2: 6a 00                push 0
+  1c7e4: 6a 00                push 0
+  1c7e6: b8 b4 2b             mov ax, 0x2bb4
+  1c7e9: 50                   push ax
+  1c7ea: 31 c0                xor ax, ax
+  1c7ec: 50                   push ax
+  1c7ed: 50                   push ax
+  1c7ee: 9a 99 2a ce 0b       lcall 0xbce, 0x2a99
+  1c7f3: c4 7e 06             les di, ptr [bp + 6]
+  1c7f6: 26 89 85 75 01       mov word ptr es:[di + 0x175], ax
+  1c7fb: 26 89 95 77 01       mov word ptr es:[di + 0x177], dx
+  1c800: 6a 1b                push 0x1b
+  1c802: 6a 4b                push 0x4b
+  1c804: 6a 57                push 0x57
+  1c806: 6a 5a                push 0x5a
+  1c808: 8d 7e f8             lea di, [bp - 8]
+  1c80b: 16                   push ss
+  1c80c: 57                   push di
+  1c80d: 9a 00 00 c4 10       lcall 0x10c4, 0
+  1c812: 8d 7e f8             lea di, [bp - 8]
+  1c815: 16                   push ss
+  1c816: 57                   push di
+  1c817: ff 36 84 35          push word ptr [0x3584]
+  1c81b: ff 36 82 35          push word ptr [0x3582]
+  1c81f: 8d be f7 fe          lea di, [bp - 0x109]
+  1c823: 16                   push ss
+  1c824: 57                   push di
+  1c825: 9a b7 01 6d 10       lcall 0x106d, 0x1b7
+  1c82a: 6a 00                push 0
+  1c82c: 6a 00                push 0
+  1c82e: b8 b4 2b             mov ax, 0x2bb4
+  1c831: 50                   push ax
+  1c832: 31 c0                xor ax, ax
+  1c834: 50                   push ax
+  1c835: 50                   push ax
+  1c836: 9a 99 2a ce 0b       lcall 0xbce, 0x2a99
+  1c83b: c4 7e 06             les di, ptr [bp + 6]
+  1c83e: 26 89 85 79 01       mov word ptr es:[di + 0x179], ax
+  1c843: 26 89 95 7b 01       mov word ptr es:[di + 0x17b], dx
+  1c848: 68 82 00             push 0x82
+  1c84b: 6a 4b                push 0x4b
+  1c84d: 68 be 00             push 0xbe
+  1c850: 6a 5a                push 0x5a
+  1c852: 8d 7e f8             lea di, [bp - 8]
+  1c855: 16                   push ss
+  1c856: 57                   push di
+  1c857: 9a 00 00 c4 10       lcall 0x10c4, 0
+  1c85c: 8d 7e f8             lea di, [bp - 8]
+  1c85f: 16                   push ss
+  1c860: 57                   push di
+  1c861: ff 36 84 35          push word ptr [0x3584]
+  1c865: ff 36 82 35          push word ptr [0x3582]
+  1c869: 8d be f7 fe          lea di, [bp - 0x109]
+  1c86d: 16                   push ss
+  1c86e: 57                   push di
+  1c86f: 9a b7 01 6d 10       lcall 0x106d, 0x1b7
+  1c874: 6a 00                push 0
+  1c876: 6a 00                push 0
+  1c878: b8 b4 2b             mov ax, 0x2bb4
+  1c87b: 50                   push ax
+  1c87c: 31 c0                xor ax, ax
+  1c87e: 50                   push ax
+  1c87f: 50                   push ax
+  1c880: 9a 99 2a ce 0b       lcall 0xbce, 0x2a99
+  1c885: c4 7e 06             les di, ptr [bp + 6]
+  1c888: 26 89 85 7d 01       mov word ptr es:[di + 0x17d], ax
+  1c88d: 26 89 95 7f 01       mov word ptr es:[di + 0x17f], dx
+  1c892: 68 e9 00             push 0xe9
+  1c895: 6a 4b                push 0x4b
+  1c897: 68 25 01             push 0x125
+  1c89a: 6a 5a                push 0x5a
+  1c89c: 8d 7e f8             lea di, [bp - 8]
+  1c89f: 16                   push ss
+  1c8a0: 57                   push di
+  1c8a1: 9a 00 00 c4 10       lcall 0x10c4, 0
+  1c8a6: 8d 7e f8             lea di, [bp - 8]
+  1c8a9: 16                   push ss
+  1c8aa: 57                   push di
+  1c8ab: ff 36 84 35          push word ptr [0x3584]
+  1c8af: ff 36 82 35          push word ptr [0x3582]
+  1c8b3: 8d be f7 fe          lea di, [bp - 0x109]
+  1c8b7: 16                   push ss
+  1c8b8: 57                   push di
+  1c8b9: 9a b7 01 6d 10       lcall 0x106d, 0x1b7
+  1c8be: 6a 00                push 0
+  1c8c0: 6a 00                push 0
+  1c8c2: b8 b4 2b             mov ax, 0x2bb4
+  1c8c5: 50                   push ax
+  1c8c6: 31 c0                xor ax, ax
+  1c8c8: 50                   push ax
+  1c8c9: 50                   push ax
+  1c8ca: 9a 99 2a ce 0b       lcall 0xbce, 0x2a99
+  1c8cf: c4 7e 06             les di, ptr [bp + 6]
+  1c8d2: 26 89 85 81 01       mov word ptr es:[di + 0x181], ax
+  1c8d7: 26 89 95 83 01       mov word ptr es:[di + 0x183], dx
+  1c8dc: 6a 1b                push 0x1b
+  1c8de: 6a 7e                push 0x7e
+  1c8e0: 6a 57                push 0x57
+  1c8e2: 68 8d 00             push 0x8d
+  1c8e5: 8d 7e f8             lea di, [bp - 8]
+  1c8e8: 16                   push ss
+  1c8e9: 57                   push di
+  1c8ea: 9a 00 00 c4 10       lcall 0x10c4, 0
+  1c8ef: 8d 7e f8             lea di, [bp - 8]
+  1c8f2: 16                   push ss
+  1c8f3: 57                   push di
+  1c8f4: ff 36 84 35          push word ptr [0x3584]
+  1c8f8: ff 36 82 35          push word ptr [0x3582]
+  1c8fc: 8d be f7 fe          lea di, [bp - 0x109]
+
+  [0 inline data blocks skipped]

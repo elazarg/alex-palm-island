@@ -1,0 +1,181 @@
+
+============================================================
+  Custom range
+  File offset: 0x0ab70 - 0x0ad10
+============================================================
+  0ab70: 3c 0d                cmp al, 0xd
+  0ab72: 00 01                add byte ptr [bx + di], al
+  0ab74: 26 89 45 3c          mov word ptr es:[di + 0x3c], ax
+  0ab78: 06                   push es
+  0ab79: b1 26                mov cl, 0x26
+  0ab7b: 8b 7d 55             mov di, word ptr [di + 0x55]
+  0ab7e: ff 5d 3c             lcall [di + 0x3c]
+  0ab81: e9 db 01             jmp 0xad5f
+  0ab84: 3c 49                cmp al, 0x49
+  0ab86: 75 4c                jne 0xabd4
+  0ab88: f7 7e f7             idiv word ptr [bp - 9]
+  0ab8b: 16                   push ss
+  0ab8c: b1 f7                mov cl, 0xf7
+  0ab8e: a9 f7 fe             test ax, 0xfef7
+  0ab91: 16                   push ss
+  0ab92: 57                   push di
+  0ab93: c4 3e a8 30          les di, ptr [0x30a8]
+  0ab97: 81 c7 0a 00          add di, 0xa
+  0ab9b: 06                   push es
+  0ab9c: b1 9a                mov cl, 0x9a
+  0ab9e: 74 6e                je 0xac0e
+  0aba0: 6f                   outsw dx, word ptr [si]  <<< SUSPECT
+  0aba1: 7e bf                jle 0xab62
+  0aba3: 1c 1f                sbb al, 0x1f
+  0aba5: 0e                   push cs
+  0aba6: 3c 9a                cmp al, 0x9a
+  0aba8: f3 6e                rep outsb dx, byte ptr [si]
+  0abaa: 6f                   outsw dx, word ptr [si]  <<< SUSPECT
+  0abab: 7e 9a                jle 0xab47
+  0abad: 4f                   dec di
+  0abae: 00 e8                add al, ch
+  0abb0: 10 c4                adc ah, al
+  0abb2: 7e f7                jle 0xabab
+  0abb4: 06                   push es
+  0abb5: b1 6a                mov cl, 0x6a
+  0abb7: 00 6a ff             add byte ptr [bp + si - 1], ch
+  0abba: 8a 46 0c             mov al, byte ptr [bp + 0xc]
+  0abbd: 61                   popaw 
+  0abbe: 9a ef 00 5e 16       lcall 0x165e, 0xef
+  0abc3: ff 76 f9             push word ptr [bp - 7]
+  0abc6: 0f 87 f7 68          ja 0x114c1
+  0abca: 00 13                add byte ptr [bp + di], dl
+  0abcc: aa 9f 02 6f 7e       ; CALL_IO(0x029f)
+  ---- resume code ----
+  0abd1: e9 8b 01             jmp 0xad5f
+  0abd4: 3c 4b                cmp al, 0x4b
+  0abd6: 75 0c                jne 0xabe4
+  0abd8: ff 76 fc             push word ptr [bp - 4]
+  0abdb: 6a 01                push 1
+  0abdd: 0f 2f bd 33 e9       comiss xmm7, dword ptr [di - 0x16cd]
+  0abe2: 7b 01                jnp 0xabe5
+  0abe4: 3c 4c                cmp al, 0x4c
+  0abe6: 75 2d                jne 0xac15
+  0abe8: c4 3e a8 40          les di, ptr [0x40a8]
+  0abec: 36 c4 7d 5c          les di, ptr ss:[di + 0x5c]
+  0abf0: 26 8b 45 59          mov ax, word ptr es:[di + 0x59]
+  0abf4: 31 d2                xor dx, dx
+  0abf6: 8b c8                mov cx, ax
+  0abf8: 8b da                mov bx, dx
+  0abfa: 8b 46 fc             mov ax, word ptr [bp - 4]
+  0abfd: 99                   cdq 
+  0abfe: 2b c1                sub ax, cx
+  0ac00: 1b d3                sbb dx, bx
+  0ac02: 50                   push ax
+  0ac03: ff 76 fe             push word ptr [bp - 2]
+  0ac06: c4 7e 06             les di, ptr [bp + 6]
+  0ac09: 06                   push es
+  0ac0a: b1 26                mov cl, 0x26
+  0ac0c: 8b 7d 55             mov di, word ptr [di + 0x55]
+  0ac0f: ff 5d 48             lcall [di + 0x48]
+  0ac12: e9 4a 01             jmp 0xad5f
+  0ac15: 3c 4d                cmp al, 0x4d
+  0ac17: 75 1f                jne 0xac38
+  0ac19: c4 7e 06             les di, ptr [bp + 6]
+  0ac1c: 26 8b 45 02          mov ax, word ptr es:[di + 2]
+  0ac20: 03 46 fc             add ax, word ptr [bp - 4]
+  0ac23: 50                   push ax
+  0ac24: 26 8b 45 04          mov ax, word ptr es:[di + 4]
+  0ac28: 03 46 fe             add ax, word ptr [bp - 2]
+  0ac2b: 50                   push ax
+  0ac2c: 06                   push es
+  0ac2d: b1 26                mov cl, 0x26
+  0ac2f: 8b 7d 55             mov di, word ptr [di + 0x55]
+  0ac32: ff 5d 48             lcall [di + 0x48]
+  0ac35: e9 27 01             jmp 0xad5f
+  0ac38: 3c 4f                cmp al, 0x4f
+  0ac3a: 75 10                jne 0xac4c
+  0ac3c: 6a 00                push 0
+  0ac3e: 6a ff                push -1
+  0ac40: 8a 46 fc             mov al, byte ptr [bp - 4]
+  0ac43: 50                   push ax
+  0ac44: 9a e6 01 5e 16       lcall 0x165e, 0x1e6
+  0ac49: e9 13 01             jmp 0xad5f
+  0ac4c: 3c 50                cmp al, 0x50
+  0ac4e: 75 33                jne 0xac83
+  0ac50: 8b 46 fe             mov ax, word ptr [bp - 2]
+  0ac53: 3b 46 fc             cmp ax, word ptr [bp - 4]
+  0ac56: 7d 06                jge 0xac5e
+  0ac58: 8b 46 fc             mov ax, word ptr [bp - 4]
+  0ac5b: 89 46 fe             mov word ptr [bp - 2], ax
+  0ac5e: 8b 46 fe             mov ax, word ptr [bp - 2]
+  0ac61: 2b 46 0c             sub ax, word ptr [bp + 0xc]
+  0ac64: 61                   popaw 
+  0ac65: 9a 33 44 6f 7e       lcall 0x7e6f, 0x4433
+  0ac6a: 31 d2                xor dx, dx
+  0ac6c: 8b c8                mov cx, ax
+  0ac6e: 8b da                mov bx, dx
+  0ac70: 8b 46 fc             mov ax, word ptr [bp - 4]
+  0ac73: 99                   cdq 
+  0ac74: 03 c1                add ax, cx
+  0ac76: 13 d3                adc dx, bx
+  0ac78: c4 7e 06             les di, ptr [bp + 6]
+  0ac7b: 26 89 85 6f 03       mov word ptr es:[di + 0x36f], ax
+  0ac80: e9 dc 00             jmp 0xad5f
+  0ac83: 3c 62                cmp al, 0x62
+  0ac85: 85 0c                test word ptr [si], cx
+  0ac87: c4 7e 06             les di, ptr [bp + 6]
+  0ac8a: 06                   push es
+  0ac8b: b1 0e                mov cl, 0xe
+  0ac8d: e8 71 02             call 0xaf01
+  0ac90: e9 cc 00             jmp 0xad5f
+  0ac93: 3c 53                cmp al, 0x53
+  0ac95: 75 53                jne 0xacea
+  0ac97: c4 7e 06             les di, ptr [bp + 6]
+  0ac9a: 26 8b 45 02          mov ax, word ptr es:[di + 2]
+  0ac9e: 26 03 45 06          add ax, word ptr es:[di + 6]
+  0aca2: 09 c0                or ax, ax
+  0aca4: 7e 42                jle 0xace8
+  0aca6: 26 81 7d 02 40 01    cmp word ptr es:[di + 2], 0x140
+  0acac: 7d 3a                jge 0xace8
+  0acae: f7 a9 f7 fe          ; LEA DI, [BP-265]  (0xfef7)
+  ---- resume code ----
+  0acb2: 16                   push ss
+  0acb3: 57                   push di
+  0acb4: bf 20 1f             mov di, 0x1f20
+  0acb7: 0e                   push cs
+  0acb8: 3c 9a                cmp al, 0x9a
+  0acba: 74 6e                je 0xad2a
+  0acbc: 6f                   outsw dx, word ptr [si]  <<< SUSPECT
+  0acbd: 7e c4                jle 0xac83
+  0acbf: 7e 06                jle 0xacc7
+  0acc1: 81 c7 57 00          add di, 0x57
+  0acc5: 06                   push es
+  0acc6: b1 9a                mov cl, 0x9a
+  0acc8: f3 6e                rep outsb dx, byte ptr [si]
+  0acca: 6f                   outsw dx, word ptr [si]  <<< SUSPECT
+  0accb: 7e f7                jle 0xacc4
+  0accd: a9 f7 fd             test ax, 0xfdf7
+  0acd0: 16                   push ss
+  0acd1: b1 8b                mov cl, 0x8b
+  0acd3: 46                   inc si
+  0acd4: fc                   cld 
+  0acd5: 05 30 00             add ax, 0x30
+  0acd8: 60 aa 90 3d 6f 7e    ; CALL_IO_PROC(0x3d90)  [saves regs]
+  ---- resume code ----
+  0acde: 9a f3 6e 6f 7e       lcall 0x7e6f, 0x6ef3
+  0ace3: 9a 9e 0a f8 20       lcall 0x20f8, 0xa9e
+  0ace8: eb 75                jmp 0xad5f
+  0acea: 3c 54                cmp al, 0x54
+  0acec: 75 0e                jne 0xacfc
+  0acee: 8b 46 fc             mov ax, word ptr [bp - 4]
+  0acf1: 48                   dec ax
+  0acf2: c4 7e 06             les di, ptr [bp + 6]
+  0acf5: 26 89 85 83 13       mov word ptr es:[di + 0x1383], ax
+  0acfa: eb 63                jmp 0xad5f
+  0acfc: 3c 66                cmp al, 0x66
+  0acfe: 85 2e 83 7e          test word ptr [0x7e83], bp
+  0ad02: 0c 11                or al, 0x11
+  0ad04: 74 0e                je 0xad14
+  0ad06: c4 7e 06             les di, ptr [bp + 6]
+  0ad09: 06                   push es
+  0ad0a: b1 26                mov cl, 0x26
+  0ad0c: 8b 7d 55             mov di, word ptr [di + 0x55]
+  0ad0f: ff                    db 0xff
+
+  [3 inline data blocks skipped]

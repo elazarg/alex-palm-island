@@ -1,0 +1,51 @@
+
+============================================================
+  Custom range
+  File offset: 0x01300 - 0x01400
+============================================================
+  01300: cf                   iret 
+  01301: bc 04 35             mov sp, 0x3504
+  01304: 26 c4 7d 5c          les di, ptr es:[di + 0x5c]
+  01308: 89 ce                mov si, cx
+  0130a: 0f 76 0a             pcmpeqd mm1, qword ptr [bp + si]
+  0130d: 8a 46 08             mov al, byte ptr [bp + 8]
+  01310: f4                   hlt   <<< SUSPECT
+  01311: ff c0                inc ax
+  01313: b8 08 2c             mov ax, 0x2c08
+  01316: 50                   push ax
+  01317: e3 a4                jcxz 0x12bd
+  01319: 50                   push ax
+  0131a: 60                   pushaw 
+  0131b: aa                   stosb byte ptr es:[di], al  <<< SUSPECT
+  0131c: e6 3a                out 0x3a, al  <<< SUSPECT
+  0131e: ce                   into   <<< SUSPECT
+  0131f: 0b c4                or ax, sp
+  01321: 7e 14                jle 0x1337
+  01323: 26 99                cdq 
+  01325: 15 26 89             adc ax, 0x8926
+  01328: 55                   push bp
+  01329: 02 26 c4 3d          add ah, byte ptr [0x3dc4]
+  0132d: 26 8b 45 3c          mov ax, word ptr es:[di + 0x3c]
+  01331: 0d 00 01             or ax, 0x100
+  01334: c4 7e 14             les di, ptr [bp + 0x14]
+  01337: 26 c4 3d             les di, ptr es:[di]
+  0133a: 36 99                cdq 
+  0133c: 45                   inc bp
+  0133d: 3c c4                cmp al, 0xc4
+  0133f: 7e 14                jle 0x1355
+  01341: 26 8b 05             mov ax, word ptr es:[di]
+  01344: 26 8b 55 02          mov dx, word ptr es:[di + 2]
+  01348: 89 46 fc             mov word ptr [bp - 4], ax
+  0134b: 89 56 fe             mov word ptr [bp - 2], dx
+  0134e: 8b 46 fc             mov ax, word ptr [bp - 4]
+  01351: 8b 56 fe             mov dx, word ptr [bp - 2]
+  01354: c9                   leave 
+  01355: ca 12 00             retf 0x12
+  --- RETF reached, 168 bytes remaining ---
+  01358: Pascal string: "Meter" (len=5)
+  01358: 05 4d 65 74 65 72 08 4d 6f 6e 65 79 42 6f 78 05  .Meter.MoneyBox.
+  01368: 53 63 96 6a 97 00 05 50 61 6e 65 6c 04 43 f7 96  Sc.j...Panel.C..
+  01378: 00 03 4d 61 70 04 57 61 6c 6b 04 54 61 6c 6b 04  ..Map.Walk.Talk.
+  01388: 4c 6f 6f 6b 05 54 6f 75 63 68 04 45 78 69 74 05  Look.Touch.Exit.
+
+  [0 inline data blocks skipped]
