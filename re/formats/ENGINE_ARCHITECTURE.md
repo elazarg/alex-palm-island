@@ -1481,7 +1481,7 @@ Row 2 (142,113)(176,113)(210,113)
 ## 9. Sound System
 
 Sound resources are stored as raw unsigned 8-bit PCM in SD*.DAT files (no COMP header).
-Byte 0x80 = silence. Likely played at 11025 Hz or 22050 Hz.
+Byte 0x80 = silence. Played at 22050 Hz.
 
 Sound resource naming convention: `sd{Speaker}{Number}` (e.g., sdOldM6, sdNar91).
 

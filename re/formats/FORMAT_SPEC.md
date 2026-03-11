@@ -68,7 +68,7 @@ First 4 decompressed bytes of each chunk are overhead (always 00 00 00 00) and m
 
 ### Sound DAT (SD*.DAT)
 
-No header. Raw unsigned 8-bit PCM audio data at 11025 Hz (presumed). NDX offsets point directly into the file. Byte 0x80 = silence.
+No header. Raw unsigned 8-bit PCM audio data, generally at 22050 Hz. NDX offsets point directly into the file. Byte 0x80 = silence. One known exception: the NARRATOR resource in SPYMASTR.DAT plays at 11025 Hz.
 
 ### ALEX1.DAT (installed to hard disk)
 

@@ -20,6 +20,9 @@ re/formats/__pycache__/
 # Build outputs
 alex-compact.jsdos
 alex-compact.zip
+alex-sprites.zip
+alex-sounds.zip
+alex-music-fonts-palettes.zip
 .wrangler/
 
 # Tool artifacts
