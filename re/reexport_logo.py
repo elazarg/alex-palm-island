@@ -8,7 +8,7 @@ from export_all_assets import sprite_to_image
 from parse_dat import extract_resources, parse_sprite_header
 
 GAME_DIR = os.path.join(os.path.dirname(__file__), '..', 'game_decrypted', 'cd')
-OUT_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'logo')
+OUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'remake', 'assets', 'logo')
 
 os.makedirs(OUT_DIR, exist_ok=True)
 

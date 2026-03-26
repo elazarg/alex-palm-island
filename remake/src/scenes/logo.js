@@ -85,6 +85,7 @@ export class LogoScene {
     this.titleFadeIn = true;
     this.tickCount = 0;
     this.animStarted = false;
+    this.onDone = null; // callback when scene finishes
   }
 
   async load(engine) {
@@ -120,7 +121,13 @@ export class LogoScene {
       this.animStarted = true;
     }
 
-    if (this.animStarted && this.anim) this.anim.tick();
+    if (this.animStarted && this.anim) {
+      this.anim.tick();
+      if (this.anim.done && this.onDone) {
+        this.onDone();
+        this.onDone = null;
+      }
+    }
   }
 
   render(ctx) {

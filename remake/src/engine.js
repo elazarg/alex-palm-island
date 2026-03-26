@@ -7,8 +7,8 @@ const TICK_MS = 55; // ~18.2 Hz DOS timer tick
 
 export class Engine {
   constructor(canvas) {
-    canvas.width = WIDTH * SCALE;
-    canvas.height = HEIGHT * SCALE;
+    canvas.width = WIDTH;
+    canvas.height = HEIGHT;
     this.ctx = canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
 
@@ -61,11 +61,8 @@ export class Engine {
 
     // Render
     const ctx = this.ctx;
-    ctx.clearRect(0, 0, WIDTH * SCALE, HEIGHT * SCALE);
-    ctx.save();
-    ctx.scale(SCALE, SCALE);
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
     if (this.scene) this.scene.render(ctx);
-    ctx.restore();
 
     requestAnimationFrame((t) => this._frame(t));
   }
