@@ -82,9 +82,28 @@ Not encrypted. Despite earlier claims, the CD copy, installed copy, and game_dec
 |--------|------|--------|--------|-------------|
 | 0      | 2    | u16 LE | width  | Sprite width in pixels |
 | 2      | 2    | u16 LE | height | Sprite height in pixels |
-| 4      | w×h  | u8[]   | pixels | VGA palette indices, row-major |
+| 4      | w×h  | u8[]   | pixels | VGA palette indices, Mode X planar |
 
 Pixel value 0x00 = transparent (for cursors and overlaid sprites).
+
+### Mode X Planar Storage
+
+Sprites are stored in VGA Mode X full-frame planar format, NOT linear row-major.
+The pixel data is organized as four consecutive plane blocks:
+
+```
+[plane 0: H rows × PW bytes] [plane 1: H rows × PW bytes] [plane 2: ...] [plane 3: ...]
+```
+
+Where `PW = width / 4` (plane width). Each plane stores every 4th pixel:
+plane P contains pixels at display x-coordinates where `x % 4 == P`.
+
+To reconstruct display pixel (x, y):
+```
+source_index = (x % 4) * PW * H + y * PW + (x // 4)
+```
+
+Without deinterleaving, sprites appear as a 4×1 tiled grid of quarter-width images.
 
 ---
 

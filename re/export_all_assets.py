@@ -49,8 +49,37 @@ def grayscale_palette():
     return [(i, i, i) for i in range(256)]
 
 
+def deinterleave_modex(pixels, width, height):
+    """Convert VGA Mode X full-frame planar pixels to linear order.
+
+    The game stores sprites in Mode X planar format: all plane 0 rows first,
+    then all plane 1 rows, plane 2, plane 3. Each plane holds every 4th pixel
+    (plane P gets pixels at x where x % 4 == P).
+
+    Layout in file (for sprite width W, height H, plane_width PW = W // 4):
+      [plane 0: H rows of PW bytes] [plane 1: ...] [plane 2: ...] [plane 3: ...]
+
+    Display pixel (x, y) is at file offset:
+      (x % 4) * PW * H + y * PW + (x // 4)
+    """
+    pw = width // 4
+    linear = bytearray(width * height)
+    for y in range(height):
+        for x in range(width):
+            si = (x % 4) * pw * height + y * pw + (x // 4)
+            linear[y * width + x] = pixels[si] if si < len(pixels) else 0
+    return bytes(linear)
+
+
 def sprite_to_image(width, height, pixels, palette, transparent_zero=False):
-    """Create a PIL Image from sprite data."""
+    """Create a PIL Image from sprite data.
+
+    Pixels are assumed to be in Mode X planar format and are deinterleaved
+    before rendering. Width must be divisible by 4.
+    """
+    if width % 4 == 0:
+        pixels = deinterleave_modex(pixels, width, height)
+
     if transparent_zero:
         img = Image.new('RGBA', (width, height))
         px = img.load()
