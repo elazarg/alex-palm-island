@@ -134,8 +134,8 @@ After the 260-byte header, characters from `start_char` to `end_char` are stored
 
 | Offset | Size | Type | Field | Description |
 |--------|------|------|-------|-------------|
-| 0 | 2 | u16 LE | char_h | Character height (usually = header height) |
-| 2 | 2 | u16 LE | char_w | Character width (matches widths[char_code]) |
+| 0 | 2 | u16 LE | char_w | Character storage width (= header max_width) |
+| 2 | 2 | u16 LE | char_h | Character height |
 | 4 | h×w | u8[] | pixels | VGA palette indices, row-major |
 
 ### Known fonts

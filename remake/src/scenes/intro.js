@@ -2,6 +2,8 @@
 // Film-strip scenes use 248px content area at x=36, y=12.
 // Click to advance between scenes. Fades between phases.
 
+import { BitmapFont } from '../font.js';
+
 function range(pfx, a, b) {
   const r = []; for (let i = a; i <= b; i++) r.push(`${pfx}${i}`); return r;
 }
@@ -108,6 +110,7 @@ export class IntroScene {
     this.talkFrame = 1;
     this.talkTick = 0;
     this.awaitingClick = false;
+    this.needsAudioUnlock = false;
   }
 
   async load(engine) {
@@ -121,6 +124,16 @@ export class IntroScene {
         await engine.loadSounds(snds);
       }
     }
+
+    // Load bitmap font
+    const fontImg = new Image();
+    const fontData = await (await fetch('assets/mainfont.json')).json();
+    await new Promise((resolve, reject) => {
+      fontImg.onload = resolve;
+      fontImg.onerror = reject;
+      fontImg.src = 'assets/mainfont.png';
+    });
+    this.font = new BitmapFont(fontImg, fontData);
   }
 
   init() {
@@ -131,19 +144,49 @@ export class IntroScene {
     this.sceneIdx = SCENE_ORDER.indexOf(startName);
     this._startScene(startName);
     const canvas = this.engine.ctx.canvas;
-    this._onClick = () => {
-      // Resume audio context on first interaction (browser autoplay policy)
+    this.pressedBtn = null; // 'play' | 'rewind' | null
+
+    this._getButton = (e) => {
+      if (!this.awaitingClick || this.sceneName !== 'spymastr') return null;
+      const rect = canvas.getBoundingClientRect();
+      const mx = (e.clientX - rect.left) / (rect.width / 320);
+      const my = (e.clientY - rect.top) / (rect.height / 200);
+      if (mx >= 272 && mx <= 300 && my >= 170 && my <= 194) return 'play';
+      if (mx >= 20 && mx <= 48 && my >= 170 && my <= 194) return 'rewind';
+      return null;
+    };
+
+    this._onMouseDown = (e) => {
       if (this.engine.audioCtx && this.engine.audioCtx.state === 'suspended') {
         this.engine.audioCtx.resume();
       }
+      if (this.needsAudioUnlock) {
+        this.needsAudioUnlock = false;
+        this._advanceDialog();
+        return;
+      }
       if (this.fade === 'wait-click') {
         this._fadeOut(() => this._nextScene());
-      } else if (this.awaitingClick && this.sceneName === 'spymastr') {
-        this.awaitingClick = false;
-        this._advanceDialog();
+        return;
       }
+      this.pressedBtn = this._getButton(e);
     };
-    canvas.addEventListener('click', this._onClick);
+
+    this._onMouseUp = (e) => {
+      if (this.pressedBtn && this.pressedBtn === this._getButton(e)) {
+        if (this.pressedBtn === 'play') {
+          this.awaitingClick = false;
+          this._advanceDialog();
+        } else if (this.pressedBtn === 'rewind') {
+          this.awaitingClick = false;
+          this._replayDialog();
+        }
+      }
+      this.pressedBtn = null;
+    };
+
+    canvas.addEventListener('mousedown', this._onMouseDown);
+    canvas.addEventListener('mouseup', this._onMouseUp);
 
     // Pause audio when tab hidden
     this._onVis = () => {
@@ -177,11 +220,8 @@ export class IntroScene {
 
     if (name === 'spymastr') {
       this._fadeIn();
-      // If audio context is suspended (direct load, no prior interaction),
-      // wait for a click before starting dialog
       if (this.engine.audioCtx && this.engine.audioCtx.state === 'suspended') {
-        this.dialogText = 'click to start';
-        this.awaitingClick = true;
+        this.needsAudioUnlock = true;
       } else {
         this._advanceDialog();
       }
@@ -230,6 +270,26 @@ export class IntroScene {
     }
     const entry = DIALOG[this.dialogIdx];
     this.dialogText = entry.text;
+    this.talkFrame = 1;
+    this.isTalking = true;
+    this.awaitingClick = false;
+    const src = this._playSound(entry.sound);
+    if (src) {
+      src.onended = () => {
+        this.isTalking = false;
+        this.talkFrame = 1;
+        this.awaitingClick = true;
+      };
+    } else {
+      this.isTalking = false;
+      this.awaitingClick = true;
+    }
+  }
+
+  _replayDialog() {
+    // Replay the current line's audio (buttons hidden during playback)
+    const entry = DIALOG[this.dialogIdx];
+    if (!entry) return;
     this.talkFrame = 1;
     this.isTalking = true;
     this.awaitingClick = false;
@@ -437,32 +497,18 @@ export class IntroScene {
     draw(`SPYTLK${this.talkFrame}`, 95, 37);
     draw('LAMP', 32, 68);
 
-    // Solid black bar at bottom for text
+    // Black bar at bottom for text + arrows
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 160, 320, 40);
+    ctx.fillRect(0, 172, 320, 28);
 
-    // Arrows at bottom corners
-    draw('SPYREWIND1', 4, 184);
-    draw('SPYPLAY1', 288, 184);
+    // Arrows only visible when awaiting click
+    if (this.awaitingClick) {
+      draw(this.pressedBtn === 'rewind' ? 'SPYREWIND1' : 'SPYREWIND2', 10, 174);
+      draw(this.pressedBtn === 'play' ? 'SPYPLAY1' : 'SPYPLAY2', 272, 174);
+    }
 
-    if (this.dialogText) {
-      ctx.fillStyle = '#fff';
-      ctx.font = '14px serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      const words = this.dialogText.split(' ');
-      const lines = []; let line = '';
-      for (const w of words) {
-        const t = line + (line ? ' ' : '') + w;
-        if (ctx.measureText(t).width > 260 && line) { lines.push(line); line = w; }
-        else line = t;
-      }
-      lines.push(line);
-      const totalH = lines.length * 15;
-      const y0 = 180 - totalH / 2 + 8;
-      for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], 160, y0 + i * 15);
-      ctx.textBaseline = 'alphabetic';
+    if (this.dialogText && this.font) {
+      this.font.drawWrapped(ctx, this.dialogText, 160, 174, 230, 11);
     }
   }
 
@@ -498,7 +544,8 @@ export class IntroScene {
   destroy() {
     this._stopSound();
     const canvas = this.engine.ctx.canvas;
-    canvas.removeEventListener('click', this._onClick);
+    canvas.removeEventListener('mousedown', this._onMouseDown);
+    canvas.removeEventListener('mouseup', this._onMouseUp);
     document.removeEventListener('visibilitychange', this._onVis);
   }
 }

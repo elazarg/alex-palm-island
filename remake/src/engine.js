@@ -79,6 +79,7 @@ export class Engine {
 
     // Render
     const ctx = this.ctx;
+    ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     if (this.scene) this.scene.render(ctx);
 
