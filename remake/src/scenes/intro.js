@@ -10,6 +10,11 @@ function range(pfx, a, b) {
 const CX = 36, CY = 12; // content area offset
 const FADE_TICKS = 18;
 
+// Timing scale: compensates for original DOS overhead (disk I/O, VGA blitting).
+// Original 18.2 Hz ticks took ~110ms in practice due to hardware overhead.
+// Value of 2 means each SCX tick = 2 engine ticks (~110ms).
+const ANIM_TICK_SCALE = 2;
+
 // Position data from SCX sections
 const WALK_POS = [
   [37,20],[132,35],[142,28],[136,35],[132,29],[128,24],[118,20],[119,32],
@@ -363,7 +368,7 @@ export class IntroScene {
   // Phone animation: exact sequence from OPENING.SCX section 5010.
   _initPhoneSteps() {
     const S = (snd) => ({ sound: snd });
-    const F = (f, t) => ({ frame: f, ticks: t * 4 });
+    const F = (f, t) => ({ frame: f, ticks: Math.max(t * ANIM_TICK_SCALE, ANIM_TICK_SCALE) });
     this._phoneSteps = [
       // Start on frame 1 (dark room, visible during fade-in)
       F(1,4),
@@ -441,9 +446,10 @@ export class IntroScene {
     } else if (this.phase === 1) {
       // Street: car approaches
       const T = this.phaseTick;
+      const S = ANIM_TICK_SCALE;
       if (T === 1) this._playSound('SDSTREET1');
-      if (T === 10) this._playSound('SDCAR1');
-      if (T === 8 * 10 + 18) {
+      if (T === 5 * S) this._playSound('SDCAR1');
+      if (T === 8 * 5 * S + FADE_TICKS) {
         this._fadeOut(() => this._waitClick());
       }
     }
@@ -451,23 +457,24 @@ export class IntroScene {
 
   _tickOpen2() {
     const T = this.phaseTick;
+    const S = ANIM_TICK_SCALE;
     if (this.phase === 0) {
       // Walk toward camera
       if (T === 1) this._playSound('SDWALK1');
-      if (T === 32 * 4) {
+      if (T === 32 * S) {
         this._fadeOut(() => { this.phase = 1; this.phaseTick = 0; this._fadeIn(); });
       }
     } else if (this.phase === 1) {
       // Walk away from camera
       if (T === 1) this._playSound('SDWALK1');
-      if (T === 41 * 4) {
+      if (T === 41 * S) {
         this._fadeOut(() => { this.phase = 2; this.phaseTick = 0; this._fadeIn(); });
       }
     } else if (this.phase === 2) {
       // Door opens
       if (T === 1) this._playSound('SDDOOR1');
-      if (T === 30) this._playSound('SDDOOR2');
-      if (T === 13 * 4 + 18) {
+      if (T === 15 * S) this._playSound('SDDOOR2');
+      if (T === 13 * S + FADE_TICKS) {
         this._fadeOut(() => this._waitClick());
       }
     }
@@ -476,7 +483,7 @@ export class IntroScene {
   _tickSpyMaster() {
     if (this.bagAnimPlaying) {
       this.bagAnimTick++;
-      if (this.bagAnimTick >= 5) {
+      if (this.bagAnimTick >= 3 * ANIM_TICK_SCALE) {
         this.bagAnimTick = 0;
         this.bagAnimFrame++;
         if (this.bagAnimFrame > 16) {
@@ -495,16 +502,17 @@ export class IntroScene {
 
   _tickOpen3() {
     const T = this.phaseTick;
+    const S = ANIM_TICK_SCALE;
     if (T === 1) this._playSound('SDPLANE1');
-    if (T === 23 * 8 + 36) {
+    if (T === 23 * 4 * S + FADE_TICKS) {
       this._fadeOut(() => this._waitClick());
     }
   }
 
   _tickOpen4() {
     const T = this.phaseTick;
-    if (T === 1) this._playSound('SDPLANE1');
-    if (T === 450) {
+    const S = ANIM_TICK_SCALE;
+    if (T === 225 * S) {
       this._fadeOut(() => this._waitClick());
     }
   }
@@ -549,7 +557,7 @@ export class IntroScene {
     } else if (this.phase === 1) {
       // Street scene — BStreet at (37,10), car at positions from SCX 5030
       draw('BSTREET', BSTREET_X, BSTREET_Y);
-      const fi = Math.min(Math.floor(T / 10), 7);
+      const fi = Math.min(Math.floor(T / (5 * ANIM_TICK_SCALE)), 7);
       const p = STREET_POS[fi];
       draw(`STREET${fi + 1}`, p[0], p[1]);
     }
@@ -561,18 +569,18 @@ export class IntroScene {
 
     if (this.phase === 0) {
       draw('BHALL', CX, CY);
-      const fi = Math.min(Math.floor(T / 4), 31);
+      const fi = Math.min(Math.floor(T / ANIM_TICK_SCALE), 31);
       const p = WALK_POS[fi];
       draw(`WALK${fi + 1}`, p[0], p[1]);
     } else if (this.phase === 1) {
       draw('BHALL2', CX, CY);
-      const fi = Math.min(Math.floor(T / 4), 40);
+      const fi = Math.min(Math.floor(T / ANIM_TICK_SCALE), 40);
       const idx = 32 + fi;
       const p = WALK_POS[idx] || WALK_POS[72];
       draw(`WALK${idx + 1}`, p[0], p[1]);
     } else if (this.phase === 2) {
       draw('BHALL3', CX, CY);
-      const fi = Math.min(Math.floor(T / 4), 12);
+      const fi = Math.min(Math.floor(T / ANIM_TICK_SCALE), 12);
       draw(`DOOR${fi + 1}`, CX, CY);
     }
   }
@@ -612,29 +620,32 @@ export class IntroScene {
 
   _renderOpen3(ctx) {
     const T = this.phaseTick;
+    const S = ANIM_TICK_SCALE;
     const draw = this.engine.drawSprite.bind(this.engine, ctx);
     draw('BPLANE', CX, CY);
-    const fi = Math.min(Math.floor(T / 8), 22);
+    const fi = Math.min(Math.floor(T / (4 * S)), 22);
     draw(`PLANE${fi + 1}`, 140, 80);
   }
 
   _renderOpen4(ctx) {
     const T = this.phaseTick;
+    const S = ANIM_TICK_SCALE;
     const draw = this.engine.drawSprite.bind(this.engine, ctx);
-    const pf = Math.floor(T / 8) % 25;
+    const pf = Math.floor(T / (4 * S)) % 25;
     draw(`PLANE${pf + 1}`, CX, CY);
 
-    if (T < 100) {
-      const fi = Math.min(Math.floor(T / 12), 7);
+    const segLen = 50 * S;
+    if (T < segLen) {
+      const fi = Math.min(Math.floor(T / (6 * S)), 7);
       draw(`PROG${fi + 1}`, 44, 34);
-    } else if (T < 200) {
-      const fi = Math.min(Math.floor((T-100) / 5), 19);
+    } else if (T < segLen * 2) {
+      const fi = Math.min(Math.floor((T - segLen) / (3 * S)), 19);
       draw(`GRAPH${fi + 1}`, 68, 34);
-    } else if (T < 320) {
-      const fi = Math.min(Math.floor((T-200) / 8), 14);
+    } else if (T < segLen * 3) {
+      const fi = Math.min(Math.floor((T - segLen * 2) / (4 * S)), 14);
       draw(`ONDA${fi + 1}`, 0, 0);
-    } else if (T < 420) {
-      const fi = Math.min(Math.floor((T-320) / 10), 9);
+    } else if (T < segLen * 4) {
+      const fi = Math.min(Math.floor((T - segLen * 3) / (5 * S)), 9);
       draw(`PROD${fi + 1}`, 46, 30);
     }
   }

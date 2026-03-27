@@ -105,6 +105,21 @@ export class LogoScene {
     this.titleFadeIn = true;
     this.tickCount = 0;
     this.animStarted = false;
+    this.holdTicks = 0;
+
+    // Skip on click or keypress
+    this._skip = () => {
+      if (this.onDone) { this.onDone(); this.onDone = null; }
+    };
+    const canvas = this.engine.ctx.canvas;
+    canvas.addEventListener('click', this._skip);
+    document.addEventListener('keydown', this._skip);
+  }
+
+  destroy() {
+    const canvas = this.engine.ctx.canvas;
+    canvas.removeEventListener('click', this._skip);
+    document.removeEventListener('keydown', this._skip);
   }
 
   tick() {
@@ -123,9 +138,12 @@ export class LogoScene {
 
     if (this.animStarted && this.anim) {
       this.anim.tick();
-      if (this.anim.done && this.onDone) {
-        this.onDone();
-        this.onDone = null;
+      if (this.anim.done) {
+        this.holdTicks++;
+        if (this.holdTicks >= 18 && this.onDone) { // ~1s hold then transition
+          this.onDone();
+          this.onDone = null;
+        }
       }
     }
   }
