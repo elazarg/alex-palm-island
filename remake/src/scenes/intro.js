@@ -68,18 +68,19 @@ const ASSETS = {
   },
 };
 
+// Dialog text from SPYMASTR.SCX sections 501-511, sounds SPY1-SPY11
 const DIALOG = [
   { text: '"Good morning, Alex."', sound: 'SPY1' },
   { text: '"We have a spy named Walter."', sound: 'SPY2' },
   { text: '"He went to Palm Island but now we don\'t know where he is."', sound: 'SPY3' },
   { text: '"Go to Palm Island.  Find Walter before it\'s too late."', sound: 'SPY4' },
-  { text: '"Go everywhere. Look at everything. Talk to everyone."', sound: 'SPY5' },
-  { text: '"Take things from the places you visit."', sound: 'SPY6' },
-  { text: '"Here is your bag. Don\'t lose it!"', sound: 'SPY7' },
+  { text: '"Go everywhere.  Look at everything.  Talk to everyone."', sound: 'SPY5' },
+  { text: '"Take things from the places you visit.  You never know what may come in handy."', sound: 'SPY6' },
+  { text: '"Here is your bag.  Don\'t lose it!  Your passport is inside."', sound: 'SPY7' },
   { text: '"There is also a letter to Walter inside the bag."', sound: 'SPY8' },
   { text: '"When you find him, give it to him."', sound: 'SPY9' },
-  { text: '"Palm Island is a very strange place."', sound: 'SPY10' },
-  { text: '"Remember! I am watching!"', sound: 'SPY11' },
+  { text: '"Palm Island is a very strange place.  Anything can happen there, so be careful!"', sound: 'SPY10' },
+  { text: '"Remember!  I am watching!"', sound: 'SPY11' },
 ];
 
 export class IntroScene {
@@ -111,6 +112,12 @@ export class IntroScene {
     this.talkTick = 0;
     this.awaitingClick = false;
     this.needsAudioUnlock = false;
+
+    // Bag animation (spymastr section 507)
+    this.bagAnimPlaying = false;
+    this.bagAnimFrame = 1;
+    this.bagAnimTick = 0;
+    this.bagVisible = false; // static bag stays after animation
   }
 
   async load(engine) {
@@ -273,6 +280,14 @@ export class IntroScene {
     this.talkFrame = 1;
     this.isTalking = true;
     this.awaitingClick = false;
+
+    // Section 507 (dialog index 6): bag animation
+    if (this.dialogIdx === 6) {
+      this.bagAnimPlaying = true;
+      this.bagAnimFrame = 1;
+      this.bagAnimTick = 0;
+    }
+
     const src = this._playSound(entry.sound);
     if (src) {
       src.onended = () => {
@@ -388,7 +403,17 @@ export class IntroScene {
   }
 
   _tickSpyMaster() {
-    if (this.isTalking) {
+    if (this.bagAnimPlaying) {
+      this.bagAnimTick++;
+      if (this.bagAnimTick >= 5) {
+        this.bagAnimTick = 0;
+        this.bagAnimFrame++;
+        if (this.bagAnimFrame > 16) {
+          this.bagAnimPlaying = false;
+          this.bagVisible = true; // static bag stays
+        }
+      }
+    } else if (this.isTalking) {
       this.talkTick++;
       if (this.talkTick >= 4) {
         this.talkTick = 0;
@@ -494,7 +519,19 @@ export class IntroScene {
   _renderSpyMaster(ctx) {
     const draw = this.engine.drawSprite.bind(this.engine, ctx);
     draw('SNSPYMASTER1', 0, 0);
-    draw(`SPYTLK${this.talkFrame}`, 95, 37);
+
+    if (this.bagAnimPlaying) {
+      // BAG animation replaces spy master (BAG1-16 include his body)
+      draw(`BAG${this.bagAnimFrame}`, 79, 37);
+    } else {
+      draw(`SPYTLK${this.talkFrame}`, 95, 37);
+    }
+
+    // Static bag appears after animation, behind lamp
+    if (this.bagVisible) {
+      draw('BAG', 79, 88);
+    }
+
     draw('LAMP', 32, 68);
 
     // Black bar at bottom for text + arrows
@@ -508,7 +545,7 @@ export class IntroScene {
     }
 
     if (this.dialogText && this.font) {
-      this.font.drawWrapped(ctx, this.dialogText, 160, 174, 230, 11);
+      this.font.drawWrapped(ctx, this.dialogText, 158, 174, 215, 11);
     }
   }
 
