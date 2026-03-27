@@ -172,6 +172,9 @@ export class IntroScene {
     this._stopSound();
     location.hash = 'intro-' + name;
 
+    // Cursor only visible during spymaster (click-to-advance)
+    this.engine.cursor = (name === 'spymastr') ? 'MMARROWCURSOR' : null;
+
     if (name === 'spymastr') {
       this._fadeIn();
       // If audio context is suspended (direct load, no prior interaction),
