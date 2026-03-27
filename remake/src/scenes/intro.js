@@ -99,7 +99,7 @@ export class IntroScene {
     this.phase = 0;
     this.phaseTick = 0;
 
-    // Fade: 'in' | 'out' | 'none' | 'wait-click'
+    // Fade: 'in' | 'out' | 'none'
     this.fade = 'none';
     this.fadeAlpha = 1;
 
@@ -177,10 +177,6 @@ export class IntroScene {
         if (this.sceneName === 'spymastr') {
           this._advanceDialog();
         }
-        return;
-      }
-      if (this.fade === 'wait-click') {
-        this._fadeOut(() => this._nextScene());
         return;
       }
       this.pressedBtn = this._getButton(e);
@@ -263,9 +259,6 @@ export class IntroScene {
   }
   _fadeOut(cb) {
     this.fade = 'out'; this.fadeAlpha = 1; this._fadeCb = cb || null;
-  }
-  _waitClick() {
-    this.fade = 'wait-click';
   }
 
   _playSound(name) {
@@ -450,7 +443,7 @@ export class IntroScene {
       if (T === 1) this._playSound('SDSTREET1');
       if (T === 5 * S) this._playSound('SDCAR1');
       if (T === 8 * 5 * S + FADE_TICKS) {
-        this._fadeOut(() => this._waitClick());
+        this._fadeOut(() => this._nextScene());
       }
     }
   }
@@ -462,20 +455,23 @@ export class IntroScene {
       // Walk toward camera
       if (T === 1) this._playSound('SDWALK1');
       if (T === 32 * S) {
-        this._fadeOut(() => { this.phase = 1; this.phaseTick = 0; this._fadeIn(); });
+        this.phase = 1; this.phaseTick = 0; // no fade, direct cut
       }
     } else if (this.phase === 1) {
       // Walk away from camera
       if (T === 1) this._playSound('SDWALK1');
       if (T === 41 * S) {
-        this._fadeOut(() => { this.phase = 2; this.phaseTick = 0; this._fadeIn(); });
+        this.phase = 2; this.phaseTick = 0; // no fade, direct cut to door
       }
     } else if (this.phase === 2) {
-      // Door opens
+      // Door: frames 1-6 open, hold, frames 7-13 close
+      const openEnd = 6 * S;
+      const holdEnd = openEnd + 10 * S; // hold open
+      const closeEnd = holdEnd + 7 * S;
       if (T === 1) this._playSound('SDDOOR1');
-      if (T === 15 * S) this._playSound('SDDOOR2');
-      if (T === 13 * S + FADE_TICKS) {
-        this._fadeOut(() => this._waitClick());
+      if (T === holdEnd) this._playSound('SDDOOR2');
+      if (T === closeEnd + 4 * S) {
+        this._fadeOut(() => this._nextScene());
       }
     }
   }
@@ -505,7 +501,7 @@ export class IntroScene {
     const S = ANIM_TICK_SCALE;
     if (T === 1) this._playSound('SDPLANE1');
     if (T === 23 * 4 * S + FADE_TICKS) {
-      this._fadeOut(() => this._waitClick());
+      this._fadeOut(() => this._nextScene());
     }
   }
 
@@ -513,7 +509,7 @@ export class IntroScene {
     const T = this.phaseTick;
     const S = ANIM_TICK_SCALE;
     if (T === 225 * S) {
-      this._fadeOut(() => this._waitClick());
+      this._fadeOut(() => this._nextScene());
     }
   }
 
@@ -538,12 +534,6 @@ export class IntroScene {
       ctx.globalAlpha = 1;
     }
 
-    if (this.fade === 'wait-click') {
-      ctx.fillStyle = '#888';
-      ctx.font = '8px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('click to continue', 160, 196);
-    }
   }
 
   _renderOpening(ctx) {
@@ -567,21 +557,36 @@ export class IntroScene {
     const T = this.phaseTick;
     const draw = this.engine.drawSprite.bind(this.engine, ctx);
 
+    // BHALL/WALK positions are absolute from OVR (37,20), not film strip origin
     if (this.phase === 0) {
-      draw('BHALL', CX, CY);
+      draw('BHALL', 37, 20);
       const fi = Math.min(Math.floor(T / ANIM_TICK_SCALE), 31);
       const p = WALK_POS[fi];
       draw(`WALK${fi + 1}`, p[0], p[1]);
     } else if (this.phase === 1) {
-      draw('BHALL2', CX, CY);
+      draw('BHALL2', 37, 20);
       const fi = Math.min(Math.floor(T / ANIM_TICK_SCALE), 40);
       const idx = 32 + fi;
       const p = WALK_POS[idx] || WALK_POS[72];
       draw(`WALK${idx + 1}`, p[0], p[1]);
     } else if (this.phase === 2) {
-      draw('BHALL3', CX, CY);
-      const fi = Math.min(Math.floor(T / ANIM_TICK_SCALE), 12);
-      draw(`DOOR${fi + 1}`, CX, CY);
+      draw('BHALL3', 37, 20);
+      // Door: frames 1→6 (opening), hold 6, frames 7→13 (closing)
+      const S = ANIM_TICK_SCALE;
+      const openEnd = 6 * S;
+      const holdEnd = openEnd + 10 * S;
+      const closeEnd = holdEnd + 7 * S;
+      let doorFrame;
+      if (T < openEnd) {
+        doorFrame = Math.min(Math.floor(T / S) + 1, 6);
+      } else if (T < holdEnd) {
+        doorFrame = 6; // hold open
+      } else if (T < closeEnd) {
+        doorFrame = Math.min(7 + Math.floor((T - holdEnd) / S), 13);
+      } else {
+        doorFrame = 13;
+      }
+      draw(`DOOR${doorFrame}`, 37, 20);
     }
   }
 
