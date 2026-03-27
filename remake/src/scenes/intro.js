@@ -62,14 +62,18 @@ const ASSETS = {
   },
   open3: {
     base: 'assets/open3', bg: 'SNOPEN31',
-    sprites: ['BPLANE', ...range('PLANE',1,23), ...range('LFILM',1,3), ...range('RFILM',1,3)],
+    sprites: ['BPLANE', ...range('O3PLANE',1,23), ...range('LFILM',1,3), ...range('RFILM',1,3)],
     sounds: ['SDPLANE1'],
+    // Remap: load PLANE*.png but store as O3PLANE* to avoid collision with OPEN4
+    remap: Object.fromEntries(range('O3PLANE',1,23).map((k,i) => [k, `PLANE${i+1}`])),
   },
   open4: {
     base: 'assets/open4', bg: 'SNOPEN41',
-    sprites: [...range('PLANE',1,25), ...range('PROG',1,8), ...range('GRAPH',1,20),
+    sprites: [...range('O4PLANE',1,25), ...range('PROG',1,8), ...range('GRAPH',1,20),
+              ...range('LANG',1,20), ...range('HEBR',1,9),
               ...range('ONDA',1,15), ...range('PROD',1,10)],
     sounds: ['SDPLANE1'],
+    remap: Object.fromEntries(range('O4PLANE',1,25).map((k,i) => [k, `PLANE${i+1}`])),
   },
 };
 
@@ -128,7 +132,10 @@ export class IntroScene {
   async load(engine) {
     for (const [, sc] of Object.entries(ASSETS)) {
       const imgs = { [sc.bg]: `${sc.base}/${sc.bg}.png` };
-      for (const s of sc.sprites) imgs[s] = `${sc.base}/${s}.png`;
+      for (const s of sc.sprites) {
+        const filename = (sc.remap && sc.remap[s]) || s;
+        imgs[s] = `${sc.base}/${filename}.png`;
+      }
       await engine.loadImages(imgs);
       if (sc.sounds.length) {
         const snds = {};
@@ -499,17 +506,62 @@ export class IntroScene {
   _tickOpen3() {
     const T = this.phaseTick;
     const S = ANIM_TICK_SCALE;
+    // Plane takes off from runway: 23 frames, positions from SCX 5020
     if (T === 1) this._playSound('SDPLANE1');
-    if (T === 23 * 4 * S + FADE_TICKS) {
+    if (T === 23 * S + 8 * S) {
       this._fadeOut(() => this._nextScene());
     }
   }
 
   _tickOpen4() {
+    // Credits roll over plane-in-clouds background
+    // 6 credit groups play sequentially: Prog→Graph→Lang→Hebr→Prod→Onda
+    // Each group plays its frames at SCX positions, then hides
+    if (!this._creditGroups) {
+      this._initCredits();
+    }
     const T = this.phaseTick;
     const S = ANIM_TICK_SCALE;
-    if (T === 225 * S) {
+    // Check if all groups have finished
+    const lastGroup = this._creditGroups[this._creditGroups.length - 1];
+    const endTick = lastGroup._startTick + lastGroup._totalTicks + 5 * S;
+    if (T >= endTick) {
       this._fadeOut(() => this._nextScene());
+    }
+  }
+
+  _initCredits() {
+    const S = ANIM_TICK_SCALE;
+    // Credit groups with positions from their SCX data sections
+    // SCX pattern per group:
+    //   P 5,0 (invisible) → V 1 → G n → P m (show, slight drift) → D -1 (hold) → G 1 (exit) → V 0
+    // The position data provides slight floating. Frames cycle through credit pages.
+    // "hold" = ticks at final position. "exit" = number of ticks for slide-off.
+    // Credits grow in (frames 1→N), hold at full size, then:
+    //   Normal: reverse shrink (frames N→1)
+    //   ONDA: continues growing off screen (zooms past viewer)
+    // Positions from SCX data sections provide center coordinates.
+    // Each frame is centered dynamically on the content area (center: 161, 99).
+    // Position is computed from the sprite's actual size at render time.
+    this._creditGroups = [
+      { prefix: 'PROG',  count: 8,  hold: 30, exitMode: 'reverse' },
+      { prefix: 'GRAPH', count: 20, hold: 25, exitMode: 'reverse' },
+      { prefix: 'LANG',  count: 20, hold: 30, exitMode: 'reverse' },
+      { prefix: 'HEBR',  count: 9,  hold: 30, exitMode: 'reverse' },
+      { prefix: 'PROD',  count: 10, hold: 25, exitMode: 'reverse' },
+      { prefix: 'ONDA',  count: 8, hold: 40, exitMode: 'zoom', exitCount: 7 },
+      // ONDA enter: frames 1-8 (grow to readable). Hold frame 8.
+      // Exit: frames 9-15 (continue growing to full screen).
+    ];
+    let t = 5 * S;
+    for (const g of this._creditGroups) {
+      const exitFrames = g.exitCount || g.count; // ONDA uses exitCount for zoom frames
+      g._enterTicks = g.count * S;
+      g._holdTicks = g.hold * S;
+      g._exitTicks = exitFrames * S;
+      g._totalTicks = g._enterTicks + g._holdTicks + g._exitTicks;
+      g._startTick = t;
+      t += g._totalTicks + 5 * S;
     }
   }
 
@@ -627,31 +679,67 @@ export class IntroScene {
     const T = this.phaseTick;
     const S = ANIM_TICK_SCALE;
     const draw = this.engine.drawSprite.bind(this.engine, ctx);
-    draw('BPLANE', CX, CY);
-    const fi = Math.min(Math.floor(T / (4 * S)), 22);
-    draw(`PLANE${fi + 1}`, 140, 80);
+    // Runway background
+    draw('BPLANE', 37, 20);
+    // Plane takes off: frames 1-23 at positions from SCX 5020
+    // Plane starts small at far right, grows as it approaches, then flies overhead
+    const POS = [
+      [279,89],[272,73],[265,68],[256,66],[247,64],[239,62],[230,62],
+      [219,59],[208,59],[197,56],[184,55],[171,53],[157,51],[143,48],
+      [127,47],[109,42],[91,34],[69,23],[46,20],[37,20],[37,20],[37,20],[37,20],
+    ];
+    const fi = Math.min(Math.floor(T / S), 22);
+    const p = POS[fi];
+    draw(`O3PLANE${fi + 1}`, p[0], p[1]);
   }
 
   _renderOpen4(ctx) {
     const T = this.phaseTick;
     const S = ANIM_TICK_SCALE;
     const draw = this.engine.drawSprite.bind(this.engine, ctx);
-    const pf = Math.floor(T / (4 * S)) % 25;
-    draw(`PLANE${pf + 1}`, CX, CY);
 
-    const segLen = 50 * S;
-    if (T < segLen) {
-      const fi = Math.min(Math.floor(T / (6 * S)), 7);
-      draw(`PROG${fi + 1}`, 44, 34);
-    } else if (T < segLen * 2) {
-      const fi = Math.min(Math.floor((T - segLen) / (3 * S)), 19);
-      draw(`GRAPH${fi + 1}`, 68, 34);
-    } else if (T < segLen * 3) {
-      const fi = Math.min(Math.floor((T - segLen * 2) / (4 * S)), 14);
-      draw(`ONDA${fi + 1}`, 0, 0);
-    } else if (T < segLen * 4) {
-      const fi = Math.min(Math.floor((T - segLen * 3) / (5 * S)), 9);
-      draw(`PROD${fi + 1}`, 46, 30);
+    // Cycling plane-in-clouds background (25 full-frame sprites)
+    const pf = Math.floor(T / (2 * S)) % 25;
+    draw(`O4PLANE${pf + 1}`, 37, 20);
+
+    // Credit groups: grow in → hold centered → reverse shrink / zoom out
+    // Content area center: (161, 99)
+    if (!this._creditGroups) return;
+    const CEN_X = 161, CEN_Y = 99;
+    for (const g of this._creditGroups) {
+      const localT = T - g._startTick;
+      if (localT < 0 || localT >= g._totalTicks) continue;
+
+      let fi;
+      if (localT < g._enterTicks) {
+        fi = Math.min(Math.floor(localT / S), g.count - 1);
+      } else if (localT < g._enterTicks + g._holdTicks) {
+        fi = g.count - 1;
+      } else {
+        const exitT = localT - g._enterTicks - g._holdTicks;
+        if (g.exitMode === 'zoom') {
+          // ONDA: continue to next frames (9→15, growing to full screen)
+          const exitIdx = Math.min(Math.floor(exitT / S), (g.exitCount || g.count) - 1);
+          fi = g.count + exitIdx; // frame count+1, count+2, etc.
+        } else {
+          // Reverse: frames count → 1 (shrinking back)
+          const reverseIdx = Math.min(Math.floor(exitT / S), g.count - 1);
+          fi = g.count - 1 - reverseIdx;
+        }
+      }
+
+      // Center sprite on content area (161, 99)
+      const spriteName = `${g.prefix}${fi + 1}`;
+      const img = this.engine.assets.get(spriteName);
+      if (img) {
+        const x = CEN_X - Math.floor(img.width / 2);
+        // HEBR: top of content area with small margin
+        const y = g.prefix === 'HEBR'
+          ? 28
+          : CEN_Y - Math.floor(img.height / 2);
+        draw(spriteName, x, y);
+      }
+      break;
     }
   }
 
