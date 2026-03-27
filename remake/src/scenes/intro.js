@@ -169,7 +169,9 @@ export class IntroScene {
       }
       if (this.needsAudioUnlock) {
         this.needsAudioUnlock = false;
-        this._advanceDialog();
+        if (this.sceneName === 'spymastr') {
+          this._advanceDialog();
+        }
         return;
       }
       if (this.fade === 'wait-click') {
@@ -225,15 +227,20 @@ export class IntroScene {
     // Cursor only visible during spymaster (click-to-advance)
     this.engine.cursor = (name === 'spymastr') ? 'MMARROWCURSOR' : null;
 
-    if (name === 'spymastr') {
-      this._fadeIn();
-      if (this.engine.audioCtx && this.engine.audioCtx.state === 'suspended') {
-        this.needsAudioUnlock = true;
-      } else {
-        this._advanceDialog();
-      }
-    } else {
-      this._fadeIn();
+    // Initialize scene-specific state before fade
+    if (name === 'opening') this._initPhoneSteps();
+
+    // Check if audio needs unlocking (browser autoplay policy)
+    if (this.engine.audioCtx && this.engine.audioCtx.state === 'suspended') {
+      this.needsAudioUnlock = true;
+    }
+
+    // Always fade in (shows static first frame during unlock wait)
+    this._fadeIn();
+
+    // Start dialog immediately if audio is available
+    if (name === 'spymastr' && !this.needsAudioUnlock) {
+      this._advanceDialog();
     }
   }
 
@@ -323,7 +330,8 @@ export class IntroScene {
 
   // --- Tick ---
   tick() {
-    // Handle fades
+    // Handle fades (even while waiting for audio unlock)
+    // This allows fade-in to render before user clicks
     if (this.fade === 'in') {
       this.fadeAlpha = Math.min(1, this.fadeAlpha + 1 / FADE_TICKS);
       if (this.fadeAlpha >= 1) {
@@ -338,6 +346,10 @@ export class IntroScene {
       }
     }
 
+    // Don't advance scene animation until fade-in completes or audio unlocked
+    if (this.fade === 'in') return;
+    if (this.needsAudioUnlock) return;
+
     this.phaseTick++;
     switch (this.sceneName) {
       case 'opening': this._tickOpening(); break;
@@ -348,29 +360,88 @@ export class IntroScene {
     }
   }
 
+  // Phone animation: exact sequence from OPENING.SCX section 5010.
+  _initPhoneSteps() {
+    const S = (snd) => ({ sound: snd });
+    const F = (f, t) => ({ frame: f, ticks: t * 4 });
+    this._phoneSteps = [
+      // Start on frame 1 (dark room, visible during fade-in)
+      F(1,4),
+      // S1, Ring 1: F1/2 ×3, hold F1 for 7
+      S('SDPHONE1'),
+      F(1,1), F(2,1), F(1,1), F(2,1), F(1,1), F(2,1), F(1,7),
+      // S1, Ring 2: F2/1 ×3
+      S('SDPHONE1'),
+      F(2,1), F(1,1), F(2,1), F(1,1), F(2,1),
+      // Hand reaches for lamp, light turns on (frames 3→4→5→6→7→8)
+      F(3,2), F(4,2), F(5,2), F(6,2), F(7,2), F(8,2),
+      // S1, Ring 3 + wake: F8/7 ×2
+      S('SDPHONE1'),
+      F(8,1), F(7,1), F(8,1), F(7,1),
+      // Reach for phone (frame 9), pick up (10→11)
+      F(9,2), F(10,1), F(11,1), F(10,1), F(11,1),
+      // S2, bring phone to bed (12→13→14→15→16)
+      S('SDPHONE2'),
+      F(12,1), F(13,1), F(14,1), F(15,1), F(16,1),
+      // S3, talking: F16/15 ×4
+      S('SDPHONE3'),
+      F(16,2), F(15,2), F(16,2), F(15,2), F(16,2), F(15,2), F(16,2),
+      // Put phone back (17→18→19→20)
+      F(17,1), F(18,1), F(19,1), F(20,1),
+      // S4, hang up + light off (21→22→23→24→25)
+      S('SDPHONE4'),
+      F(21,1), F(22,1), F(23,1), F(24,1),
+      F(25,4),
+      { fadeToStreet: true },
+    ];
+    this._phoneIdx = 0;
+    this._phoneTick = 0;
+    this._phoneFrame = 1;
+  }
+
   _tickOpening() {
-    const T = this.phaseTick;
+    if (!this._phoneSteps) this._initPhoneSteps();
+
     if (this.phase === 0) {
-      // Phone ringing
-      if (T === 1) this._playSound('SDPHONE1');
-      if (T === 78) { this.phase = 1; this.phaseTick = 0; }
-    } else if (this.phase === 1) {
-      // Alex wakes up
-      if (T === 1) this._playSound('SDPHONE2');
-      if (T === 36) { this.phase = 2; this.phaseTick = 0; }
-    } else if (this.phase === 2) {
-      // Alex answers and talks
-      if (T === 1) this._playSound('SDPHONE3');
-      if (T === 64) { this.phase = 3; this.phaseTick = 0; }
-    } else if (this.phase === 3) {
-      // Hang up
-      if (T === 1) this._playSound('SDPHONE4');
-      if (T === 36) {
-        this._fadeOut(() => { this.phase = 4; this.phaseTick = 0; this._fadeIn(); });
+      // Advance through steps — process sounds instantly, only pause on frames
+      while (this._phoneIdx < this._phoneSteps.length) {
+        const step = this._phoneSteps[this._phoneIdx];
+
+        if (step.fadeToStreet) {
+          if (this.fade !== 'none') return; // fade already in progress
+          // Fade out phone, then fade in street (drive to spy master)
+          this._fadeOut(() => {
+            this.phase = 1; // street/driving scene
+            this.phaseTick = 0;
+            this._fadeIn();
+          });
+          return;
+        }
+
+        if (step.sound) {
+          // Play sound and advance immediately (no tick consumed)
+          this._playSound(step.sound);
+          this._phoneIdx++;
+          continue;
+        }
+
+        // Frame step — update displayed frame
+        this._phoneFrame = step.frame;
+        if (step.ticks === 0) {
+          this._phoneIdx++;
+          continue;
+        }
+        this._phoneTick++;
+        if (this._phoneTick >= step.ticks) {
+          this._phoneTick = 0;
+          this._phoneIdx++;
+        }
+        break;
       }
-    } else if (this.phase === 4) {
+    } else if (this.phase === 1) {
       // Street: car approaches
-      if (T === 1) { this._playSound('SDSTREET1'); }
+      const T = this.phaseTick;
+      if (T === 1) this._playSound('SDSTREET1');
       if (T === 10) this._playSound('SDCAR1');
       if (T === 8 * 10 + 18) {
         this._fadeOut(() => this._waitClick());
@@ -471,21 +542,11 @@ export class IntroScene {
     const T = this.phaseTick;
     const draw = this.engine.drawSprite.bind(this.engine, ctx);
 
-    if (this.phase <= 3) {
+    if (this.phase === 0 && this._phoneSteps) {
       // Phone scene — BPhone at (37,20), Phone overlay at (93,66)
       draw('BPHONE', BPHONE_X, BPHONE_Y);
-      let frame;
-      if (this.phase === 0) {
-        frame = (Math.floor(T / 6) % 2 === 0) ? 1 : 2;
-      } else if (this.phase === 1) {
-        frame = (Math.floor(T / 6) % 2 === 0) ? 7 : 8;
-      } else if (this.phase === 2) {
-        frame = (Math.floor(T / 8) % 2 === 0) ? 15 : 16;
-      } else {
-        frame = 25;
-      }
-      draw(`PHONE${frame}`, PHONE_X, PHONE_Y);
-    } else if (this.phase === 4) {
+      draw(`PHONE${this._phoneFrame}`, PHONE_X, PHONE_Y);
+    } else if (this.phase === 1) {
       // Street scene — BStreet at (37,10), car at positions from SCX 5030
       draw('BSTREET', BSTREET_X, BSTREET_Y);
       const fi = Math.min(Math.floor(T / 10), 7);

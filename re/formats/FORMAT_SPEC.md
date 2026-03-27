@@ -138,14 +138,18 @@ After the 260-byte header, characters from `start_char` to `end_char` are stored
 | 2 | 2 | u16 LE | char_h | Character height |
 | 4 | h×w | u8[] | pixels | VGA palette indices, row-major |
 
-### Known fonts
+### Known fonts (verified from actual data)
 
-| Name | Chars | Max width | Height |
-|------|-------|-----------|--------|
-| MAINFONT | 32–127 | 14 | 18 |
-| SMALLFONT | 32–127 | 10 | 13 |
-| DIGITALFONT | 32–127 | 16 | 20 |
-| BABYDIGIFONT | 32–127 | 8 | 10 |
+| Name | Chars | Storage width | Glyph height | Display widths |
+|------|-------|---------------|--------------|----------------|
+| MAINFONT | 1–254 | 8 | 16 | 3–9 (variable) |
+| SMALLFONT | 32–154 | 8 | 9 | 2–6 (variable) |
+| DIGITALFONT | 48–58 | 14 | 12 | (digits only) |
+| BABYDIGIFONT | 32–57 | 11 | 8 | (digits + symbols) |
+
+Note: Storage width is the per-glyph pixel array width (Mode X interleaved);
+display width from the header's widths[] table determines spacing.
+The dialog system uses SMALLFONT for subtitle text.
 
 ---
 

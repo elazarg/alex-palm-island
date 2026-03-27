@@ -74,13 +74,14 @@ Advances through the data section's position array while displaying the current 
 | frame_count | 1-40 | Number of positions to step through in the data array. |
 | delay | 0-40 | Delay per step in ticks. 0 = advance without visible delay. |
 
-**Key insight:** P is NOT simply "pause." It steps through `frame_count` entries in the paired data section, moving the sprite to each position with `delay` ticks between steps. This is the primary mechanism for smooth motion along paths.
+**Key insight:** P is NOT simply "pause." It steps through `frame_count` entries in the paired data section, advancing both the position AND the displayed frame (frame index tracks position index). This is the primary mechanism for smooth motion along paths and for sequential frame playback.
 
 **Evidence:**
-- LOGO.SCX 5010: `P 3,0` then `G 8,0` then `P 2,0` — steps through 3 positions, jumps to entry 8, steps through 2 more.
+- LOGO.SCX 5010: `P 3,0` then `G 8,0` then `P 2,0` — steps through 3 positions/frames, jumps to entry 8, steps through 2 more.
 - AIRPORT.SCX 5020: `P 5,20` — slow movement through 5 positions (5 steps, 20 ticks each = 100 ticks total).
 - AIRPORT.SCX 5040: `P 1,0` and `P 1,1` — single-step positioning with 0 or 1 tick delay.
-- When `delay=0`, sprite teleports through positions instantly (used for initial positioning).
+- OPENING.SCX 5010: `G 20,0 / P 4,0` — jumps to position 20 then steps through frames 21-24 (phone hang-up sequence: put phone back, turn off light).
+- When `delay=0`, sprite advances through positions/frames instantly (used for initial positioning).
 
 **Confidence: HIGH**
 
