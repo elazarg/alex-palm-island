@@ -64,6 +64,7 @@ export class MainMenuScene {
     for (let i = 1; i <= ALEX_FRAMES; i++) {
       images[`MMALEX${i}`] = `${ASSET_BASE}/MMALEX${i}.png`;
     }
+    images['MMARROWCURSOR'] = `${ASSET_BASE}/MMARROWCURSOR.png`;
     await engine.loadImages(images);
   }
 
@@ -71,10 +72,10 @@ export class MainMenuScene {
     this.hoveredButton = null;
     this.alexFrame = 1;
     this.alexTick = 0;
+    this.engine.cursor = 'MMARROWCURSOR';
 
     // Listen for mouse events on the canvas
     const canvas = this.engine.ctx.canvas;
-    const scale = canvas.width / 320;
 
     canvas.onmousemove = (e) => {
       const rect = canvas.getBoundingClientRect();
@@ -127,6 +128,7 @@ export class MainMenuScene {
   }
 
   destroy() {
+    this.engine.cursor = null;
     const canvas = this.engine.ctx.canvas;
     canvas.onmousemove = null;
     canvas.onmousedown = null;

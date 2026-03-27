@@ -11,11 +11,29 @@ export class Engine {
     canvas.height = HEIGHT;
     this.ctx = canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
+    this.ctx.direction = 'ltr';
 
+    this.canvas = canvas;
     this.assets = new Map();
     this.scene = null;
     this.lastTick = 0;
     this.running = false;
+
+    // Mouse state in game coordinates (320x200)
+    this.mouseX = -1;
+    this.mouseY = -1;
+    this.cursor = null; // sprite name for custom cursor
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      this.mouseX = (e.clientX - rect.left) / (rect.width / WIDTH);
+      this.mouseY = (e.clientY - rect.top) / (rect.height / HEIGHT);
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      this.mouseX = -1;
+      this.mouseY = -1;
+    });
   }
 
   async loadImages(paths) {
@@ -64,11 +82,47 @@ export class Engine {
     ctx.clearRect(0, 0, WIDTH, HEIGHT);
     if (this.scene) this.scene.render(ctx);
 
+    // Draw custom cursor on top of everything
+    if (this.cursor && this.mouseX >= 0) {
+      this.drawSprite(ctx, this.cursor, this.mouseX, this.mouseY);
+    }
+
     requestAnimationFrame((t) => this._frame(t));
   }
 
   drawSprite(ctx, name, x, y) {
     const img = this.assets.get(name);
-    if (img) ctx.drawImage(img, x, y);
+    if (img) {
+      ctx.drawImage(img, x, y);
+    } else {
+      console.warn(`Missing sprite: ${name}`);
+    }
+  }
+
+  async loadSounds(paths) {
+    const entries = Object.entries(paths);
+    for (const [name, url] of entries) {
+      try {
+        const resp = await fetch(url);
+        const buf = await resp.arrayBuffer();
+        if (!this.audioCtx) {
+          this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        const decoded = await this.audioCtx.decodeAudioData(buf);
+        this.assets.set(name, decoded);
+      } catch (e) {
+        console.warn(`Failed to load sound ${name}: ${e.message}`);
+      }
+    }
+  }
+
+  playSound(name) {
+    const buffer = this.assets.get(name);
+    if (!buffer || !this.audioCtx) return null;
+    const source = this.audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.audioCtx.destination);
+    source.start();
+    return source;
   }
 }
