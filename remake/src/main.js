@@ -2,6 +2,7 @@ import { Engine } from './engine.js';
 import { LogoScene } from './scenes/logo.js';
 import { MainMenuScene } from './scenes/mainmenu.js';
 import { IntroScene } from './scenes/intro.js';
+import { GameScene } from './scenes/game-scene.js';
 
 async function main() {
   const canvas = document.getElementById('screen');
@@ -27,6 +28,9 @@ async function main() {
         break;
       case 'intro':
         scene = new IntroScene();
+        break;
+      case 'airport':
+        scene = new GameScene('airport');
         break;
       default:
         console.warn(`Unknown scene: ${name}`);
@@ -64,7 +68,7 @@ async function main() {
       const intro = await showScene('intro');
       intro.onDone = async () => { await showScene('menu'); };
     } else if (name === 'play') {
-      console.log('Play: game not yet implemented');
+      await showScene('airport');
     }
   };
 

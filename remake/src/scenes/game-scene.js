@@ -1,0 +1,408 @@
+// Interactive game scene — data-driven from scene descriptor + SCX
+// First implementation: Airport. Will generalize as more scenes are added.
+
+const ANIM_TICK_SCALE = 2;
+const FADE_TICKS = 18;
+
+export class GameScene {
+  constructor(sceneId) {
+    this.sceneId = sceneId;
+    this.engine = null;
+    this.onDone = null;
+
+    // Scene state
+    this.bgWidth = 320;    // total background width (960 for scrolling)
+    this.scrollX = 0;      // viewport scroll offset
+
+    // Alex state
+    this.alexX = 160;
+    this.alexY = 100;
+    this.alexDir = 2;      // facing direction (numpad: 1-9, skip 5)
+    this.alexFrame = 0;    // current walk frame (0-7)
+    this.alexWalking = false;
+    this.alexTargetX = 0;
+    this.alexTargetY = 0;
+    this.alexStepTick = 0;
+
+    // Fade
+    this.fade = 'none';
+    this.fadeAlpha = 1;
+    this._fadeCb = null;
+
+    // Walk deltas per direction (from ALEX1.SCX walk delta table)
+    // Direction mapping: 1=SW, 2=S, 3=SE, 4=W, 6=E, 7=NW, 8=N, 9=NE
+    this.walkDeltas = {
+      1: [{dx:0,dy:0},{dx:-4,dy:2},{dx:-4,dy:3},{dx:0,dy:0},{dx:0,dy:0},{dx:-4,dy:2},{dx:-4,dy:3},{dx:0,dy:0},{dx:0,dy:0}],
+      2: [{dx:0,dy:0},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:0},{dx:0,dy:0}],
+      3: [{dx:0,dy:0},{dx:4,dy:2},{dx:4,dy:3},{dx:0,dy:0},{dx:0,dy:0},{dx:4,dy:2},{dx:4,dy:3},{dx:0,dy:0},{dx:0,dy:0}],
+      4: [{dx:0,dy:0},{dx:0,dy:0},{dx:0,dy:0},{dx:-12,dy:0},{dx:-12,dy:0},{dx:-12,dy:0},{dx:-12,dy:0},{dx:0,dy:0},{dx:0,dy:0}],
+      6: [{dx:0,dy:0},{dx:0,dy:0},{dx:0,dy:0},{dx:12,dy:0},{dx:12,dy:0},{dx:12,dy:0},{dx:12,dy:0},{dx:0,dy:0},{dx:0,dy:0}],
+      7: [{dx:0,dy:0},{dx:-4,dy:-2},{dx:-4,dy:-3},{dx:0,dy:0},{dx:0,dy:0},{dx:-4,dy:-2},{dx:-4,dy:-3},{dx:0,dy:0},{dx:0,dy:0}],
+      8: [{dx:0,dy:0},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:0},{dx:0,dy:0}],
+      9: [{dx:0,dy:0},{dx:4,dy:-2},{dx:4,dy:-3},{dx:0,dy:0},{dx:0,dy:0},{dx:4,dy:-2},{dx:4,dy:-3},{dx:0,dy:0},{dx:0,dy:0}],
+    };
+  }
+
+  async load(engine) {
+    // Load scene-specific assets
+    const base = `assets/${this.sceneId}`;
+
+    // Background
+    await engine.loadImages({
+      'SCENE_BG': `${base}/SNAIRPORT_FULL.png`,
+    });
+
+    // Alex walk sprites (global)
+    // Alex walk sprites: 8 directions, variable frame count per direction
+    const alexImgs = {};
+    const frameCounts = {1:8, 2:7, 3:8, 4:8, 6:8, 7:8, 8:7, 9:8};
+    for (const [dir, count] of Object.entries(frameCounts)) {
+      for (let frame = 0; frame < count; frame++) {
+        const name = `ALEX${dir}-${frame}`;
+        alexImgs[name] = `assets/alex/${name}.png`;
+      }
+    }
+    this._frameCounts = frameCounts;
+    await engine.loadImages(alexImgs);
+
+    // Scene objects — sprites that overlay the background
+    // Position and z-order from OVR scene init (extract_hotspots.py)
+    const sceneImgs = {};
+    // Scene objects from OVR disassembly — exact positions verified.
+    // Hotspots (named, interactive):
+    //   Maake (776,120), Arrive (811,0), Depart (811,0), LineSign (436,69)
+    // Animated objects (named, with sprites set via SCX):
+    //   Stairs (825,0), ALEXDN (838,0), Family (500,40), Guard (701,13),
+    //   Trup (960,50), StaffB (500,50), P/L/G-Lost (104,16),
+    //   Border (454,25), Door (273,0), FemGrd (0,0)
+    // Objects split into behind-Alex and front-of-Alex layers.
+    // Positions from OVR disassembly.
+    this.objectsBehind = [
+      // NPCs use base+overlay pattern: large base frame always drawn,
+      // small overlay frames cycle on top at a matched offset.
+      // Animation sequences from SCX sections, positions from data sections.
+
+      // Lost clerk: base LOST0, face overlay LOST1-8 at (35,12),
+      // plus ACHU sneeze overlay — Achu object at OVR position (111,31).
+      // Sequence: blink (F1/F2), then sneeze uses ACHU frames.
+      { name: 'Lost',    sprite: 'LOST0',   x: 86,  y: 16,  visible: true,
+        overlay: { prefix: 'LOST', rate: 6, ox: 35, oy: 12,
+          sequence: [1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,
+                     1,1,1,1,1,1,1,1,1,1,2,1] },
+        overlay2: { prefix: 'ACHU', rate: 6, ox: 25, oy: 15,
+          // Sneeze sequence: mostly 0 (hidden), then ACHU1-11 burst
+          sequence: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+                     1,2,3,4,5,6,7,8,9,10,11,0] } },
+      { name: 'Door',    sprite: 'DOOR1',   x: 273, y: 0,   visible: true },
+      // FemGrd: F1=hat at side (idle off), F8/F10=hat on head (idle on/heels).
+      // Hat ON:  F1→F2→F3→F4→F6→F7 (lift hat, diagonal place, hand down)
+      // Hat OFF: F7→F6→F3→F2→F1 (hand up, grab hat, bring down; skip F4)
+      { name: 'FemGrd',  sprite: 'FEMGRD1', x: 246, y: 20,  visible: true,
+        anim: { prefix: 'FEMGRD', rate: 4, bottomAlign: 121,
+          //       idle   hat on               heels              hat off          idle
+          sequence: [1,1, 2,3,4,6,7, 8,10,8,10,8,10, 8,8, 7,6,3,2, 1,1],
+          framePos: {
+            1:[246,20], 2:[259,20], 3:[260,20], 4:[261,17], 5:[261,21],
+            6:[261,21], 7:[260,21], 8:[254,21], 9:[254,21], 10:[254,21]
+          } } },
+      // Passport officer: base BRDTLK0, face overlays BRDTLK1-11 at (73,21)
+      { name: 'BrdTlk',  sprite: 'BRDTLK0', x: 386, y: 2,   visible: true,
+        overlay: { prefix: 'BRDTLK', rate: 8, ox: 73, oy: 21,
+          sequence: [1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,
+                     3,4,3,4,3,1,1,1,
+                     5,6,5,6,7,8,7,8,5,6,1,1,
+                     9,10,9,10,11,10,9,1,1,1,1,1] } },
+      // Border (SCX 5100): hand/stamp tapping — drawn AFTER BrdTlk so it's on top.
+      { name: 'Border',  sprite: 'BORDER1', x: 454, y: 25,  visible: true,
+        anim: { prefix: 'BORDER', rate: 3,
+          sequence: [1,2,3,4,5,6, 1,1,1,1,1,1,1,1,1,1,1,1,1,1] } },
+      // Guard: F1/F2 idle, F3/F4 gesture, F6/F7 look around
+      { name: 'Guard',   sprite: 'GUARD1',  x: 701, y: 13,  visible: true,
+        anim: { prefix: 'GUARD', rate: 10,
+          sequence: [1,1,1,1,1,2,1,1,1,1,1,2,1,1,1,1,1,2,1,1,1,1,1,2,1,1,
+                     3,4,3,4,3,1,1,1,6,7,6,7,6,1,1,1,1] } },
+      // Family in front of passport officer (rendered after BrdTlk)
+      { name: 'Family',  sprite: 'FAMILY1', x: 500, y: 40,  visible: true,
+        anim: { prefix: 'FAMILY', rate: 5,
+          sequence: [1,1,1,1,1,1,1,1,1,1,2,3,4,5,6,5,4,3,2,1,1,1,1] } },
+      // Desk sign — drawn after BrdTlk so it appears on top of the desk
+      { name: 'LineSign',sprite: 'LINESIGN', x: 436, y: 69, visible: true },
+      { name: 'Stairs',  sprite: 'STAIRS1', x: 825, y: 0,   visible: true, anim: 'stairs' },
+      // Hidden until triggered by SCX
+      { name: 'ALEXDN',  sprite: 'ALEXDN1', x: 838, y: 0,   visible: false },
+      { name: 'Trup',    sprite: 'TRUP1',   x: 960, y: 50,  visible: false },
+      { name: 'StaffB',  sprite: 'STAFFB1', x: 500, y: 50,  visible: false },
+      { name: 'Depart',  sprite: 'DEPART',  x: 811, y: 0,   visible: false },
+    ];
+    this.objectsFront = [
+      // In front of Alex: ceiling signs, wall bases
+      { name: 'Maake',   sprite: 'MAAKE',   x: 776, y: 120, visible: true },
+      { name: 'Arrive',  sprite: 'ARRIVE',  x: 811, y: 0,   visible: true },
+      { name: 'WallB',   sprite: 'WALL_B',  x: 0,   y: 0,   visible: true },
+      { name: 'WallK',   sprite: 'WALL_K',  x: 920, y: 100, visible: true },
+    ];
+    this.sceneObjects = [...this.objectsBehind, ...this.objectsFront];
+    for (const obj of this.sceneObjects) {
+      if (!sceneImgs[obj.sprite]) {
+        sceneImgs[obj.sprite] = `${base}/${obj.sprite}.png`;
+      }
+    }
+    // Load animation frames for all animated objects
+    for (let i = 1; i <= 4; i++) sceneImgs[`STAIRS${i}`] = `${base}/STAIRS${i}.png`;
+    for (let i = 1; i <= 12; i++) sceneImgs[`GUARD${i}`] = `${base}/GUARD${i}.png`;
+    for (let i = 1; i <= 6; i++) sceneImgs[`FAMILY${i}`] = `${base}/FAMILY${i}.png`;
+    for (let i = 0; i <= 8; i++) sceneImgs[`LOST${i}`] = `${base}/LOST${i}.png`;
+    for (let i = 1; i <= 10; i++) sceneImgs[`FEMGRD${i}`] = `${base}/FEMGRD${i}.png`;
+    for (let i = 0; i <= 11; i++) sceneImgs[`BRDTLK${i}`] = `${base}/BRDTLK${i}.png`;
+    for (let i = 1; i <= 11; i++) sceneImgs[`ACHU${i}`] = `${base}/ACHU${i}.png`;
+    // Load additional character sprites
+    for (let i = 1; i <= 6; i++) sceneImgs[`BORDER${i}`] = `${base}/BORDER${i}.png`;
+    for (const name of ['TRUP1','STAFFB1',
+                         'DOOR1','DOOR2','FEMGRD1','LOST0','LOST1','ALEXDN1',
+                         'WALL_B','WALL_K',
+                         'MAAKE','ARRIVE','DEPART','LINESIGN','DALPAK']) {
+      if (!sceneImgs[name]) sceneImgs[name] = `${base}/${name}.png`;
+    }
+    await engine.loadImages(sceneImgs);
+
+    // Cursors
+    await engine.loadImages({
+      'WALKCURSOR': 'assets/cursors/WALKCURSOR.png',
+    });
+
+    // Escalator animation state
+    this.stairsTick = 0;
+    this.stairsFrame = 1;
+
+    this.bgWidth = engine.assets.get('SCENE_BG')?.width || 320;
+  }
+
+  init() {
+    this.engine.cursor = 'WALKCURSOR';
+
+    // Airport: Alex starts at escalator area (right side of 960px scene)
+    this.alexX = 840;
+    this.alexY = 140;
+    this.alexDir = 4; // facing left (west)
+    this.scrollX = Math.max(0, this.alexX - 160); // center viewport on Alex
+
+    this._fadeIn();
+
+    // Click handler
+    const canvas = this.engine.ctx.canvas;
+    this._onMouseDown = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = (e.clientX - rect.left) / (rect.width / 320);
+      const my = (e.clientY - rect.top) / (rect.height / 200);
+
+      // Convert screen coords to world coords
+      const worldX = mx + this.scrollX;
+      const worldY = my;
+
+      // Walk to clicked position
+      this.alexTargetX = worldX;
+      this.alexTargetY = worldY;
+      this.alexWalking = true;
+      this.alexFrame = 0;
+      this.alexStepTick = 0;
+
+      // Determine direction
+      this.alexDir = this._calcDirection(this.alexX, this.alexY, worldX, worldY);
+    };
+    canvas.addEventListener('mousedown', this._onMouseDown);
+  }
+
+  _calcDirection(fromX, fromY, toX, toY) {
+    const dx = toX - fromX;
+    const dy = toY - fromY;
+    const angle = Math.atan2(dy, dx) * 180 / Math.PI; // -180 to 180
+    // Map angle to numpad direction
+    if (angle >= -22.5 && angle < 22.5) return 6;   // E
+    if (angle >= 22.5 && angle < 67.5) return 3;    // SE
+    if (angle >= 67.5 && angle < 112.5) return 2;   // S
+    if (angle >= 112.5 && angle < 157.5) return 1;  // SW
+    if (angle >= 157.5 || angle < -157.5) return 4;  // W
+    if (angle >= -157.5 && angle < -112.5) return 7; // NW
+    if (angle >= -112.5 && angle < -67.5) return 8;  // N
+    if (angle >= -67.5 && angle < -22.5) return 9;   // NE
+    return 2;
+  }
+
+  tick() {
+    // Fade
+    if (this.fade === 'in') {
+      this.fadeAlpha = Math.min(1, this.fadeAlpha + 1 / FADE_TICKS);
+      if (this.fadeAlpha >= 1) {
+        this.fade = 'none';
+        if (this._fadeCb) { this._fadeCb(); this._fadeCb = null; }
+      }
+    } else if (this.fade === 'out') {
+      this.fadeAlpha = Math.max(0, this.fadeAlpha - 1 / FADE_TICKS);
+      if (this.fadeAlpha <= 0) {
+        this.fade = 'none';
+        if (this._fadeCb) { this._fadeCb(); this._fadeCb = null; }
+      }
+    }
+
+    // Walk
+    if (this.alexWalking) {
+      this.alexStepTick++;
+      if (this.alexStepTick >= ANIM_TICK_SCALE) {
+        this.alexStepTick = 0;
+        const maxFrames = this._frameCounts[this.alexDir] || 8;
+        this.alexFrame = (this.alexFrame + 1) % maxFrames;
+
+        const deltas = this.walkDeltas[this.alexDir];
+        if (deltas) {
+          const d = deltas[this.alexFrame];
+          this.alexX += d.dx;
+          this.alexY += d.dy;
+        }
+
+        // Check if close enough to target
+        const dist = Math.abs(this.alexX - this.alexTargetX) + Math.abs(this.alexY - this.alexTargetY);
+        if (dist < 10) {
+          this.alexWalking = false;
+          this.alexFrame = 0;
+          // Re-evaluate direction at end of each cycle
+        } else if (this.alexFrame === 0) {
+          // Re-evaluate direction each cycle
+          this.alexDir = this._calcDirection(this.alexX, this.alexY, this.alexTargetX, this.alexTargetY);
+        }
+      }
+    }
+
+    // Animate scene objects
+    this.stairsTick++;
+    if (this.stairsTick >= 3) {
+      this.stairsTick = 0;
+      this.stairsFrame = (this.stairsFrame % 4) + 1;
+    }
+    // Update all animated objects
+    for (const obj of this.sceneObjects) {
+      if (obj.anim === 'stairs') {
+        obj.sprite = `STAIRS${this.stairsFrame}`;
+      } else if (obj.overlay && obj.overlay.sequence) {
+        // Base+overlay with sequence
+        if (obj._oTick == null) obj._oTick = 0;
+        if (obj._oIdx == null) obj._oIdx = 0;
+        obj._oTick++;
+        if (obj._oTick >= obj.overlay.rate) {
+          obj._oTick = 0;
+          obj._oIdx = (obj._oIdx + 1) % obj.overlay.sequence.length;
+        }
+        // Second overlay (e.g., ACHU sneeze)
+        if (obj.overlay2 && obj.overlay2.sequence) {
+          if (obj._o2Tick == null) obj._o2Tick = 0;
+          if (obj._o2Idx == null) obj._o2Idx = 0;
+          obj._o2Tick++;
+          if (obj._o2Tick >= obj.overlay2.rate) {
+            obj._o2Tick = 0;
+            obj._o2Idx = (obj._o2Idx + 1) % obj.overlay2.sequence.length;
+          }
+        }
+      } else if (obj.anim && obj.anim.sequence) {
+        // Full-frame animation with sequence
+        if (obj._animTick == null) obj._animTick = 0;
+        if (obj._animIdx == null) obj._animIdx = 0;
+        obj._animTick++;
+        if (obj._animTick >= obj.anim.rate) {
+          obj._animTick = 0;
+          obj._animIdx = (obj._animIdx + 1) % obj.anim.sequence.length;
+          const frameNum = obj.anim.sequence[obj._animIdx];
+          obj.sprite = `${obj.anim.prefix}${frameNum}`;
+          // Per-frame positions from SCX data section (same frame = same position always)
+          if (obj.anim.framePos && obj.anim.framePos[frameNum]) {
+            obj.x = obj.anim.framePos[frameNum][0];
+            obj.y = obj.anim.framePos[frameNum][1];
+          }
+        }
+      }
+    }
+
+    // Scroll viewport to follow Alex
+    const targetScroll = Math.max(0, Math.min(this.bgWidth - 320, this.alexX - 160));
+    // Smooth scroll
+    if (Math.abs(this.scrollX - targetScroll) > 1) {
+      this.scrollX += Math.sign(targetScroll - this.scrollX) * Math.min(4, Math.abs(targetScroll - this.scrollX));
+    } else {
+      this.scrollX = targetScroll;
+    }
+  }
+
+  render(ctx) {
+    // Draw scrolling background
+    const bg = this.engine.assets.get('SCENE_BG');
+    if (bg) {
+      ctx.drawImage(bg, -this.scrollX, 0);
+    }
+
+    // Draw objects BEHIND Alex
+    for (const obj of this.objectsBehind) {
+      if (!obj.visible) continue;
+
+      // Check if overlay2 is active (e.g., ACHU sneeze replaces clerk)
+      const o2Active = obj.overlay2 && obj.overlay2.sequence &&
+        obj._o2Idx != null && obj.overlay2.sequence[obj._o2Idx] > 0;
+
+      if (o2Active) {
+        // Skip base sprite entirely (its pixels match the background anyway)
+        // and draw overlay2 directly on the background
+        const frameNum = obj.overlay2.sequence[obj._o2Idx];
+        const oImg = this.engine.assets.get(`${obj.overlay2.prefix}${frameNum}`);
+        if (oImg) ctx.drawImage(oImg, obj.x + obj.overlay2.ox - this.scrollX, obj.y + obj.overlay2.oy);
+      } else {
+        // Draw base sprite
+        const img = this.engine.assets.get(obj.sprite);
+        if (img) {
+          // Bottom-aligned: sprites with different heights align at feet
+          const drawY = (obj.anim && obj.anim.bottomAlign)
+            ? obj.anim.bottomAlign - img.height
+            : obj.y;
+          ctx.drawImage(img, obj.x - this.scrollX, drawY);
+        }
+        // Draw overlay1 (face) on top of base
+        if (obj.overlay && obj.overlay.sequence && obj._oIdx != null) {
+          const frameNum = obj.overlay.sequence[obj._oIdx];
+          if (frameNum > 0) {
+            const oImg = this.engine.assets.get(`${obj.overlay.prefix}${frameNum}`);
+            if (oImg) ctx.drawImage(oImg, obj.x + obj.overlay.ox - this.scrollX, obj.y + obj.overlay.oy);
+          }
+        }
+      }
+    }
+
+    // Draw Alex (idle = frame 1, not 0 which is eyes-closed)
+    const displayFrame = (!this.alexWalking && this.alexFrame === 0) ? 1 : this.alexFrame;
+    const spriteName = `ALEX${this.alexDir}-${displayFrame}`;
+    const alexImg = this.engine.assets.get(spriteName);
+    if (alexImg) {
+      const screenX = this.alexX - this.scrollX - alexImg.width / 2;
+      const screenY = this.alexY - alexImg.height; // feet at alexY
+      ctx.drawImage(alexImg, Math.round(screenX), Math.round(screenY));
+    }
+
+    // Draw objects IN FRONT of Alex (signs, foreground elements)
+    for (const obj of this.objectsFront) {
+      if (!obj.visible) continue;
+      const img = this.engine.assets.get(obj.sprite);
+      if (img) ctx.drawImage(img, obj.x - this.scrollX, obj.y);
+    }
+
+    // Fade overlay
+    if (this.fadeAlpha < 1) {
+      ctx.globalAlpha = 1 - this.fadeAlpha;
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, 320, 200);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  _fadeIn(cb) { this.fade = 'in'; this.fadeAlpha = 0; this._fadeCb = cb || null; }
+  _fadeOut(cb) { this.fade = 'out'; this.fadeAlpha = 1; this._fadeCb = cb || null; }
+
+  destroy() {
+    const canvas = this.engine.ctx.canvas;
+    canvas.removeEventListener('mousedown', this._onMouseDown);
+  }
+}
