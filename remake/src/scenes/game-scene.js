@@ -116,11 +116,18 @@ export class GameScene {
       { name: 'Border',  sprite: 'BORDER1', x: 454, y: 25,  visible: true,
         anim: { prefix: 'BORDER', rate: 3,
           sequence: [1,2,3,4,5,6, 1,1,1,1,1,1,1,1,1,1,1,1,1,1] } },
-      // Guard: F1/F2 idle, F3/F4 gesture, F6/F7 look around
+      // Guard (SCX 5020): F1/F2 blink ×6, then discrete yawn gestures:
+      // F4↔F3 arm shake, F6↔F7 hand at face, F11 yawn hold, F12→F1 return
+      // (retraction skips stretched-arm frames — matches original)
       { name: 'Guard',   sprite: 'GUARD1',  x: 701, y: 13,  visible: true,
-        anim: { prefix: 'GUARD', rate: 10,
-          sequence: [1,1,1,1,1,2,1,1,1,1,1,2,1,1,1,1,1,2,1,1,1,1,1,2,1,1,
-                     3,4,3,4,3,1,1,1,6,7,6,7,6,1,1,1,1] } },
+        anim: { prefix: 'GUARD', rate: 4,
+          sequence: [1,1,1,1,1,1,1,2, 1,1,1,1,1,1,1,2,
+                     1,1,1,1,1,1,1,2, 1,1,1,1,1,1,1,2,
+                     1,1,1,1,1,1,1,2, 1,1,1,1,1,1,1,2,
+                     4,3,4,3,
+                     6,6,6,6, 7,7,7,7, 6,6,6,6,
+                     11,11,11,11,11,11,11,11,
+                     12, 1,1] } },
       // Family in front of passport officer (rendered after BrdTlk)
       { name: 'Family',  sprite: 'FAMILY1', x: 500, y: 40,  visible: true,
         anim: { prefix: 'FAMILY', rate: 5,
@@ -186,6 +193,16 @@ export class GameScene {
     this.alexDir = 4; // facing left (west)
     this.scrollX = Math.max(0, this.alexX - 160); // center viewport on Alex
 
+    // Walk zones — type A rectangles from OVR, expanded to cover actual
+    // walk destinations from SCX W commands (y ranges 60-150).
+    // Original zones define click-target areas; floor Y extends further.
+    this.walkZones = [
+      [0, 95, 300, 160],       // left floor (lobby/lost&found area)
+      [250, 55, 400, 160],     // door corridor
+      [350, 95, 960, 160],     // main floor (passport to escalator)
+      [785, 90, 960, 160],     // right floor near escalator
+    ];
+
     this._fadeIn();
 
     // Click handler
@@ -199,14 +216,14 @@ export class GameScene {
       const worldX = mx + this.scrollX;
       const worldY = my;
 
-      // Walk to clicked position
+      // Only walk to positions inside a walk zone
+      if (!this._inWalkZone(worldX, worldY)) return;
+
       this.alexTargetX = worldX;
       this.alexTargetY = worldY;
       this.alexWalking = true;
       this.alexFrame = 0;
       this.alexStepTick = 0;
-
-      // Determine direction
       this.alexDir = this._calcDirection(this.alexX, this.alexY, worldX, worldY);
     };
     canvas.addEventListener('mousedown', this._onMouseDown);
@@ -255,8 +272,17 @@ export class GameScene {
         const deltas = this.walkDeltas[this.alexDir];
         if (deltas) {
           const d = deltas[this.alexFrame];
-          this.alexX += d.dx;
-          this.alexY += d.dy;
+          const newX = this.alexX + d.dx;
+          const newY = this.alexY + d.dy;
+          if (this._inWalkZone(newX, newY)) {
+            this.alexX = newX;
+            this.alexY = newY;
+          } else {
+            // Hit boundary — stop walking
+            this.alexWalking = false;
+            this.alexFrame = 0;
+            return;
+          }
         }
 
         // Check if close enough to target
@@ -264,7 +290,6 @@ export class GameScene {
         if (dist < 10) {
           this.alexWalking = false;
           this.alexFrame = 0;
-          // Re-evaluate direction at end of each cycle
         } else if (this.alexFrame === 0) {
           // Re-evaluate direction each cycle
           this.alexDir = this._calcDirection(this.alexX, this.alexY, this.alexTargetX, this.alexTargetY);
@@ -396,6 +421,13 @@ export class GameScene {
       ctx.fillRect(0, 0, 320, 200);
       ctx.globalAlpha = 1;
     }
+  }
+
+  _inWalkZone(x, y) {
+    for (const [x1, y1, x2, y2] of this.walkZones) {
+      if (x >= x1 && x <= x2 && y >= y1 && y <= y2) return true;
+    }
+    return false;
   }
 
   _fadeIn(cb) { this.fade = 'in'; this.fadeAlpha = 0; this._fadeCb = cb || null; }
