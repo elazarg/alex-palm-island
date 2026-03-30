@@ -3,6 +3,8 @@
 
 import { BitmapFont } from '../font.js';
 import { AIRPORT_SCRIPT } from './scripts/airport-script.js';
+import { AIRPORT_DIALOG_LAYOUT } from '../ui/dialog-layouts.js';
+import { buildTalkResponseSlices, renderTalkDialog, renderTalkResponse } from '../ui/dialog-renderer.js';
 
 const ANIM_TICK_SCALE = 2;
 const FADE_TICKS = 18;
@@ -15,11 +17,13 @@ const ACHU_SEQUENCE = [
 ];
 
 export class GameScene {
-  constructor(sceneId) {
+  constructor(sceneId, options = {}) {
     this.sceneId = sceneId;
+    this.options = options;
     this.engine = null;
     this.onDone = null;
     this.sceneScript = sceneId === 'airport' ? AIRPORT_SCRIPT : null;
+    this.dialogLayout = sceneId === 'airport' ? AIRPORT_DIALOG_LAYOUT : null;
 
     // Scene state
     this.bgWidth = 320;    // total background width (960 for scrolling)
@@ -249,7 +253,7 @@ export class GameScene {
       FEMTLK0: `assets/airport/FEMTLK0.png?v=${uiVersion}`,
       FAMTLK0: `assets/airport/FAMTLK0.png?v=${uiVersion}`,
     });
-    this._buildTalkResponseSlices();
+    buildTalkResponseSlices(engine, this.dialogLayout);
 
     const fontImg = new Image();
     const fontData = await (await fetch('assets/mainfont.json')).json();
@@ -296,55 +300,6 @@ export class GameScene {
 
     this.bgWidth = engine.assets.get('SCENE_BG')?.width || 320;
     this.objectByName = Object.fromEntries(this.sceneObjects.map(obj => [obj.name, obj]));
-  }
-
-  _buildTalkResponseSlices() {
-    const talk = this.engine?.assets?.get('TALKWINDOW');
-    if (!talk) return;
-    this.engine.assets.set('TALKRESP_LEFT', this._makeTransparentSlice(talk, 6, 1, 144, 109));
-    this.engine.assets.set('TALKRESP_BUBBLE', this._makeTransparentSlice(talk, 120, 1, 200, 99));
-  }
-
-  _makeTransparentSlice(source, sx, sy, sw, sh) {
-    const canvas = document.createElement('canvas');
-    canvas.width = sw;
-    canvas.height = sh;
-    const ctx = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(source, sx, sy, sw, sh, 0, 0, sw, sh);
-    const img = ctx.getImageData(0, 0, sw, sh);
-    const data = img.data;
-    const stack = [];
-    const seen = new Uint8Array(sw * sh);
-    const push = (x, y) => {
-      if (x < 0 || y < 0 || x >= sw || y >= sh) return;
-      const idx = y * sw + x;
-      if (seen[idx]) return;
-      seen[idx] = 1;
-      const o = idx * 4;
-      if (data[o + 3] && data[o] === 0 && data[o + 1] === 0 && data[o + 2] === 0) stack.push(idx);
-    };
-    for (let x = 0; x < sw; x++) {
-      push(x, 0);
-      push(x, sh - 1);
-    }
-    for (let y = 1; y < sh - 1; y++) {
-      push(0, y);
-      push(sw - 1, y);
-    }
-    while (stack.length) {
-      const idx = stack.pop();
-      const o = idx * 4;
-      data[o + 3] = 0;
-      const x = idx % sw;
-      const y = Math.floor(idx / sw);
-      push(x + 1, y);
-      push(x - 1, y);
-      push(x, y + 1);
-      push(x, y - 1);
-    }
-    ctx.putImageData(img, 0, 0);
-    return canvas;
   }
 
   init() {
@@ -466,6 +421,10 @@ export class GameScene {
       }
     };
     window.addEventListener('keydown', this._onKeyDown);
+
+    if (this.options.previewDialogId) {
+      this._openDialog(this.options.previewDialogId);
+    }
   }
 
   _calcDirection(fromX, fromY, toX, toY) {
@@ -913,9 +872,25 @@ export class GameScene {
   _renderModal(ctx) {
     if (!this.modal || !this.font) return;
     if (this.modal.type === 'dialog') {
-      this._renderTalkDialog(ctx);
+      const result = renderTalkDialog(ctx, {
+        engine: this.engine,
+        font: this.font,
+        modal: this.modal,
+        uiTick: this.uiTick,
+        layout: this.dialogLayout,
+      });
+      this._choiceBoxes = result.choiceBoxes;
+      this._dialogExitBox = result.dialogExitBox;
     } else if (this.modal.presentation === 'talk') {
-      this._renderTalkResponse(ctx);
+      const result = renderTalkResponse(ctx, {
+        engine: this.engine,
+        font: this.font,
+        modal: this.modal,
+        uiTick: this.uiTick,
+        layout: this.dialogLayout,
+      });
+      this._choiceBoxes = result.choiceBoxes;
+      this._dialogExitBox = result.dialogExitBox;
     } else {
       this._renderNotePopup(ctx);
     }
@@ -991,124 +966,6 @@ export class GameScene {
     }
     this._choiceBoxes = [];
     this._dialogExitBox = null;
-  }
-
-  _renderTalkDialog(ctx) {
-    const win = this.engine.assets.get('TALKWINDOW');
-    if (win) ctx.drawImage(win, 0, 0);
-
-    this._renderDialogSpeaker(ctx);
-
-    const alex = this.engine.assets.get('ALTALK1');
-    if (alex) ctx.drawImage(alex, 210, 65);
-
-    const topLines = this._wrapText(this.modal.prompt, 136);
-    let y = 14;
-    for (const line of topLines) {
-      this.font.drawText(ctx, line, 166, y, '#000000');
-      y += 11;
-    }
-
-    const baseQuestion = this.modal.question.replace(/:\s*$/, '');
-    const selectedText = this.modal.selectedChoice != null
-      ? this.modal.choices[this.modal.selectedChoice].label
-      : '____';
-    const questionX = 16;
-    const questionY = 103;
-    y = this._drawQuestionSelection(ctx, baseQuestion, selectedText, questionX, questionY, 168) + 7;
-
-    this._choiceBoxes = [];
-    const numberX = 16;
-    const bodyX = 36;
-    const highlightX = 32;
-    const highlightRight = 184;
-    for (let i = 0; i < this.modal.choices.length; i++) {
-      const label = `${i + 1}.  ${this.modal.choices[i].label}`;
-      const choiceText = this.modal.choices[i].label;
-      if (this.modal.selectedChoice === i) {
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(highlightX, y - 1, highlightRight - highlightX, this.font.height + 2);
-        this.font.drawText(ctx, choiceText, bodyX, y, '#ffffff');
-        this.font.drawText(ctx, `${i + 1}.`, numberX, y, '#000000');
-      } else {
-        this.font.drawText(ctx, label, numberX, y, '#000000');
-      }
-      this._choiceBoxes.push({ x1: numberX, y1: y - 2, x2: highlightRight, y2: y + this.font.height + 2 });
-      y += 11;
-    }
-
-    const exit = this.engine.assets.get('TLKEXIT1');
-    if (exit) {
-      ctx.drawImage(exit, 166, 148);
-      this._dialogExitBox = { x1: 166, y1: 148, x2: 166 + exit.width, y2: 148 + exit.height };
-    }
-  }
-
-  _renderTalkResponse(ctx) {
-    const leftTile = this.engine.assets.get('TALKRESP_LEFT');
-    if (leftTile) ctx.drawImage(leftTile, 6, 1);
-    this._renderDialogSpeaker(ctx);
-    const bubble = this.engine.assets.get('TALKRESP_BUBBLE');
-    if (bubble) ctx.drawImage(bubble, 120, 1);
-
-    const lines = this._wrapText(this.modal.text, 188);
-    let y = 14;
-    for (const line of lines) {
-      this.font.drawText(ctx, line, 166, y, '#000000');
-      y += 11;
-    }
-    this._choiceBoxes = [];
-    this._dialogExitBox = null;
-  }
-
-  _drawQuestionSelection(ctx, baseQuestion, selectedText, x, y, maxWidth) {
-    const prefix = this.modal.selectedChoice != null ? `${baseQuestion} ` : `${baseQuestion}: `;
-    let cx = x;
-    let cy = y;
-    const drawWord = (word, color) => {
-      const width = this.font.measureText(word);
-      if (cx > x && cx + width > x + maxWidth) {
-        cy += 11;
-        cx = x;
-      }
-      this.font.drawText(ctx, word, cx, cy, color);
-      cx += width;
-    };
-    for (const token of prefix.match(/\S+\s*/g) || [prefix]) {
-      drawWord(token, '#000000');
-    }
-    if (this.modal.selectedChoice != null) {
-      for (const token of selectedText.match(/\S+\s*/g) || [selectedText]) {
-        drawWord(token, '#d40000');
-      }
-    } else {
-      drawWord(selectedText, '#000000');
-    }
-    return cy;
-  }
-
-  _renderDialogSpeaker(ctx) {
-    const baseName = this.modal.speakerBase || this.modal.speakerSprite;
-    const npc = this.engine.assets.get(baseName);
-    if (!npc) return;
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(16, 12, 116, 80);
-    ctx.clip();
-    ctx.drawImage(npc, this.modal.speakerX, this.modal.speakerY);
-
-    const overlay = this.modal.speakerOverlay;
-    if (overlay?.sequence?.length) {
-      const idx = Math.floor(this.uiTick / (overlay.rate || 8)) % overlay.sequence.length;
-      const frameNum = overlay.sequence[idx];
-      if (frameNum) {
-        const oImg = this.engine.assets.get(`${overlay.prefix}${frameNum}`);
-        if (oImg) {
-          ctx.drawImage(oImg, this.modal.speakerX + overlay.ox, this.modal.speakerY + overlay.oy);
-        }
-      }
-    }
-    ctx.restore();
   }
 
   _formatNoteText(text) {

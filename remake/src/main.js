@@ -7,17 +7,29 @@ import { GameScene } from './scenes/game-scene.js';
 async function main() {
   const canvas = document.getElementById('screen');
   const engine = new Engine(canvas);
+  const search = new URLSearchParams(location.search);
+  const previewScene = search.get('scene') || 'airport';
+  const previewDialogId = search.get('dialog');
+  const startFromDialogPreview = Boolean(previewDialogId);
 
   // Determine starting scene from URL hash (supports #intro-spymastr etc.)
   const fullHash = location.hash.replace('#', '') || 'logo';
-  const startScene = fullHash.split('-')[0];
+  const startScene = startFromDialogPreview ? previewScene : fullHash.split('-')[0];
   const subScene = fullHash.split('-')[1] || null;
 
   // Preload scenes on demand
   const scenes = {};
 
+  function getSceneCacheKey(name) {
+    if (startFromDialogPreview && name === previewScene) {
+      return `${name}:dialog:${previewDialogId}`;
+    }
+    return name;
+  }
+
   async function getScene(name) {
-    if (scenes[name]) return scenes[name];
+    const cacheKey = getSceneCacheKey(name);
+    if (scenes[cacheKey]) return scenes[cacheKey];
     let scene;
     switch (name) {
       case 'logo':
@@ -30,14 +42,16 @@ async function main() {
         scene = new IntroScene();
         break;
       case 'airport':
-        scene = new GameScene('airport');
+        scene = new GameScene('airport', {
+          previewDialogId: startFromDialogPreview && name === previewScene ? previewDialogId : null,
+        });
         break;
       default:
         console.warn(`Unknown scene: ${name}`);
         return null;
     }
     await scene.load(engine);
-    scenes[name] = scene;
+    scenes[cacheKey] = scene;
     return scene;
   }
 
