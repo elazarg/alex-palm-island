@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <title>Alex in Palm Island</title>
   <style>
+    :root {
+      --canvas-offset-x: 24px;
+    }
+
     body {
       margin: 0;
       background: #000;
@@ -20,6 +24,7 @@
       height: 100vh;
       object-fit: contain;
       cursor: none;
+      transform: translateX(var(--canvas-offset-x));
     }
   </style>
 </head>

@@ -352,7 +352,7 @@ export class GameScene {
     this._initSceneScript();
 
     // Airport: Alex starts at escalator area (right side of 960px scene)
-    this.alexX = 837;
+    this.alexX = 836;
     this.alexY = 140;
     this.alexDir = 1;
     this.alexFrame = 1;
@@ -1000,7 +1000,7 @@ export class GameScene {
     this._renderDialogSpeaker(ctx);
 
     const alex = this.engine.assets.get('ALTALK1');
-    if (alex) ctx.drawImage(alex, 222, 64);
+    if (alex) ctx.drawImage(alex, 210, 65);
 
     const topLines = this._wrapText(this.modal.prompt, 136);
     let y = 14;
@@ -1120,7 +1120,7 @@ export class GameScene {
     const digitW = 5;
     const gap = 2;
     const totalW = digitW * text.length + gap * (text.length - 1);
-    const startX = boxX + 16;
+    const startX = boxX + 15;
     const startY = boxY + 3;
     for (let i = 0; i < text.length; i++) {
       this._drawSevenSegmentDigit(ctx, startX + i * (digitW + gap), startY, text[i]);
