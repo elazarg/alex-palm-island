@@ -1,6 +1,9 @@
 // Interactive game scene — data-driven from scene descriptor + SCX
 // First implementation: Airport. Will generalize as more scenes are added.
 
+import { BitmapFont } from '../font.js';
+import { AIRPORT_SCRIPT } from './scripts/airport-script.js';
+
 const ANIM_TICK_SCALE = 2;
 const FADE_TICKS = 18;
 
@@ -16,6 +19,7 @@ export class GameScene {
     this.sceneId = sceneId;
     this.engine = null;
     this.onDone = null;
+    this.sceneScript = sceneId === 'airport' ? AIRPORT_SCRIPT : null;
 
     // Scene state
     this.bgWidth = 320;    // total background width (960 for scrolling)
@@ -36,6 +40,13 @@ export class GameScene {
     this.fade = 'none';
     this.fadeAlpha = 1;
     this._fadeCb = null;
+
+    // Declarative scene logic runtime
+    this.state = {};
+    this.actionQueue = [];
+    this.modal = null;
+    this._choiceBoxes = [];
+    this._interactionEnabled = {};
 
     // Walk deltas per direction (from ALEX1.SCX walk delta table)
     // Direction mapping: 1=SW, 2=S, 3=SE, 4=W, 6=E, 7=NW, 8=N, 9=NE
@@ -143,7 +154,7 @@ export class GameScene {
                      11,11,11,11,11,11,11,11,
                      12, 1,1] } },
       // Family in front of passport officer (rendered after BrdTlk)
-      { name: 'Family',  sprite: 'FAMILY1', x: 500, y: 40,  visible: true,
+      { name: 'Family',  sprite: 'FAMILY1', x: 500, y: 40,  visible: false,
         anim: { prefix: 'FAMILY', rate: 5,
           sequence: [1,1,1,1,1,1,1,1,1,1,2,3,4,5,6,5,4,3,2,1,1,1,1] } },
       // Desk sign — drawn after BrdTlk so it appears on top of the desk
@@ -185,6 +196,15 @@ export class GameScene {
     }
     await engine.loadImages(sceneImgs);
 
+    const fontImg = new Image();
+    const fontData = await (await fetch('assets/mainfont.json')).json();
+    await new Promise((resolve, reject) => {
+      fontImg.onload = resolve;
+      fontImg.onerror = reject;
+      fontImg.src = 'assets/mainfont.png';
+    });
+    this.font = new BitmapFont(fontImg, fontData);
+
     // Cursors
     await engine.loadImages({
       'WALKCURSOR': 'assets/cursors/WALKCURSOR.png',
@@ -195,10 +215,12 @@ export class GameScene {
     this.stairsFrame = 1;
 
     this.bgWidth = engine.assets.get('SCENE_BG')?.width || 320;
+    this.objectByName = Object.fromEntries(this.sceneObjects.map(obj => [obj.name, obj]));
   }
 
   init() {
     this.engine.cursor = 'WALKCURSOR';
+    this._initSceneScript();
 
     // Airport: Alex starts at escalator area (right side of 960px scene)
     this.alexX = 840;
@@ -225,20 +247,27 @@ export class GameScene {
       const mx = (e.clientX - rect.left) / (rect.width / 320);
       const my = (e.clientY - rect.top) / (rect.height / 200);
 
+      if (this.modal) {
+        this._handleModalClick(mx, my);
+        return;
+      }
+
+      if (this.actionQueue.length) return;
+
       // Convert screen coords to world coords
       const worldX = mx + this.scrollX;
       const worldY = my;
 
+      const interaction = this._findInteraction(worldX, worldY);
+      if (interaction) {
+        this._queueEvent(interaction.event);
+        return;
+      }
+
       // Only walk to positions inside a walk zone
       if (!this._inWalkZone(worldX, worldY)) return;
 
-      this.alexTargetX = worldX;
-      this.alexTargetY = worldY;
-      this.alexWalking = true;
-      this.alexFrame = 0;
-      this.alexStepTick = 0;
-      this.alexDir = this._calcDirection(this.alexX, this.alexY, worldX, worldY);
-      this.alexWalkCycleIdx = 0;
+      this._startWalk(worldX, worldY);
     };
     canvas.addEventListener('mousedown', this._onMouseDown);
   }
@@ -257,6 +286,170 @@ export class GameScene {
     if (angle >= -112.5 && angle < -67.5) return 8;  // N
     if (angle >= -67.5 && angle < -22.5) return 9;   // NE
     return 2;
+  }
+
+  _initSceneScript() {
+    this.state = { ...(this.sceneScript?.initialState || {}) };
+    this.actionQueue = [];
+    this.modal = null;
+    this._choiceBoxes = [];
+    this._interactionEnabled = {};
+
+    const interactions = this.sceneScript?.interactions || [];
+    for (const interaction of interactions) {
+      this._interactionEnabled[interaction.id] = interaction.enabled !== false;
+    }
+    this._applyBindings();
+  }
+
+  _evaluateCondition(condition) {
+    if (!condition) return true;
+    const value = this.state[condition.state];
+    if (Object.prototype.hasOwnProperty.call(condition, 'equals')) return value === condition.equals;
+    if (Object.prototype.hasOwnProperty.call(condition, 'gte')) return value >= condition.gte;
+    if (Object.prototype.hasOwnProperty.call(condition, 'lte')) return value <= condition.lte;
+    return Boolean(value);
+  }
+
+  _applyBindings() {
+    if (!this.sceneScript?.bindings) return;
+    for (const binding of this.sceneScript.bindings) {
+      const active = this._evaluateCondition(binding.when);
+      if (binding.type === 'objectVisible') {
+        const obj = this.objectByName?.[binding.object];
+        if (obj) obj.visible = active;
+      } else if (binding.type === 'interactionEnabled') {
+        this._interactionEnabled[binding.interaction] = active;
+      }
+    }
+  }
+
+  _findInteraction(worldX, worldY) {
+    const interactions = this.sceneScript?.interactions || [];
+    for (const interaction of interactions) {
+      if (!this._interactionEnabled[interaction.id]) continue;
+      const [x1, y1, x2, y2] = interaction.rect;
+      if (worldX >= x1 && worldX <= x2 && worldY >= y1 && worldY <= y2) {
+        return interaction;
+      }
+    }
+    return null;
+  }
+
+  _startWalk(x, y) {
+    this.alexTargetX = x;
+    this.alexTargetY = y;
+    this.alexWalking = true;
+    this.alexFrame = 0;
+    this.alexStepTick = 0;
+    this.alexDir = this._calcDirection(this.alexX, this.alexY, x, y);
+    this.alexWalkCycleIdx = 0;
+  }
+
+  _queueEvent(eventId) {
+    const event = this.sceneScript?.events?.[eventId];
+    if (!event) return;
+    this.actionQueue = [];
+    this._enqueueSteps(event);
+    this._processActionQueue();
+  }
+
+  _enqueueSteps(steps) {
+    if (!steps) return;
+    const list = Array.isArray(steps) ? steps : [steps];
+    this.actionQueue.push(...list.map(step => ({ ...step })));
+  }
+
+  _processActionQueue() {
+    if (this.modal || this.alexWalking) return;
+
+    while (this.actionQueue.length) {
+      const step = this.actionQueue.shift();
+
+      if (step.if) {
+        this._enqueueSteps(this._evaluateCondition(step.if) ? step.then : step.else);
+        continue;
+      }
+
+      if (step.type === 'event') {
+        this._enqueueSteps(this.sceneScript?.events?.[step.id]);
+        continue;
+      }
+
+      if (step.type === 'walkTo') {
+        this._startWalk(step.x, step.y);
+        return;
+      }
+
+      if (step.type === 'face') {
+        this.alexDir = step.dir;
+        this.alexFrame = 0;
+        continue;
+      }
+
+      if (step.type === 'message') {
+        this._openMessage(step.id);
+        return;
+      }
+
+      if (step.type === 'dialog') {
+        this._openDialog(step.id);
+        return;
+      }
+
+      if (step.type === 'setState') {
+        this.state[step.key] = step.value;
+        this._applyBindings();
+        continue;
+      }
+
+      if (step.type === 'incState') {
+        this.state[step.key] = (this.state[step.key] || 0) + (step.amount ?? 1);
+        this._applyBindings();
+      }
+    }
+  }
+
+  _openMessage(messageId) {
+    const message = this.sceneScript?.messages?.[messageId];
+    if (!message) return;
+    this.modal = { type: 'message', ...message };
+  }
+
+  _openDialog(dialogId) {
+    const dialog = this.sceneScript?.dialogs?.[dialogId];
+    if (!dialog) return;
+    this.modal = {
+      type: 'dialog',
+      speaker: dialog.speaker,
+      prompt: dialog.prompt,
+      question: dialog.question,
+      choices: dialog.choices,
+    };
+  }
+
+  _handleModalClick(mx, my) {
+    if (!this.modal) return;
+
+    if (this.modal.type === 'message') {
+      this.modal = null;
+      this._processActionQueue();
+      return;
+    }
+
+    if (this.modal.type === 'dialog') {
+      for (let i = 0; i < this._choiceBoxes.length; i++) {
+        const box = this._choiceBoxes[i];
+        if (mx >= box.x1 && mx <= box.x2 && my >= box.y1 && my <= box.y2) {
+          const choice = this.modal.choices[i];
+          this.modal = null;
+          this._choiceBoxes = [];
+          this._enqueueSteps(choice.event);
+          this._processActionQueue();
+          return;
+        }
+      }
+    }
   }
 
   tick() {
@@ -367,6 +560,8 @@ export class GameScene {
     } else {
       this.scrollX = targetScroll;
     }
+
+    this._processActionQueue();
   }
 
   render(ctx) {
@@ -428,12 +623,49 @@ export class GameScene {
       if (img) ctx.drawImage(img, obj.x - this.scrollX, obj.y);
     }
 
+    this._renderModal(ctx);
+
     // Fade overlay
     if (this.fadeAlpha < 1) {
       ctx.globalAlpha = 1 - this.fadeAlpha;
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, 320, 200);
       ctx.globalAlpha = 1;
+    }
+  }
+
+  _renderModal(ctx) {
+    if (!this.modal || !this.font) return;
+
+    const panelY = this.modal.type === 'dialog' ? 108 : 150;
+    const panelH = 200 - panelY;
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, panelY, 320, panelH);
+
+    if (this.modal.speaker) {
+      this.font.drawText(ctx, `${this.modal.speaker}:`, 10, panelY + 8);
+    }
+
+    if (this.modal.type === 'message') {
+      this.font.drawWrapped(ctx, this.modal.text, 160, panelY + 22, 290, 11);
+      this._choiceBoxes = [];
+      return;
+    }
+
+    const promptY = panelY + 18;
+    this.font.drawCentered(ctx, this.modal.prompt, 160, promptY);
+    this.font.drawCentered(ctx, this.modal.question, 160, promptY + 12);
+
+    this._choiceBoxes = [];
+    let y = promptY + 26;
+    for (let i = 0; i < this.modal.choices.length; i++) {
+      const choice = this.modal.choices[i];
+      const label = `${i + 1}. ${choice.label}`;
+      const width = this.font.measureText(label);
+      const x = Math.round(160 - width / 2);
+      this.font.drawText(ctx, label, x, y);
+      this._choiceBoxes.push({ x1: x - 4, y1: y - 2, x2: x + width + 4, y2: y + this.font.height + 2 });
+      y += 11;
     }
   }
 
