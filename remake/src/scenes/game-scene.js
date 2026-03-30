@@ -46,7 +46,17 @@ export class GameScene {
     this.actionQueue = [];
     this.modal = null;
     this._choiceBoxes = [];
+    this._dialogExitBox = null;
     this._interactionEnabled = {};
+    this.inputMode = 'walk';
+
+    this.uiButtons = [
+      { mode: 'walk', normal: 'WALKBUTTON', pressed: 'WALKPRESSED', x: 4, y: 168, w: 48, h: 31 },
+      { mode: 'look', normal: 'LOOKBUTTON', pressed: 'LOOKPRESSED', x: 56, y: 168, w: 44, h: 31 },
+      { mode: 'talk', normal: 'TALKBUTTON', pressed: 'TALKPRESSED', x: 104, y: 168, w: 40, h: 31 },
+      { mode: 'touch', normal: 'TOUCHBUTTON', pressed: 'TOUCHPRESSED', x: 148, y: 168, w: 40, h: 32 },
+      { mode: 'bag', normal: 'CASEBUTTON', pressed: 'CASEPRESSED', x: 192, y: 167, w: 44, h: 33 },
+    ];
 
     // Walk deltas per direction (from ALEX1.SCX walk delta table)
     // Direction mapping: 1=SW, 2=S, 3=SE, 4=W, 6=E, 7=NW, 8=N, 9=NE
@@ -196,6 +206,33 @@ export class GameScene {
     }
     await engine.loadImages(sceneImgs);
 
+    await engine.loadImages({
+      PANEL: 'assets/ui/PANEL.png',
+      LOOKBUTTON: 'assets/ui/LOOKBUTTON.png',
+      LOOKPRESSED: 'assets/ui/LOOKPRESSED.png',
+      TALKBUTTON: 'assets/ui/TALKBUTTON.png',
+      TALKPRESSED: 'assets/ui/TALKPRESSED.png',
+      TOUCHBUTTON: 'assets/ui/TOUCHBUTTON.png',
+      TOUCHPRESSED: 'assets/ui/TOUCHPRESSED.png',
+      WALKBUTTON: 'assets/ui/WALKBUTTON.png',
+      WALKPRESSED: 'assets/ui/WALKPRESSED.png',
+      CASEBUTTON: 'assets/ui/CASEBUTTON.png',
+      CASEPRESSED: 'assets/ui/CASEPRESSED.png',
+      EXITBUTTON: 'assets/ui/EXITBUTTON.png',
+      EXITPRESSED: 'assets/ui/EXITPRESSED.png',
+      TALKWINDOW: 'assets/ui/TALKWINDOW.png',
+      ALTALK1: 'assets/ui/ALTALK1.png',
+      TEXTWIN2: 'assets/ui/TEXTWIN2.png',
+      TEXTWIN3: 'assets/ui/TEXTWIN3.png',
+      TEXTWIN4: 'assets/ui/TEXTWIN4.png',
+      TEXTWIN5: 'assets/ui/TEXTWIN5.png',
+      TLKEXIT1: 'assets/ui/TLKEXIT1.png',
+      TLKEXIT2: 'assets/ui/TLKEXIT2.png',
+      GRDTLK0: 'assets/ui/GRDTLK0.png',
+      FEMTLK0: 'assets/ui/FEMTLK0.png',
+      FAMTLK0: 'assets/ui/FAMTLK0.png',
+    });
+
     const fontImg = new Image();
     const fontData = await (await fetch('assets/mainfont.json')).json();
     await new Promise((resolve, reject) => {
@@ -207,6 +244,10 @@ export class GameScene {
 
     // Cursors
     await engine.loadImages({
+      'ARROWCURSOR': 'assets/cursors/ARROWCURSOR.png',
+      'LOOKCURSOR': 'assets/cursors/LOOKCURSOR.png',
+      'TALKCURSOR': 'assets/cursors/TALKCURSOR.png',
+      'TOUCHCURSOR': 'assets/cursors/TOUCHCURSOR.png',
       'WALKCURSOR': 'assets/cursors/WALKCURSOR.png',
     });
 
@@ -219,7 +260,7 @@ export class GameScene {
   }
 
   init() {
-    this.engine.cursor = 'WALKCURSOR';
+    this._setInputMode('walk');
     this._initSceneScript();
 
     // Airport: Alex starts at escalator area (right side of 960px scene)
@@ -252,17 +293,25 @@ export class GameScene {
         return;
       }
 
+      const button = this._getUiButton(mx, my);
+      if (button) {
+        this._setInputMode(button.mode);
+        return;
+      }
+
       if (this.actionQueue.length) return;
 
       // Convert screen coords to world coords
       const worldX = mx + this.scrollX;
       const worldY = my;
 
-      const interaction = this._findInteraction(worldX, worldY);
+      const interaction = this._findInteraction(worldX, worldY, this.inputMode);
       if (interaction) {
-        this._queueEvent(interaction.event);
+        this._queueEvent(interaction.eventId);
         return;
       }
+
+      if (this.inputMode !== 'walk') return;
 
       // Only walk to positions inside a walk zone
       if (!this._inWalkZone(worldX, worldY)) return;
@@ -293,6 +342,7 @@ export class GameScene {
     this.actionQueue = [];
     this.modal = null;
     this._choiceBoxes = [];
+    this._dialogExitBox = null;
     this._interactionEnabled = {};
 
     const interactions = this.sceneScript?.interactions || [];
@@ -324,13 +374,36 @@ export class GameScene {
     }
   }
 
-  _findInteraction(worldX, worldY) {
+  _setInputMode(mode) {
+    this.inputMode = mode;
+    const cursorByMode = {
+      walk: 'WALKCURSOR',
+      look: 'LOOKCURSOR',
+      talk: 'TALKCURSOR',
+      touch: 'TOUCHCURSOR',
+      bag: 'ARROWCURSOR',
+    };
+    this.engine.cursor = cursorByMode[mode] || 'ARROWCURSOR';
+  }
+
+  _getUiButton(mx, my) {
+    for (const button of this.uiButtons) {
+      if (mx >= button.x && mx <= button.x + button.w &&
+          my >= button.y && my <= button.y + button.h) {
+        return button;
+      }
+    }
+    return null;
+  }
+
+  _findInteraction(worldX, worldY, mode) {
     const interactions = this.sceneScript?.interactions || [];
     for (const interaction of interactions) {
       if (!this._interactionEnabled[interaction.id]) continue;
       const [x1, y1, x2, y2] = interaction.rect;
       if (worldX >= x1 && worldX <= x2 && worldY >= y1 && worldY <= y2) {
-        return interaction;
+        const eventId = interaction.modes?.[mode];
+        if (eventId) return { interaction, eventId };
       }
     }
     return null;
@@ -413,15 +486,20 @@ export class GameScene {
   _openMessage(messageId) {
     const message = this.sceneScript?.messages?.[messageId];
     if (!message) return;
-    this.modal = { type: 'message', ...message };
+    this._dialogExitBox = null;
+    this.modal = { type: 'message', presentation: message.presentation || 'note', ...message };
   }
 
   _openDialog(dialogId) {
     const dialog = this.sceneScript?.dialogs?.[dialogId];
     if (!dialog) return;
+    this._dialogExitBox = null;
     this.modal = {
       type: 'dialog',
       speaker: dialog.speaker,
+      speakerSprite: dialog.speakerSprite,
+      speakerX: dialog.speakerX,
+      speakerY: dialog.speakerY,
       prompt: dialog.prompt,
       question: dialog.question,
       choices: dialog.choices,
@@ -438,12 +516,23 @@ export class GameScene {
     }
 
     if (this.modal.type === 'dialog') {
+      if (this._dialogExitBox &&
+          mx >= this._dialogExitBox.x1 && mx <= this._dialogExitBox.x2 &&
+          my >= this._dialogExitBox.y1 && my <= this._dialogExitBox.y2) {
+        this.modal = null;
+        this._choiceBoxes = [];
+        this._dialogExitBox = null;
+        this.actionQueue = [];
+        return;
+      }
+
       for (let i = 0; i < this._choiceBoxes.length; i++) {
         const box = this._choiceBoxes[i];
         if (mx >= box.x1 && mx <= box.x2 && my >= box.y1 && my <= box.y2) {
           const choice = this.modal.choices[i];
           this.modal = null;
           this._choiceBoxes = [];
+          this._dialogExitBox = null;
           this._enqueueSteps(choice.event);
           this._processActionQueue();
           return;
@@ -624,6 +713,7 @@ export class GameScene {
     }
 
     this._renderModal(ctx);
+    this._renderPanel(ctx);
 
     // Fade overlay
     if (this.fadeAlpha < 1) {
@@ -636,36 +726,104 @@ export class GameScene {
 
   _renderModal(ctx) {
     if (!this.modal || !this.font) return;
+    if (this.modal.type === 'dialog') {
+      this._renderTalkDialog(ctx);
+    } else {
+      this._renderNotePopup(ctx);
+    }
+  }
 
-    const panelY = this.modal.type === 'dialog' ? 108 : 150;
-    const panelH = 200 - panelY;
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, panelY, 320, panelH);
+  _renderPanel(ctx) {
+    const panel = this.engine.assets.get('PANEL');
+    if (panel) ctx.drawImage(panel, 0, 167);
 
-    if (this.modal.speaker) {
-      this.font.drawText(ctx, `${this.modal.speaker}:`, 10, panelY + 8);
+    const money = `${100}`;
+    this.font?.drawText(ctx, money, 236, 176);
+    this.font?.drawText(ctx, 'P', 278, 176);
+
+    if (this.modal?.type === 'dialog') return;
+
+    for (const button of this.uiButtons) {
+      const sprite = this.inputMode === button.mode ? button.pressed : button.normal;
+      const img = this.engine.assets.get(sprite);
+      if (img) ctx.drawImage(img, button.x, button.y);
+    }
+  }
+
+  _wrapText(text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (line && this.font.measureText(test) > maxWidth) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    return lines;
+  }
+
+  _renderNotePopup(ctx) {
+    const lines = this._wrapText(this.modal.text, 160);
+    const winName = lines.length <= 2 ? 'TEXTWIN2'
+      : lines.length === 3 ? 'TEXTWIN3'
+        : lines.length === 4 ? 'TEXTWIN4'
+          : 'TEXTWIN5';
+    const win = this.engine.assets.get(winName);
+    if (!win) return;
+    const x = Math.round((320 - win.width) / 2);
+    const y = 24;
+    ctx.drawImage(win, x, y);
+    let ty = y + 14;
+    for (const line of lines) {
+      this.font.drawText(ctx, line, x + 16, ty);
+      ty += 11;
+    }
+    this._choiceBoxes = [];
+    this._dialogExitBox = null;
+  }
+
+  _renderTalkDialog(ctx) {
+    const win = this.engine.assets.get('TALKWINDOW');
+    if (win) ctx.drawImage(win, 0, 0);
+
+    const npc = this.engine.assets.get(this.modal.speakerSprite);
+    if (npc) ctx.drawImage(npc, this.modal.speakerX, this.modal.speakerY);
+
+    const alex = this.engine.assets.get('ALTALK1');
+    if (alex) ctx.drawImage(alex, 228, 64);
+
+    const topLines = this._wrapText(this.modal.prompt, 136);
+    let y = 14;
+    for (const line of topLines) {
+      this.font.drawText(ctx, line, 166, y);
+      y += 11;
     }
 
-    if (this.modal.type === 'message') {
-      this.font.drawWrapped(ctx, this.modal.text, 160, panelY + 22, 290, 11);
-      this._choiceBoxes = [];
-      return;
+    const questionLines = this._wrapText(this.modal.question, 140);
+    y = 103;
+    for (const line of questionLines) {
+      this.font.drawText(ctx, line, 14, y);
+      y += 11;
     }
-
-    const promptY = panelY + 18;
-    this.font.drawCentered(ctx, this.modal.prompt, 160, promptY);
-    this.font.drawCentered(ctx, this.modal.question, 160, promptY + 12);
 
     this._choiceBoxes = [];
-    let y = promptY + 26;
     for (let i = 0; i < this.modal.choices.length; i++) {
-      const choice = this.modal.choices[i];
-      const label = `${i + 1}. ${choice.label}`;
+      const label = `${i + 1}.  ${this.modal.choices[i].label}`;
+      this.font.drawText(ctx, label, 24, y);
       const width = this.font.measureText(label);
-      const x = Math.round(160 - width / 2);
-      this.font.drawText(ctx, label, x, y);
-      this._choiceBoxes.push({ x1: x - 4, y1: y - 2, x2: x + width + 4, y2: y + this.font.height + 2 });
+      this._choiceBoxes.push({ x1: 20, y1: y - 2, x2: 24 + width + 4, y2: y + this.font.height + 2 });
       y += 11;
+    }
+
+    const exit = this.engine.assets.get('TLKEXIT1');
+    if (exit) {
+      ctx.drawImage(exit, 166, 148);
+      this._dialogExitBox = { x1: 166, y1: 148, x2: 166 + exit.width, y2: 148 + exit.height };
     }
   }
 
