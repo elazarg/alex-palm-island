@@ -54,9 +54,9 @@ export class GameScene {
     this._pendingButtonMode = null;
 
     this.uiButtons = [
-      { mode: 'bag', normal: 'NOBAG', active: 'CASEBUTTON', pressed: 'CASEPRESSED', x: 4, y: 165, w: 44, h: 33 },
+      { mode: 'bag', normal: 'NOBAG', active: 'CASEBUTTON', pressed: 'CASEPRESSED', x: 4, y: 167, w: 44, h: 33 },
       { mode: 'walk', normal: 'WALKBUTTON', pressed: 'WALKPRESSED', x: 68, y: 168, w: 48, h: 31 },
-      { mode: 'talk', normal: 'TALKBUTTON', pressed: 'TALKPRESSED', x: 120, y: 167, w: 40, h: 31 },
+      { mode: 'talk', normal: 'TALKBUTTON', pressed: 'TALKPRESSED', x: 120, y: 169, w: 40, h: 31 },
       { mode: 'look', normal: 'LOOKBUTTON', pressed: 'LOOKPRESSED', x: 164, y: 168, w: 44, h: 31 },
       { mode: 'touch', normal: 'TOUCHBUTTON', pressed: 'TOUCHPRESSED', x: 212, y: 168, w: 40, h: 32 },
       { mode: 'exit', normal: 'EXITBUTTON', pressed: 'EXITPRESSED', x: 276, y: 168, w: 40, h: 31 },
@@ -915,18 +915,12 @@ export class GameScene {
     const meter = this.engine.assets.get('METER');
     if (meter) ctx.drawImage(meter, 0, 180);
 
-    const moneyBox = this.engine.assets.get('MONEYBOX');
-    if (moneyBox) {
-      const boxX = 126;
-      const boxY = 182;
-      ctx.drawImage(moneyBox, boxX, boxY);
-      this._renderMoneyDigits(ctx, boxX, boxY, this.state?.palmettoes ?? 100);
-    }
+    this._renderMoneyDigits(ctx, 127, 182, this.state?.palmettoes ?? 100);
 
     const showButtons = this._buttonsVisible();
     if (showButtons) {
       const panel = this.engine.assets.get('PANEL');
-      if (panel) ctx.drawImage(panel, 0, 165);
+      if (panel) ctx.drawImage(panel, 0, 167);
     }
 
     if (this.modal?.type === 'dialog') return;
@@ -1113,10 +1107,10 @@ export class GameScene {
 
   _renderMoneyDigits(ctx, boxX, boxY, amount) {
     const text = String(Math.max(0, Math.min(9999, amount))).padStart(4, ' ');
-    const digitW = 6;
-    const gap = 1;
+    const digitW = 5;
+    const gap = 2;
     const totalW = digitW * text.length + gap * (text.length - 1);
-    const startX = boxX + 5 + Math.round((35 - totalW) / 2);
+    const startX = boxX + 16;
     const startY = boxY + 3;
     for (let i = 0; i < text.length; i++) {
       this._drawSevenSegmentDigit(ctx, startX + i * (digitW + gap), startY, text[i]);
@@ -1125,7 +1119,7 @@ export class GameScene {
 
   _drawSevenSegmentDigit(ctx, x, y, ch) {
     const on = '#0ccc0c';
-    const off = '#8c5c10';
+    const off = '#744c0c';
     const segs = {
       '0': ['a', 'b', 'c', 'd', 'e', 'f'],
       '1': ['b', 'c'],
@@ -1141,13 +1135,13 @@ export class GameScene {
     };
     const onSet = new Set(segs[ch] || []);
     const segRects = {
-      a: [1, 0, 4, 1],
-      b: [5, 1, 1, 3],
-      c: [5, 5, 1, 3],
-      d: [1, 8, 4, 1],
+      a: [1, 0, 3, 1],
+      b: [4, 1, 1, 3],
+      c: [4, 5, 1, 3],
+      d: [1, 8, 3, 1],
       e: [0, 5, 1, 3],
       f: [0, 1, 1, 3],
-      g: [1, 4, 4, 1],
+      g: [1, 4, 3, 1],
     };
     for (const [name, rect] of Object.entries(segRects)) {
       ctx.fillStyle = onSet.has(name) ? on : off;
