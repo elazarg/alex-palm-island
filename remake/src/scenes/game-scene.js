@@ -1,54 +1,14 @@
 // Interactive game scene — data-driven from scene descriptor + SCX
 // First implementation: Airport. Will generalize as more scenes are added.
 
-import { AnimationPlayer, parseAnimationCommands } from '../animation.js';
-
 const ANIM_TICK_SCALE = 2;
 const FADE_TICKS = 18;
 
-const ACHU_5030_LINES = [
-  'F 1,0',
-  'P 5,20',
-  'F 2,0',
-  'P 1,0',
-  'F 1,0',
-  'P 5,20',
-  'F 2,0',
-  'P 1,0',
-  'F 1,0',
-  'P 5,20',
-  'F 2,0',
-  'P 1,0',
-  'F 1,0',
-  'P 5,20',
-  'F 2,0',
-  'P 1,0',
-  'F 1,0',
-  'P 5,20',
-  'F 2,0',
-  'P 1,0',
-  'F 1,0',
-  'P 5,20',
-  'G 4,0',
-  'P 1,1',
-  'F 3,0',
-  'P 1,1',
-  'F 5,0',
-  'P 1,1',
-  'F 6,0',
-  'P 2,2',
-  'F 7,0',
-  'P 1,1',
-  'F 8,0',
-  'P 1,1',
-  'S 1,0',
-  'F 7,0',
-  'P 1,1',
-  'F 8,0',
-  'P 4,4',
-  'G -1,0',
-  'R 0,0',
-  'Q',
+const ACHU_SEQUENCE = [
+  1, 1, 1, 1, 1, 1, 2, 1,
+  1, 1, 1, 1, 1, 2, 1, 1,
+  1, 1, 1, 1, 3, 4, 5, 6,
+  7, 8, 9, 10, 11,
 ];
 
 export class GameScene {
@@ -129,13 +89,13 @@ export class GameScene {
       // small overlay frames cycle on top at a matched offset.
       // Animation sequences from SCX sections, positions from data sections.
 
-      // Lost-and-found clerk: this is the original "Achu" object from OVR.
-      // OVR creates Achu at (111,31) and binds it to SCX section 5030.
-      // Section 5030 starts with repeated F1/F2 blinking, then later advances
-      // through the larger reaction/sneeze motion. ACHU1 is the idle open-eyes
-      // frame; ACHU2 is the blink frame.
+      // Lost-and-found clerk: OVR creates Achu at (111,31) and binds it to
+      // section 5030. The generic SCX player was too aggressive here because
+      // Achu has no position table; this explicit forward-only frame schedule
+      // matches the original blink-blink-blink-then-sneeze pacing much more
+      // closely.
       { name: 'Achu',    sprite: 'ACHU1',   x: 111, y: 31,  visible: true,
-        scxAnim: '5030' },
+        anim: { prefix: 'ACHU', rate: 8, sequence: ACHU_SEQUENCE } },
       { name: 'Door',    sprite: 'DOOR1',   x: 273, y: 0,   visible: true },
       // FemGrd: F1=hat at side (idle off), F8/F10=hat on head (idle on/heels).
       // Hat ON:  F1→F2→F3→F4→F6→F7 (lift hat, diagonal place, hand down)
@@ -213,14 +173,6 @@ export class GameScene {
       if (!sceneImgs[name]) sceneImgs[name] = `${base}/${name}.png`;
     }
     await engine.loadImages(sceneImgs);
-
-    const achu = this.objectsBehind.find(o => o.name === 'Achu');
-    if (achu) {
-      achu._scxCommands = parseAnimationCommands(ACHU_5030_LINES);
-      achu._scxPositions = Array.from({ length: 11 }, () => ({ x: achu.x, y: achu.y }));
-      achu._player = new AnimationPlayer(achu._scxCommands, achu._scxPositions, 'ACHU');
-      achu._player.visible = true;
-    }
 
     // Cursors
     await engine.loadImages({
@@ -357,19 +309,6 @@ export class GameScene {
     for (const obj of this.sceneObjects) {
       if (obj.anim === 'stairs') {
         obj.sprite = `STAIRS${this.stairsFrame}`;
-      } else if (obj._player) {
-        obj._player.tick();
-        obj.sprite = obj._player.spriteName;
-        obj.x = obj._player.x;
-        obj.y = obj._player.y;
-        if (obj._player.done) {
-          obj._player = new AnimationPlayer(obj._scxCommands, obj._scxPositions, 'ACHU');
-          obj._player.visible = true;
-          obj._player.tick();
-          obj.sprite = obj._player.spriteName;
-          obj.x = obj._player.x;
-          obj.y = obj._player.y;
-        }
       } else if (obj.overlay && obj.overlay.sequence) {
         // Base+overlay with sequence
         if (obj._oTick == null) obj._oTick = 0;
