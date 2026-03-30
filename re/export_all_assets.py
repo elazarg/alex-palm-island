@@ -256,8 +256,8 @@ def parse_font(data):
     for ch in range(start_char, end_char + 1):
         if offset + 4 > len(data):
             break
-        char_h = struct.unpack_from('<H', data, offset)[0]
-        char_w = struct.unpack_from('<H', data, offset + 2)[0]
+        char_w = struct.unpack_from('<H', data, offset)[0]
+        char_h = struct.unpack_from('<H', data, offset + 2)[0]
         offset += 4
         num_pixels = char_h * char_w
         if offset + num_pixels > len(data):
@@ -300,6 +300,9 @@ def export_font_sheet(font_data, name, palette, out_dir):
     sorted_chars = sorted(font['glyphs'].keys())
     for idx, ch in enumerate(sorted_chars):
         glyph = font['glyphs'][ch]
+        pixels = glyph['pixels']
+        if glyph['width'] % 4 == 0:
+            pixels = deinterleave_modex(pixels, glyph['width'], glyph['height'])
         col = idx % cols
         row = idx // cols
         base_x = margin + col * cell_w + 2
@@ -309,8 +312,8 @@ def export_font_sheet(font_data, name, palette, out_dir):
         for gy in range(glyph['height']):
             for gx in range(glyph['width']):
                 pi = gy * glyph['width'] + gx
-                if pi < len(glyph['pixels']):
-                    c = glyph['pixels'][pi]
+                if pi < len(pixels):
+                    c = pixels[pi]
                     if c != 0:
                         r, g, b = palette[c]
                         if base_x + gx < img_w and base_y + gy < img_h:

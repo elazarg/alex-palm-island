@@ -49,13 +49,17 @@ export class GameScene {
     this._dialogExitBox = null;
     this._interactionEnabled = {};
     this.inputMode = 'walk';
+    this.uiTick = 0;
+    this._pressedButtonMode = null;
+    this._pendingButtonMode = null;
 
     this.uiButtons = [
-      { mode: 'walk', normal: 'WALKBUTTON', pressed: 'WALKPRESSED', x: 4, y: 168, w: 48, h: 31 },
-      { mode: 'look', normal: 'LOOKBUTTON', pressed: 'LOOKPRESSED', x: 56, y: 168, w: 44, h: 31 },
-      { mode: 'talk', normal: 'TALKBUTTON', pressed: 'TALKPRESSED', x: 104, y: 168, w: 40, h: 31 },
-      { mode: 'touch', normal: 'TOUCHBUTTON', pressed: 'TOUCHPRESSED', x: 148, y: 168, w: 40, h: 32 },
-      { mode: 'bag', normal: 'CASEBUTTON', pressed: 'CASEPRESSED', x: 192, y: 167, w: 44, h: 33 },
+      { mode: 'bag', normal: 'NOBAG', active: 'CASEBUTTON', pressed: 'CASEPRESSED', x: 4, y: 165, w: 44, h: 33 },
+      { mode: 'walk', normal: 'WALKBUTTON', pressed: 'WALKPRESSED', x: 68, y: 168, w: 48, h: 31 },
+      { mode: 'talk', normal: 'TALKBUTTON', pressed: 'TALKPRESSED', x: 120, y: 167, w: 40, h: 31 },
+      { mode: 'look', normal: 'LOOKBUTTON', pressed: 'LOOKPRESSED', x: 164, y: 168, w: 44, h: 31 },
+      { mode: 'touch', normal: 'TOUCHBUTTON', pressed: 'TOUCHPRESSED', x: 212, y: 168, w: 40, h: 32 },
+      { mode: 'exit', normal: 'EXITBUTTON', pressed: 'EXITPRESSED', x: 276, y: 168, w: 40, h: 31 },
     ];
 
     // Walk deltas per direction (from ALEX1.SCX walk delta table)
@@ -83,6 +87,7 @@ export class GameScene {
   }
 
   async load(engine) {
+    const uiVersion = '20260330f';
     // Load scene-specific assets
     const base = `assets/${this.sceneId}`;
 
@@ -195,6 +200,9 @@ export class GameScene {
     for (let i = 1; i <= 6; i++) sceneImgs[`FAMILY${i}`] = `${base}/FAMILY${i}.png`;
     for (let i = 1; i <= 10; i++) sceneImgs[`FEMGRD${i}`] = `${base}/FEMGRD${i}.png`;
     for (let i = 0; i <= 11; i++) sceneImgs[`BRDTLK${i}`] = `${base}/BRDTLK${i}.png`;
+    for (let i = 1; i <= 10; i++) sceneImgs[`GRDTLK${i}`] = `${base}/GRDTLK${i}.png`;
+    for (let i = 1; i <= 7; i++) sceneImgs[`FEMTLK${i}`] = `${base}/FEMTLK${i}.png`;
+    for (let i = 1; i <= 6; i++) sceneImgs[`FAMTLK${i}`] = `${base}/FAMTLK${i}.png`;
     for (let i = 1; i <= 11; i++) sceneImgs[`ACHU${i}`] = `${base}/ACHU${i}.png`;
     // Load additional character sprites
     for (let i = 1; i <= 6; i++) sceneImgs[`BORDER${i}`] = `${base}/BORDER${i}.png`;
@@ -207,31 +215,40 @@ export class GameScene {
     await engine.loadImages(sceneImgs);
 
     await engine.loadImages({
-      PANEL: 'assets/ui/PANEL.png',
-      LOOKBUTTON: 'assets/ui/LOOKBUTTON.png',
-      LOOKPRESSED: 'assets/ui/LOOKPRESSED.png',
-      TALKBUTTON: 'assets/ui/TALKBUTTON.png',
-      TALKPRESSED: 'assets/ui/TALKPRESSED.png',
-      TOUCHBUTTON: 'assets/ui/TOUCHBUTTON.png',
-      TOUCHPRESSED: 'assets/ui/TOUCHPRESSED.png',
-      WALKBUTTON: 'assets/ui/WALKBUTTON.png',
-      WALKPRESSED: 'assets/ui/WALKPRESSED.png',
-      CASEBUTTON: 'assets/ui/CASEBUTTON.png',
-      CASEPRESSED: 'assets/ui/CASEPRESSED.png',
-      EXITBUTTON: 'assets/ui/EXITBUTTON.png',
-      EXITPRESSED: 'assets/ui/EXITPRESSED.png',
-      TALKWINDOW: 'assets/ui/TALKWINDOW.png',
-      ALTALK1: 'assets/ui/ALTALK1.png',
-      TEXTWIN2: 'assets/ui/TEXTWIN2.png',
-      TEXTWIN3: 'assets/ui/TEXTWIN3.png',
-      TEXTWIN4: 'assets/ui/TEXTWIN4.png',
-      TEXTWIN5: 'assets/ui/TEXTWIN5.png',
-      TLKEXIT1: 'assets/ui/TLKEXIT1.png',
-      TLKEXIT2: 'assets/ui/TLKEXIT2.png',
-      GRDTLK0: 'assets/ui/GRDTLK0.png',
-      FEMTLK0: 'assets/ui/FEMTLK0.png',
-      FAMTLK0: 'assets/ui/FAMTLK0.png',
+      PANEL: `assets/ui/PANEL.png?v=${uiVersion}`,
+      LOOKBUTTON: `assets/ui/LOOKBUTTON.png?v=${uiVersion}`,
+      LOOKPRESSED: `assets/ui/LOOKPRESSED.png?v=${uiVersion}`,
+      TALKBUTTON: `assets/ui/TALKBUTTON.png?v=${uiVersion}`,
+      TALKPRESSED: `assets/ui/TALKPRESSED.png?v=${uiVersion}`,
+      TOUCHBUTTON: `assets/ui/TOUCHBUTTON.png?v=${uiVersion}`,
+      TOUCHPRESSED: `assets/ui/TOUCHPRESSED.png?v=${uiVersion}`,
+      WALKBUTTON: `assets/ui/WALKBUTTON.png?v=${uiVersion}`,
+      WALKPRESSED: `assets/ui/WALKPRESSED.png?v=${uiVersion}`,
+      CASEBUTTON: `assets/ui/CASEBUTTON.png?v=${uiVersion}`,
+      CASEPRESSED: `assets/ui/CASEPRESSED.png?v=${uiVersion}`,
+      NOBAG: `assets/ui/NOBAG.png?v=${uiVersion}`,
+      EXITBUTTON: `assets/ui/EXITBUTTON.png?v=${uiVersion}`,
+      EXITPRESSED: `assets/ui/EXITPRESSED.png?v=${uiVersion}`,
+      METER: `assets/ui/METER.png?v=${uiVersion}`,
+      MONEYBOX: `assets/ui/MONEYBOX.png?v=${uiVersion}`,
+      MONEY1: `assets/ui/MONEY1.png?v=${uiVersion}`,
+      MONEY2: `assets/ui/MONEY2.png?v=${uiVersion}`,
+      MONEY3: `assets/ui/MONEY3.png?v=${uiVersion}`,
+      MONEY4: `assets/ui/MONEY4.png?v=${uiVersion}`,
+      TALKWINDOW: `assets/ui/TALKWINDOW.png?v=${uiVersion}`,
+      ALTALK1: `assets/ui/ALTALK1.png?v=${uiVersion}`,
+      TEXTWIN2: `assets/ui/TEXTWIN2.png?v=${uiVersion}`,
+      TEXTWIN3: `assets/ui/TEXTWIN3.png?v=${uiVersion}`,
+      TEXTWIN4: `assets/ui/TEXTWIN4.png?v=${uiVersion}`,
+      TEXTWIN5: `assets/ui/TEXTWIN5.png?v=${uiVersion}`,
+      TLKEXIT1: `assets/ui/TLKEXIT1.png?v=${uiVersion}`,
+      TLKEXIT2: `assets/ui/TLKEXIT2.png?v=${uiVersion}`,
+      TALKTOP: `assets/ui/TALKTOP.png?v=${uiVersion}`,
+      GRDTLK0: `assets/airport/GRDTLK0.png?v=${uiVersion}`,
+      FEMTLK0: `assets/airport/FEMTLK0.png?v=${uiVersion}`,
+      FAMTLK0: `assets/airport/FAMTLK0.png?v=${uiVersion}`,
     });
+    this._buildTalkResponseSlices();
 
     const fontImg = new Image();
     const fontData = await (await fetch('assets/mainfont.json')).json();
@@ -242,13 +259,34 @@ export class GameScene {
     });
     this.font = new BitmapFont(fontImg, fontData);
 
+    const digiImg = new Image();
+    const digiData = await (await fetch('assets/digitalfont.json')).json();
+    await new Promise((resolve, reject) => {
+      digiImg.onload = resolve;
+      digiImg.onerror = reject;
+      digiImg.src = 'assets/digitalfont.png';
+    });
+    this.digitalFont = new BitmapFont(digiImg, digiData);
+
+    const scoreImg = new Image();
+    const scoreData = await (await fetch(`assets/scorefont.json?v=${uiVersion}`)).json();
+    await new Promise((resolve, reject) => {
+      scoreImg.onload = resolve;
+      scoreImg.onerror = reject;
+      scoreImg.src = `assets/scorefont.png?v=${uiVersion}`;
+    });
+    this.scoreFont = new BitmapFont(scoreImg, scoreData, { preserveColors: true });
+
     // Cursors
     await engine.loadImages({
-      'ARROWCURSOR': 'assets/cursors/ARROWCURSOR.png',
-      'LOOKCURSOR': 'assets/cursors/LOOKCURSOR.png',
-      'TALKCURSOR': 'assets/cursors/TALKCURSOR.png',
-      'TOUCHCURSOR': 'assets/cursors/TOUCHCURSOR.png',
-      'WALKCURSOR': 'assets/cursors/WALKCURSOR.png',
+      'ARROWCURSOR': `assets/cursors/ARROWCURSOR.png?v=${uiVersion}`,
+      'LOOKCURSOR': `assets/cursors/LOOKCURSOR.png?v=${uiVersion}`,
+      'TALKCURSOR': `assets/cursors/TALKCURSOR.png?v=${uiVersion}`,
+      'TOUCHCURSOR': `assets/cursors/TOUCHCURSOR.png?v=${uiVersion}`,
+      'WALKCURSOR': `assets/cursors/WALKCURSOR.png?v=${uiVersion}`,
+    });
+    await engine.loadImages({
+      DIALOGBOX: `assets/ui/DIALOGBOX.png?v=${uiVersion}`,
     });
 
     // Escalator animation state
@@ -257,6 +295,55 @@ export class GameScene {
 
     this.bgWidth = engine.assets.get('SCENE_BG')?.width || 320;
     this.objectByName = Object.fromEntries(this.sceneObjects.map(obj => [obj.name, obj]));
+  }
+
+  _buildTalkResponseSlices() {
+    const talk = this.engine?.assets?.get('TALKWINDOW');
+    if (!talk) return;
+    this.engine.assets.set('TALKRESP_LEFT', this._makeTransparentSlice(talk, 6, 1, 144, 109));
+    this.engine.assets.set('TALKRESP_BUBBLE', this._makeTransparentSlice(talk, 120, 1, 200, 99));
+  }
+
+  _makeTransparentSlice(source, sx, sy, sw, sh) {
+    const canvas = document.createElement('canvas');
+    canvas.width = sw;
+    canvas.height = sh;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(source, sx, sy, sw, sh, 0, 0, sw, sh);
+    const img = ctx.getImageData(0, 0, sw, sh);
+    const data = img.data;
+    const stack = [];
+    const seen = new Uint8Array(sw * sh);
+    const push = (x, y) => {
+      if (x < 0 || y < 0 || x >= sw || y >= sh) return;
+      const idx = y * sw + x;
+      if (seen[idx]) return;
+      seen[idx] = 1;
+      const o = idx * 4;
+      if (data[o + 3] && data[o] === 0 && data[o + 1] === 0 && data[o + 2] === 0) stack.push(idx);
+    };
+    for (let x = 0; x < sw; x++) {
+      push(x, 0);
+      push(x, sh - 1);
+    }
+    for (let y = 1; y < sh - 1; y++) {
+      push(0, y);
+      push(sw - 1, y);
+    }
+    while (stack.length) {
+      const idx = stack.pop();
+      const o = idx * 4;
+      data[o + 3] = 0;
+      const x = idx % sw;
+      const y = Math.floor(idx / sw);
+      push(x + 1, y);
+      push(x - 1, y);
+      push(x, y + 1);
+      push(x, y - 1);
+    }
+    ctx.putImageData(img, 0, 0);
+    return canvas;
   }
 
   init() {
@@ -295,7 +382,8 @@ export class GameScene {
 
       const button = this._getUiButton(mx, my);
       if (button) {
-        this._setInputMode(button.mode);
+        this._pressedButtonMode = button.mode;
+        this._pendingButtonMode = button.mode;
         return;
       }
 
@@ -311,7 +399,10 @@ export class GameScene {
         return;
       }
 
-      if (this.inputMode !== 'walk') return;
+      if (this.inputMode !== 'walk') {
+        this._queueFallbackEvent(this.inputMode);
+        return;
+      }
 
       // Only walk to positions inside a walk zone
       if (!this._inWalkZone(worldX, worldY)) return;
@@ -319,6 +410,59 @@ export class GameScene {
       this._startWalk(worldX, worldY);
     };
     canvas.addEventListener('mousedown', this._onMouseDown);
+
+    this._onMouseUp = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = (e.clientX - rect.left) / (rect.width / 320);
+      const my = (e.clientY - rect.top) / (rect.height / 200);
+      const pressedMode = this._pressedButtonMode;
+      const pendingMode = this._pendingButtonMode;
+      this._pressedButtonMode = null;
+      this._pendingButtonMode = null;
+      if (!pendingMode || !pressedMode || pendingMode !== pressedMode) return;
+      const button = this._getUiButton(mx, my);
+      if (!button || button.mode !== pendingMode) return;
+      if (button.mode === 'exit') return;
+      if (button.mode === 'bag' && !this.state?.bagReceived) {
+        this._queueEvent('bagMissing');
+        return;
+      }
+      this._setInputMode(button.mode);
+    };
+    canvas.addEventListener('mouseup', this._onMouseUp);
+
+    this._onMouseLeave = () => {
+      this._pressedButtonMode = null;
+      this._pendingButtonMode = null;
+    };
+    canvas.addEventListener('mouseleave', this._onMouseLeave);
+
+    this._onKeyDown = (e) => {
+      if (!this.modal) return;
+      if (this.modal.type === 'dialog' && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        const dir = e.key === 'ArrowDown' ? 1 : -1;
+        const count = this.modal.choices.length;
+        const current = this.modal.selectedChoice == null ? -1 : this.modal.selectedChoice;
+        this.modal.selectedChoice = (current + dir + count) % count;
+        e.preventDefault();
+        return;
+      }
+      if (e.key !== 'Enter') return;
+      if (this.modal.type === 'dialog' && this.modal.selectedChoice != null) {
+        const choice = this.modal.choices[this.modal.selectedChoice];
+        this.modal = null;
+        this._choiceBoxes = [];
+        this._dialogExitBox = null;
+        this._enqueueSteps(choice.event);
+        this._refreshCursor();
+        this._processActionQueue();
+      } else if (this.modal.type === 'message') {
+        this.modal = null;
+        this._refreshCursor();
+        this._processActionQueue();
+      }
+    };
+    window.addEventListener('keydown', this._onKeyDown);
   }
 
   _calcDirection(fromX, fromY, toX, toY) {
@@ -376,6 +520,14 @@ export class GameScene {
 
   _setInputMode(mode) {
     this.inputMode = mode;
+    this._refreshCursor();
+  }
+
+  _refreshCursor() {
+    if (this.modal) {
+      this.engine.cursor = 'ARROWCURSOR';
+      return;
+    }
     const cursorByMode = {
       walk: 'WALKCURSOR',
       look: 'LOOKCURSOR',
@@ -383,10 +535,11 @@ export class GameScene {
       touch: 'TOUCHCURSOR',
       bag: 'ARROWCURSOR',
     };
-    this.engine.cursor = cursorByMode[mode] || 'ARROWCURSOR';
+    this.engine.cursor = cursorByMode[this.inputMode] || 'ARROWCURSOR';
   }
 
   _getUiButton(mx, my) {
+    if (!this._buttonsVisible()) return null;
     for (const button of this.uiButtons) {
       if (mx >= button.x && mx <= button.x + button.w &&
           my >= button.y && my <= button.y + button.h) {
@@ -400,13 +553,33 @@ export class GameScene {
     const interactions = this.sceneScript?.interactions || [];
     for (const interaction of interactions) {
       if (!this._interactionEnabled[interaction.id]) continue;
-      const [x1, y1, x2, y2] = interaction.rect;
+      const rect = this._getInteractionRect(interaction);
+      if (!rect) continue;
+      const [x1, y1, x2, y2] = rect;
       if (worldX >= x1 && worldX <= x2 && worldY >= y1 && worldY <= y2) {
         const eventId = interaction.modes?.[mode];
         if (eventId) return { interaction, eventId };
       }
     }
     return null;
+  }
+
+  _getInteractionRect(interaction) {
+    if (interaction.object) {
+      const obj = this.objectByName?.[interaction.object];
+      const spriteName = interaction.sprite || obj?.sprite;
+      const img = spriteName ? this.engine.assets.get(spriteName) : null;
+      if (obj && img) {
+        const pad = interaction.pad || [0, 0, 0, 0];
+        return [
+          obj.x + pad[0],
+          obj.y + pad[1],
+          obj.x + img.width + pad[2],
+          obj.y + img.height + pad[3],
+        ];
+      }
+    }
+    return interaction.rect || null;
   }
 
   _startWalk(x, y) {
@@ -488,6 +661,7 @@ export class GameScene {
     if (!message) return;
     this._dialogExitBox = null;
     this.modal = { type: 'message', presentation: message.presentation || 'note', ...message };
+    this._refreshCursor();
   }
 
   _openDialog(dialogId) {
@@ -498,12 +672,16 @@ export class GameScene {
       type: 'dialog',
       speaker: dialog.speaker,
       speakerSprite: dialog.speakerSprite,
+      speakerBase: dialog.speakerBase,
+      speakerOverlay: dialog.speakerOverlay,
       speakerX: dialog.speakerX,
       speakerY: dialog.speakerY,
       prompt: dialog.prompt,
       question: dialog.question,
       choices: dialog.choices,
+      selectedChoice: null,
     };
+    this._refreshCursor();
   }
 
   _handleModalClick(mx, my) {
@@ -511,6 +689,7 @@ export class GameScene {
 
     if (this.modal.type === 'message') {
       this.modal = null;
+      this._refreshCursor();
       this._processActionQueue();
       return;
     }
@@ -523,18 +702,14 @@ export class GameScene {
         this._choiceBoxes = [];
         this._dialogExitBox = null;
         this.actionQueue = [];
+        this._refreshCursor();
         return;
       }
 
       for (let i = 0; i < this._choiceBoxes.length; i++) {
         const box = this._choiceBoxes[i];
         if (mx >= box.x1 && mx <= box.x2 && my >= box.y1 && my <= box.y2) {
-          const choice = this.modal.choices[i];
-          this.modal = null;
-          this._choiceBoxes = [];
-          this._dialogExitBox = null;
-          this._enqueueSteps(choice.event);
-          this._processActionQueue();
+          this.modal.selectedChoice = i;
           return;
         }
       }
@@ -542,6 +717,7 @@ export class GameScene {
   }
 
   tick() {
+    this.uiTick++;
     // Fade
     if (this.fade === 'in') {
       this.fadeAlpha = Math.min(1, this.fadeAlpha + 1 / FADE_TICKS);
@@ -728,45 +904,63 @@ export class GameScene {
     if (!this.modal || !this.font) return;
     if (this.modal.type === 'dialog') {
       this._renderTalkDialog(ctx);
+    } else if (this.modal.presentation === 'talk') {
+      this._renderTalkResponse(ctx);
     } else {
       this._renderNotePopup(ctx);
     }
   }
 
   _renderPanel(ctx) {
-    const panel = this.engine.assets.get('PANEL');
-    if (panel) ctx.drawImage(panel, 0, 167);
+    const meter = this.engine.assets.get('METER');
+    if (meter) ctx.drawImage(meter, 0, 180);
 
     const moneyBox = this.engine.assets.get('MONEYBOX');
     if (moneyBox) {
-      const boxX = Math.round((320 - moneyBox.width) / 2);
-      const boxY = 171;
+      const boxX = 126;
+      const boxY = 182;
       ctx.drawImage(moneyBox, boxX, boxY);
+      this._renderMoneyDigits(ctx, boxX, boxY, this.state?.palmettoes ?? 100);
+    }
 
-      const money = '100';
-      const text = `${money} P`;
-      const textX = Math.round(boxX + (moneyBox.width - this.font.measureText(text)) / 2);
-      this.font?.drawText(ctx, text, textX, boxY + 3);
+    const showButtons = this._buttonsVisible();
+    if (showButtons) {
+      const panel = this.engine.assets.get('PANEL');
+      if (panel) ctx.drawImage(panel, 0, 165);
     }
 
     if (this.modal?.type === 'dialog') return;
+    if (!showButtons) return;
+
 
     for (const button of this.uiButtons) {
-      const sprite = this.inputMode === button.mode ? button.pressed : button.normal;
+      const isPressed = this._pressedButtonMode === button.mode;
+      const sprite = isPressed ? button.pressed : this._buttonSprite(button);
       const img = this.engine.assets.get(sprite);
       if (img) ctx.drawImage(img, button.x, button.y);
     }
   }
 
+  _buttonSprite(button) {
+    if (button.mode === 'bag') {
+      return this.state?.bagReceived ? button.active : button.normal;
+    }
+    return button.normal;
+  }
+
+  _buttonsVisible() {
+    return !this.modal && this.engine.mouseY >= 166;
+  }
+
   _wrapText(text, maxWidth) {
-    const words = text.split(' ');
+    const words = text.split(/(\s+)/).filter(Boolean);
     const lines = [];
     let line = '';
     for (const word of words) {
-      const test = line ? `${line} ${word}` : word;
-      if (line && this.font.measureText(test) > maxWidth) {
+      const test = line ? `${line}${word}` : word;
+      if (line && !/^\s+$/.test(word) && this.font.measureText(test) > maxWidth) {
         lines.push(line);
-        line = word;
+        line = word.trimStart();
       } else {
         line = test;
       }
@@ -776,7 +970,7 @@ export class GameScene {
   }
 
   _renderNotePopup(ctx) {
-    const lines = this._wrapText(this.modal.text, 160);
+    const lines = this._wrapText(this._formatNoteText(this.modal.text), 160);
     const winName = lines.length <= 2 ? 'TEXTWIN2'
       : lines.length === 3 ? 'TEXTWIN3'
         : lines.length === 4 ? 'TEXTWIN4'
@@ -786,9 +980,9 @@ export class GameScene {
     const x = Math.round((320 - win.width) / 2);
     const y = 24;
     ctx.drawImage(win, x, y);
-    let ty = y + 14;
+    let ty = y + 20;
     for (const line of lines) {
-      this.font.drawText(ctx, line, x + 16, ty);
+      this.font.drawText(ctx, line, x + 10, ty, '#000000');
       ty += 11;
     }
     this._choiceBoxes = [];
@@ -799,32 +993,43 @@ export class GameScene {
     const win = this.engine.assets.get('TALKWINDOW');
     if (win) ctx.drawImage(win, 0, 0);
 
-    const npc = this.engine.assets.get(this.modal.speakerSprite);
-    if (npc) ctx.drawImage(npc, this.modal.speakerX, this.modal.speakerY);
+    this._renderDialogSpeaker(ctx);
 
     const alex = this.engine.assets.get('ALTALK1');
-    if (alex) ctx.drawImage(alex, 228, 64);
+    if (alex) ctx.drawImage(alex, 222, 64);
 
     const topLines = this._wrapText(this.modal.prompt, 136);
     let y = 14;
     for (const line of topLines) {
-      this.font.drawText(ctx, line, 166, y);
+      this.font.drawText(ctx, line, 166, y, '#000000');
       y += 11;
     }
 
-    const questionLines = this._wrapText(this.modal.question, 140);
-    y = 103;
-    for (const line of questionLines) {
-      this.font.drawText(ctx, line, 14, y);
-      y += 11;
-    }
+    const baseQuestion = this.modal.question.replace(/:\s*$/, '');
+    const selectedText = this.modal.selectedChoice != null
+      ? this.modal.choices[this.modal.selectedChoice].label
+      : '____';
+    const questionX = 16;
+    const questionY = 103;
+    y = this._drawQuestionSelection(ctx, baseQuestion, selectedText, questionX, questionY, 168) + 7;
 
     this._choiceBoxes = [];
+    const numberX = 16;
+    const bodyX = 36;
+    const highlightX = 32;
+    const highlightRight = 184;
     for (let i = 0; i < this.modal.choices.length; i++) {
       const label = `${i + 1}.  ${this.modal.choices[i].label}`;
-      this.font.drawText(ctx, label, 24, y);
-      const width = this.font.measureText(label);
-      this._choiceBoxes.push({ x1: 20, y1: y - 2, x2: 24 + width + 4, y2: y + this.font.height + 2 });
+      const choiceText = this.modal.choices[i].label;
+      if (this.modal.selectedChoice === i) {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(highlightX, y - 1, highlightRight - highlightX, this.font.height + 2);
+        this.font.drawText(ctx, choiceText, bodyX, y, '#ffffff');
+        this.font.drawText(ctx, `${i + 1}.`, numberX, y, '#000000');
+      } else {
+        this.font.drawText(ctx, label, numberX, y, '#000000');
+      }
+      this._choiceBoxes.push({ x1: numberX, y1: y - 2, x2: highlightRight, y2: y + this.font.height + 2 });
       y += 11;
     }
 
@@ -833,6 +1038,126 @@ export class GameScene {
       ctx.drawImage(exit, 166, 148);
       this._dialogExitBox = { x1: 166, y1: 148, x2: 166 + exit.width, y2: 148 + exit.height };
     }
+  }
+
+  _renderTalkResponse(ctx) {
+    const leftTile = this.engine.assets.get('TALKRESP_LEFT');
+    if (leftTile) ctx.drawImage(leftTile, 6, 1);
+    this._renderDialogSpeaker(ctx);
+    const bubble = this.engine.assets.get('TALKRESP_BUBBLE');
+    if (bubble) ctx.drawImage(bubble, 120, 1);
+
+    const lines = this._wrapText(this.modal.text, 188);
+    let y = 14;
+    for (const line of lines) {
+      this.font.drawText(ctx, line, 166, y, '#000000');
+      y += 11;
+    }
+    this._choiceBoxes = [];
+    this._dialogExitBox = null;
+  }
+
+  _drawQuestionSelection(ctx, baseQuestion, selectedText, x, y, maxWidth) {
+    const prefix = this.modal.selectedChoice != null ? `${baseQuestion} ` : `${baseQuestion}: `;
+    let cx = x;
+    let cy = y;
+    const drawWord = (word, color) => {
+      const width = this.font.measureText(word);
+      if (cx > x && cx + width > x + maxWidth) {
+        cy += 11;
+        cx = x;
+      }
+      this.font.drawText(ctx, word, cx, cy, color);
+      cx += width;
+    };
+    for (const token of prefix.match(/\S+\s*/g) || [prefix]) {
+      drawWord(token, '#000000');
+    }
+    if (this.modal.selectedChoice != null) {
+      for (const token of selectedText.match(/\S+\s*/g) || [selectedText]) {
+        drawWord(token, '#d40000');
+      }
+    } else {
+      drawWord(selectedText, '#000000');
+    }
+    return cy;
+  }
+
+  _renderDialogSpeaker(ctx) {
+    const baseName = this.modal.speakerBase || this.modal.speakerSprite;
+    const npc = this.engine.assets.get(baseName);
+    if (!npc) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(16, 12, 116, 80);
+    ctx.clip();
+    ctx.drawImage(npc, this.modal.speakerX, this.modal.speakerY);
+
+    const overlay = this.modal.speakerOverlay;
+    if (overlay?.sequence?.length) {
+      const idx = Math.floor(this.uiTick / (overlay.rate || 8)) % overlay.sequence.length;
+      const frameNum = overlay.sequence[idx];
+      if (frameNum) {
+        const oImg = this.engine.assets.get(`${overlay.prefix}${frameNum}`);
+        if (oImg) {
+          ctx.drawImage(oImg, this.modal.speakerX + overlay.ox, this.modal.speakerY + overlay.oy);
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  _formatNoteText(text) {
+    return text.replace(/([.!?]) (?=[A-Z"])/g, '$1  ');
+  }
+
+  _renderMoneyDigits(ctx, boxX, boxY, amount) {
+    const text = String(Math.max(0, Math.min(9999, amount))).padStart(4, ' ');
+    const digitW = 6;
+    const gap = 1;
+    const totalW = digitW * text.length + gap * (text.length - 1);
+    const startX = boxX + 5 + Math.round((35 - totalW) / 2);
+    const startY = boxY + 3;
+    for (let i = 0; i < text.length; i++) {
+      this._drawSevenSegmentDigit(ctx, startX + i * (digitW + gap), startY, text[i]);
+    }
+  }
+
+  _drawSevenSegmentDigit(ctx, x, y, ch) {
+    const on = '#0ccc0c';
+    const off = '#8c5c10';
+    const segs = {
+      '0': ['a', 'b', 'c', 'd', 'e', 'f'],
+      '1': ['b', 'c'],
+      '2': ['a', 'b', 'g', 'e', 'd'],
+      '3': ['a', 'b', 'g', 'c', 'd'],
+      '4': ['f', 'g', 'b', 'c'],
+      '5': ['a', 'f', 'g', 'c', 'd'],
+      '6': ['a', 'f', 'g', 'e', 'c', 'd'],
+      '7': ['a', 'b', 'c'],
+      '8': ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+      '9': ['a', 'b', 'c', 'd', 'f', 'g'],
+      ' ': [],
+    };
+    const onSet = new Set(segs[ch] || []);
+    const segRects = {
+      a: [1, 0, 4, 1],
+      b: [5, 1, 1, 3],
+      c: [5, 5, 1, 3],
+      d: [1, 8, 4, 1],
+      e: [0, 5, 1, 3],
+      f: [0, 1, 1, 3],
+      g: [1, 4, 4, 1],
+    };
+    for (const [name, rect] of Object.entries(segRects)) {
+      ctx.fillStyle = onSet.has(name) ? on : off;
+      ctx.fillRect(x + rect[0], y + rect[1], rect[2], rect[3]);
+    }
+  }
+
+  _queueFallbackEvent(mode) {
+    const eventId = this.sceneScript?.fallbacks?.[mode];
+    if (eventId) this._queueEvent(eventId);
   }
 
   _inWalkZone(x, y) {
@@ -848,5 +1173,8 @@ export class GameScene {
   destroy() {
     const canvas = this.engine.ctx.canvas;
     canvas.removeEventListener('mousedown', this._onMouseDown);
+    canvas.removeEventListener('mouseup', this._onMouseUp);
+    canvas.removeEventListener('mouseleave', this._onMouseLeave);
+    window.removeEventListener('keydown', this._onKeyDown);
   }
 }
