@@ -1,8 +1,55 @@
 // Interactive game scene — data-driven from scene descriptor + SCX
 // First implementation: Airport. Will generalize as more scenes are added.
 
+import { AnimationPlayer, parseAnimationCommands } from '../animation.js';
+
 const ANIM_TICK_SCALE = 2;
 const FADE_TICKS = 18;
+
+const ACHU_5030_LINES = [
+  'F 1,0',
+  'P 5,20',
+  'F 2,0',
+  'P 1,0',
+  'F 1,0',
+  'P 5,20',
+  'F 2,0',
+  'P 1,0',
+  'F 1,0',
+  'P 5,20',
+  'F 2,0',
+  'P 1,0',
+  'F 1,0',
+  'P 5,20',
+  'F 2,0',
+  'P 1,0',
+  'F 1,0',
+  'P 5,20',
+  'F 2,0',
+  'P 1,0',
+  'F 1,0',
+  'P 5,20',
+  'G 4,0',
+  'P 1,1',
+  'F 3,0',
+  'P 1,1',
+  'F 5,0',
+  'P 1,1',
+  'F 6,0',
+  'P 2,2',
+  'F 7,0',
+  'P 1,1',
+  'F 8,0',
+  'P 1,1',
+  'S 1,0',
+  'F 7,0',
+  'P 1,1',
+  'F 8,0',
+  'P 4,4',
+  'G -1,0',
+  'R 0,0',
+  'Q',
+];
 
 export class GameScene {
   constructor(sceneId) {
@@ -82,17 +129,13 @@ export class GameScene {
       // small overlay frames cycle on top at a matched offset.
       // Animation sequences from SCX sections, positions from data sections.
 
-      // Lost clerk: base LOST0, face overlay LOST1-8 at (35,12),
-      // plus ACHU sneeze overlay — Achu object at OVR position (111,31).
-      // Sequence: blink (F1/F2), then sneeze uses ACHU frames.
-      { name: 'Lost',    sprite: 'LOST0',   x: 86,  y: 16,  visible: true,
-        overlay: { prefix: 'LOST', rate: 6, ox: 35, oy: 12,
-          sequence: [1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,
-                     1,1,1,1,1,1,1,1,1,1,2,1] },
-        overlay2: { prefix: 'ACHU', rate: 6, ox: 25, oy: 15,
-          // Sneeze sequence: mostly 0 (hidden), then ACHU1-11 burst
-          sequence: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
-                     1,2,3,4,5,6,7,8,9,10,11,0] } },
+      // Lost-and-found clerk: this is the original "Achu" object from OVR.
+      // OVR creates Achu at (111,31) and binds it to SCX section 5030.
+      // Section 5030 starts with repeated F1/F2 blinking, then later advances
+      // through the larger reaction/sneeze motion. ACHU1 is the idle open-eyes
+      // frame; ACHU2 is the blink frame.
+      { name: 'Achu',    sprite: 'ACHU1',   x: 111, y: 31,  visible: true,
+        scxAnim: '5030' },
       { name: 'Door',    sprite: 'DOOR1',   x: 273, y: 0,   visible: true },
       // FemGrd: F1=hat at side (idle off), F8/F10=hat on head (idle on/heels).
       // Hat ON:  F1→F2→F3→F4→F6→F7 (lift hat, diagonal place, hand down)
@@ -155,22 +198,29 @@ export class GameScene {
       }
     }
     // Load animation frames for all animated objects
-    for (let i = 1; i <= 4; i++) sceneImgs[`STAIRS${i}`] = `${base}/STAIRS${i}.png`;
+    for (let i = 1; i <= 6; i++) sceneImgs[`STAIRS${i}`] = `${base}/STAIRS${i}.png`;
     for (let i = 1; i <= 12; i++) sceneImgs[`GUARD${i}`] = `${base}/GUARD${i}.png`;
     for (let i = 1; i <= 6; i++) sceneImgs[`FAMILY${i}`] = `${base}/FAMILY${i}.png`;
-    for (let i = 0; i <= 8; i++) sceneImgs[`LOST${i}`] = `${base}/LOST${i}.png`;
     for (let i = 1; i <= 10; i++) sceneImgs[`FEMGRD${i}`] = `${base}/FEMGRD${i}.png`;
     for (let i = 0; i <= 11; i++) sceneImgs[`BRDTLK${i}`] = `${base}/BRDTLK${i}.png`;
     for (let i = 1; i <= 11; i++) sceneImgs[`ACHU${i}`] = `${base}/ACHU${i}.png`;
     // Load additional character sprites
     for (let i = 1; i <= 6; i++) sceneImgs[`BORDER${i}`] = `${base}/BORDER${i}.png`;
     for (const name of ['TRUP1','STAFFB1',
-                         'DOOR1','DOOR2','FEMGRD1','LOST0','LOST1','ALEXDN1',
+                         'DOOR1','DOOR2','FEMGRD1','ALEXDN1',
                          'WALL_B','WALL_K',
                          'MAAKE','ARRIVE','DEPART','LINESIGN','DALPAK']) {
       if (!sceneImgs[name]) sceneImgs[name] = `${base}/${name}.png`;
     }
     await engine.loadImages(sceneImgs);
+
+    const achu = this.objectsBehind.find(o => o.name === 'Achu');
+    if (achu) {
+      achu._scxCommands = parseAnimationCommands(ACHU_5030_LINES);
+      achu._scxPositions = Array.from({ length: 11 }, () => ({ x: achu.x, y: achu.y }));
+      achu._player = new AnimationPlayer(achu._scxCommands, achu._scxPositions, 'ACHU');
+      achu._player.visible = true;
+    }
 
     // Cursors
     await engine.loadImages({
@@ -301,12 +351,25 @@ export class GameScene {
     this.stairsTick++;
     if (this.stairsTick >= 3) {
       this.stairsTick = 0;
-      this.stairsFrame = (this.stairsFrame % 4) + 1;
+      this.stairsFrame = (this.stairsFrame % 6) + 1;
     }
     // Update all animated objects
     for (const obj of this.sceneObjects) {
       if (obj.anim === 'stairs') {
         obj.sprite = `STAIRS${this.stairsFrame}`;
+      } else if (obj._player) {
+        obj._player.tick();
+        obj.sprite = obj._player.spriteName;
+        obj.x = obj._player.x;
+        obj.y = obj._player.y;
+        if (obj._player.done) {
+          obj._player = new AnimationPlayer(obj._scxCommands, obj._scxPositions, 'ACHU');
+          obj._player.visible = true;
+          obj._player.tick();
+          obj.sprite = obj._player.spriteName;
+          obj.x = obj._player.x;
+          obj.y = obj._player.y;
+        }
       } else if (obj.overlay && obj.overlay.sequence) {
         // Base+overlay with sequence
         if (obj._oTick == null) obj._oTick = 0;
