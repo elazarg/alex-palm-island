@@ -35,6 +35,7 @@ export class GameScene {
     this.alexTargetY = 0;
     this.alexStepTick = 0;
     this.alexWalkCycleIdx = 0;
+    this.alexIdleTick = 0;
 
     // Fade
     this.fade = 'none';
@@ -351,9 +352,11 @@ export class GameScene {
     this._initSceneScript();
 
     // Airport: Alex starts at escalator area (right side of 960px scene)
-    this.alexX = 840;
+    this.alexX = 837;
     this.alexY = 140;
-    this.alexDir = 4; // facing left (west)
+    this.alexDir = 1;
+    this.alexFrame = 1;
+    this.alexIdleTick = 0;
     this.scrollX = Math.max(0, this.alexX - 160); // center viewport on Alex
 
     // Walk zones — type A rectangles from OVR, expanded to cover actual
@@ -586,10 +589,11 @@ export class GameScene {
     this.alexTargetX = x;
     this.alexTargetY = y;
     this.alexWalking = true;
-    this.alexFrame = 0;
+    this.alexFrame = 1;
     this.alexStepTick = 0;
     this.alexDir = this._calcDirection(this.alexX, this.alexY, x, y);
     this.alexWalkCycleIdx = 0;
+    this.alexIdleTick = 0;
   }
 
   _queueEvent(eventId) {
@@ -629,7 +633,8 @@ export class GameScene {
 
       if (step.type === 'face') {
         this.alexDir = step.dir;
-        this.alexFrame = 0;
+        this.alexFrame = 1;
+        this.alexIdleTick = 0;
         continue;
       }
 
@@ -753,7 +758,8 @@ export class GameScene {
           this.alexX = this.alexTargetX;
           this.alexY = this.alexTargetY;
           this.alexWalking = false;
-          this.alexFrame = 0;
+          this.alexFrame = 1;
+          this.alexIdleTick = 0;
         } else {
           const newX = this.alexX + delta.dx;
           const newY = this.alexY + delta.dy;
@@ -762,11 +768,16 @@ export class GameScene {
             this.alexY = newY;
           } else {
             this.alexWalking = false;
-            this.alexFrame = 0;
+            this.alexFrame = 1;
+            this.alexIdleTick = 0;
             return;
           }
         }
       }
+    } else {
+      // Standing pose is frame 1, with a brief blink on frame 0.
+      this.alexIdleTick = (this.alexIdleTick + 1) % 72;
+      this.alexFrame = (this.alexIdleTick === 24 || this.alexIdleTick === 25) ? 0 : 1;
     }
 
     // Animate scene objects
@@ -871,9 +882,8 @@ export class GameScene {
       }
     }
 
-    // Draw Alex (idle = frame 1, not 0 which is eyes-closed)
-    const displayFrame = (!this.alexWalking && this.alexFrame === 0) ? 1 : this.alexFrame;
-    const spriteName = `ALEX${this.alexDir}-${displayFrame}`;
+    const spriteDir = this.alexWalking ? this.alexDir : 1;
+    const spriteName = `ALEX${spriteDir}-${this.alexFrame}`;
     const alexImg = this.engine.assets.get(spriteName);
     if (alexImg) {
       const screenX = this.alexX - this.scrollX - alexImg.width / 2;

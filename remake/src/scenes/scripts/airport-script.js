@@ -4,12 +4,20 @@ export const AIRPORT_SCRIPT = {
     passportChecked: false,
     doorWarnings: 0,
     clerkRepeatCount: 0,
+    palmettoes: 100,
   },
 
   bindings: [
     { type: 'objectVisible', object: 'Family', when: { state: 'bagReceived', equals: true } },
     { type: 'interactionEnabled', interaction: 'family', when: { state: 'bagReceived', equals: true } },
   ],
+
+  fallbacks: {
+    look: 'lookDefault',
+    talk: 'talkDefault',
+    touch: 'touchDefault',
+    bag: 'bagDefault',
+  },
 
   interactions: [
     {
@@ -24,24 +32,58 @@ export const AIRPORT_SCRIPT = {
     },
     {
       id: 'guard',
-      rect: [776, 60, 960, 125],
+      object: 'Guard',
+      sprite: 'GUARD1',
+      pad: [8, 0, -12, -2],
       modes: { look: 'lookGuard', touch: 'touchPeople', talk: 'guardIntro' },
     },
     {
       id: 'clerk',
-      rect: [106, 0, 216, 105],
+      object: 'Achu',
+      sprite: 'ACHU1',
+      pad: [-8, -8, 8, 4],
       modes: { look: 'lookLostCounter', touch: 'touchLostCounter', talk: 'clerkIntro' },
     },
     {
       id: 'passportOfficer',
-      rect: [447, 10, 507, 62],
+      object: 'BrdTlk',
+      sprite: 'BRDTLK0',
+      pad: [28, 0, -6, 0],
       modes: { look: 'lookPassportOfficer', touch: 'touchPeople', talk: 'passportCheck' },
     },
     {
       id: 'family',
-      rect: [737, 12, 773, 94],
+      object: 'Family',
+      sprite: 'FAMILY1',
+      pad: [0, 0, -76, 0],
       enabled: false,
       modes: { look: 'familyQueue', touch: 'touchPeople', talk: 'familyTalk' },
+    },
+    {
+      id: 'womanGuard',
+      object: 'FemGrd',
+      sprite: 'FEMGRD1',
+      pad: [8, -6, -4, 0],
+      modes: { look: 'lookWomanGuard', touch: 'touchPeople', talk: 'womanGuardTalk' },
+    },
+    {
+      id: 'lineSign',
+      object: 'LineSign',
+      sprite: 'LINESIGN',
+      pad: [0, 0, 0, 0],
+      modes: { look: 'lookLineSign', touch: 'touchSign', talk: 'talkDefault' },
+    },
+    {
+      id: 'stairs',
+      object: 'Stairs',
+      sprite: 'STAIRS1',
+      pad: [0, 24, -60, 0],
+      modes: { look: 'lookStairs', touch: 'touchStairs', talk: 'talkDefault' },
+    },
+    {
+      id: 'floor',
+      rect: [0, 120, 960, 166],
+      modes: { look: 'lookFloor', touch: 'touchFloor', talk: 'talkDefault' },
     },
   ],
 
@@ -80,6 +122,7 @@ export const AIRPORT_SCRIPT = {
     receiveBag: [
       { type: 'message', id: 'clerkThanks' },
       { type: 'message', id: 'clerkBag' },
+      { type: 'setState', key: 'palmettoes', value: 90 },
       { type: 'setState', key: 'bagReceived', value: true },
     ],
 
@@ -110,15 +153,30 @@ export const AIRPORT_SCRIPT = {
     familyTalk: [
       { type: 'message', id: 'familyNoEnglish' },
     ],
+    womanGuardTalk: [
+      { type: 'message', id: 'doorWarning1' },
+    ],
 
     lookGuard: [{ type: 'message', id: 'lookGuard' }],
     lookLostCounter: [{ type: 'message', id: 'lookLostCounter' }],
     lookPassportOfficer: [{ type: 'message', id: 'lookPassportOfficer' }],
+    lookWomanGuard: [{ type: 'message', id: 'lookWomanGuard' }],
+    lookLineSign: [{ type: 'message', id: 'lookLineSign' }],
+    lookStairs: [{ type: 'message', id: 'lookStairs' }],
+    lookFloor: [{ type: 'message', id: 'lookFloor' }],
     lookExit: [{ type: 'message', id: 'lookExit' }],
     lookDoors: [{ type: 'message', id: 'lookDoors' }],
     touchDoors: [{ type: 'message', id: 'touchDoors' }],
+    touchFloor: [{ type: 'message', id: 'touchFloor' }],
+    touchStairs: [{ type: 'message', id: 'touchStairs' }],
+    touchSign: [{ type: 'message', id: 'touchSign' }],
     touchPeople: [{ type: 'message', id: 'touchPeople' }],
     touchLostCounter: [{ type: 'message', id: 'touchLostCounter' }],
+    lookDefault: [{ type: 'message', id: 'lookDefault' }],
+    talkDefault: [{ type: 'message', id: 'talkDefault' }],
+    touchDefault: [{ type: 'message', id: 'touchDefault' }],
+    bagDefault: [{ type: 'message', id: 'bagDefault' }],
+    bagMissing: [{ type: 'message', id: 'bagMissing' }],
 
     upstairsExit: [
       {
@@ -155,8 +213,10 @@ export const AIRPORT_SCRIPT = {
     guardQuestion: {
       speaker: 'Guard',
       speakerSprite: 'GRDTLK0',
-      speakerX: 49,
-      speakerY: 11,
+      speakerBase: 'GRDTLK0',
+      speakerOverlay: { prefix: 'GRDTLK', ox: 52, oy: 12, rate: 8, sequence: [1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1] },
+      speakerX: 17,
+      speakerY: 4,
       prompt: 'Good morning. Can I help you?',
       question: 'Yes, please. I am looking for:',
       choices: [
@@ -191,18 +251,38 @@ export const AIRPORT_SCRIPT = {
     },
     guardHotel: {
       speaker: 'Guard',
+      presentation: 'talk',
+      speakerBase: 'GRDTLK0',
+      speakerOverlay: { prefix: 'GRDTLK', ox: 52, oy: 12, rate: 8, sequence: [1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1] },
+      speakerX: 17,
+      speakerY: 4,
       text: 'Read this sign.',
     },
     guardBag: {
       speaker: 'Guard',
+      presentation: 'talk',
+      speakerBase: 'GRDTLK0',
+      speakerOverlay: { prefix: 'GRDTLK', ox: 52, oy: 12, rate: 8, sequence: [1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1] },
+      speakerX: 17,
+      speakerY: 4,
       text: 'Go to the "Lost and Found".',
     },
     guardFood: {
       speaker: 'Guard',
+      presentation: 'talk',
+      speakerBase: 'GRDTLK0',
+      speakerOverlay: { prefix: 'GRDTLK', ox: 52, oy: 12, rate: 8, sequence: [1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1] },
+      speakerX: 17,
+      speakerY: 4,
       text: 'Go to Big Bob\'s Burger Bar. The food is great there.',
     },
     guardTaxi: {
       speaker: 'Guard',
+      presentation: 'talk',
+      speakerBase: 'GRDTLK0',
+      speakerOverlay: { prefix: 'GRDTLK', ox: 52, oy: 12, rate: 8, sequence: [1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1] },
+      speakerX: 17,
+      speakerY: 4,
       text: 'Sorry, there are no taxis today. All the drivers are on strike.',
     },
     clerkNotInfo: {
@@ -265,6 +345,11 @@ export const AIRPORT_SCRIPT = {
       presentation: 'note',
       text: 'Sorry, we don\'t speak English.',
     },
+    bagMissing: {
+      speaker: 'Narrator',
+      presentation: 'note',
+      text: 'You lost your bag!',
+    },
     doorWarning1: {
       speaker: 'Woman Guard',
       presentation: 'note',
@@ -305,6 +390,26 @@ export const AIRPORT_SCRIPT = {
       presentation: 'note',
       text: 'This is the passport officer. He is standing behind the counter.',
     },
+    lookWomanGuard: {
+      speaker: 'Narrator',
+      presentation: 'note',
+      text: 'This woman is guarding the exit.',
+    },
+    lookLineSign: {
+      speaker: 'Narrator',
+      presentation: 'note',
+      text: 'People should stand in line here.',
+    },
+    lookStairs: {
+      speaker: 'Narrator',
+      presentation: 'note',
+      text: 'These stairs go up to the departure lounge.',
+    },
+    lookFloor: {
+      speaker: 'Narrator',
+      presentation: 'note',
+      text: 'It is the airport floor.',
+    },
     lookExit: {
       speaker: 'Narrator',
       presentation: 'note',
@@ -320,6 +425,21 @@ export const AIRPORT_SCRIPT = {
       presentation: 'note',
       text: 'You shouldn\'t touch these automatic doors. You might get your fingers caught.',
     },
+    touchFloor: {
+      speaker: 'Narrator',
+      presentation: 'note',
+      text: 'Touching the floor will not help.',
+    },
+    touchStairs: {
+      speaker: 'Narrator',
+      presentation: 'note',
+      text: 'You should use the stairs, not touch them.',
+    },
+    touchSign: {
+      speaker: 'Narrator',
+      presentation: 'note',
+      text: 'There is no need to touch the sign.',
+    },
     touchPeople: {
       speaker: 'Narrator',
       presentation: 'note',
@@ -329,6 +449,26 @@ export const AIRPORT_SCRIPT = {
       speaker: 'Narrator',
       presentation: 'note',
       text: 'If you want a bag, ask for help.',
+    },
+    lookDefault: {
+      speaker: 'Narrator',
+      presentation: 'note',
+      text: 'There is nothing special to look at there.',
+    },
+    talkDefault: {
+      speaker: 'Narrator',
+      presentation: 'note',
+      text: 'Talking to that will not help.',
+    },
+    touchDefault: {
+      speaker: 'Narrator',
+      presentation: 'note',
+      text: 'Touching that will not help.',
+    },
+    bagDefault: {
+      speaker: 'Narrator',
+      presentation: 'note',
+      text: 'That is not the right place to use the bag.',
     },
   },
 };
