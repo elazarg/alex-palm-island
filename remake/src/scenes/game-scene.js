@@ -30,6 +30,7 @@ export class GameScene {
     this.alexTargetX = 0;
     this.alexTargetY = 0;
     this.alexStepTick = 0;
+    this.alexWalkCycleIdx = 0;
 
     // Fade
     this.fade = 'none';
@@ -47,6 +48,16 @@ export class GameScene {
       7: [{dx:0,dy:0},{dx:-4,dy:-2},{dx:-4,dy:-3},{dx:0,dy:0},{dx:0,dy:0},{dx:-4,dy:-2},{dx:-4,dy:-3},{dx:0,dy:0},{dx:0,dy:0}],
       8: [{dx:0,dy:0},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:0},{dx:0,dy:0}],
       9: [{dx:0,dy:0},{dx:4,dy:-2},{dx:4,dy:-3},{dx:0,dy:0},{dx:0,dy:0},{dx:4,dy:-2},{dx:4,dy:-3},{dx:0,dy:0},{dx:0,dy:0}],
+    };
+    this.walkFrameCycles = {
+      1: [1, 2, 5, 6],
+      2: [1, 2, 3, 4, 5, 6],
+      3: [1, 2, 5, 6],
+      4: [3, 4, 5, 6],
+      6: [3, 4, 5, 6],
+      7: [1, 2, 5, 6],
+      8: [1, 2, 3, 4, 5, 6],
+      9: [1, 2, 5, 6],
     };
   }
 
@@ -227,6 +238,7 @@ export class GameScene {
       this.alexFrame = 0;
       this.alexStepTick = 0;
       this.alexDir = this._calcDirection(this.alexX, this.alexY, worldX, worldY);
+      this.alexWalkCycleIdx = 0;
     };
     canvas.addEventListener('mousedown', this._onMouseDown);
   }
@@ -268,33 +280,33 @@ export class GameScene {
       this.alexStepTick++;
       if (this.alexStepTick >= ANIM_TICK_SCALE) {
         this.alexStepTick = 0;
-        const maxFrames = this._frameCounts[this.alexDir] || 8;
-        this.alexFrame = (this.alexFrame + 1) % maxFrames;
-
+        this.alexDir = this._calcDirection(this.alexX, this.alexY, this.alexTargetX, this.alexTargetY);
+        const cycle = this.walkFrameCycles[this.alexDir] || [1];
+        this.alexWalkCycleIdx %= cycle.length;
+        this.alexFrame = cycle[this.alexWalkCycleIdx];
+        this.alexWalkCycleIdx = (this.alexWalkCycleIdx + 1) % cycle.length;
         const deltas = this.walkDeltas[this.alexDir];
-        if (deltas) {
-          const d = deltas[this.alexFrame];
-          const newX = this.alexX + d.dx;
-          const newY = this.alexY + d.dy;
+        const delta = deltas ? deltas[this.alexFrame] : { dx: 0, dy: 0 };
+        const distX = this.alexTargetX - this.alexX;
+        const distY = this.alexTargetY - this.alexY;
+        const dist = Math.hypot(distX, distY);
+
+        if (dist <= Math.max(Math.abs(delta.dx), Math.abs(delta.dy), 1)) {
+          this.alexX = this.alexTargetX;
+          this.alexY = this.alexTargetY;
+          this.alexWalking = false;
+          this.alexFrame = 0;
+        } else {
+          const newX = this.alexX + delta.dx;
+          const newY = this.alexY + delta.dy;
           if (this._inWalkZone(newX, newY)) {
             this.alexX = newX;
             this.alexY = newY;
           } else {
-            // Hit boundary — stop walking
             this.alexWalking = false;
             this.alexFrame = 0;
             return;
           }
-        }
-
-        // Check if close enough to target
-        const dist = Math.abs(this.alexX - this.alexTargetX) + Math.abs(this.alexY - this.alexTargetY);
-        if (dist < 10) {
-          this.alexWalking = false;
-          this.alexFrame = 0;
-        } else if (this.alexFrame === 0) {
-          // Re-evaluate direction each cycle
-          this.alexDir = this._calcDirection(this.alexX, this.alexY, this.alexTargetX, this.alexTargetY);
         }
       }
     }
