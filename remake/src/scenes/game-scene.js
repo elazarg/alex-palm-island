@@ -737,9 +737,17 @@ export class GameScene {
     const panel = this.engine.assets.get('PANEL');
     if (panel) ctx.drawImage(panel, 0, 167);
 
-    const money = `${100}`;
-    this.font?.drawText(ctx, money, 236, 176);
-    this.font?.drawText(ctx, 'P', 278, 176);
+    const moneyBox = this.engine.assets.get('MONEYBOX');
+    if (moneyBox) {
+      const boxX = Math.round((320 - moneyBox.width) / 2);
+      const boxY = 171;
+      ctx.drawImage(moneyBox, boxX, boxY);
+
+      const money = '100';
+      const text = `${money} P`;
+      const textX = Math.round(boxX + (moneyBox.width - this.font.measureText(text)) / 2);
+      this.font?.drawText(ctx, text, textX, boxY + 3);
+    }
 
     if (this.modal?.type === 'dialog') return;
 
