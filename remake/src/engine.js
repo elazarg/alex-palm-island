@@ -4,6 +4,10 @@ const WIDTH = 320;
 const HEIGHT = 200;
 const SCALE = 3;
 const TICK_MS = 55; // ~18.2 Hz DOS timer tick
+const CURSOR_HOTSPOTS = {
+  ARROWCURSOR: { x: 0, y: 7 },
+  MMARROWCURSOR: { x: 0, y: 7 },
+};
 
 export class Engine {
   constructor(canvas) {
@@ -94,7 +98,12 @@ export class Engine {
   drawSprite(ctx, name, x, y) {
     const img = this.assets.get(name);
     if (img) {
-      ctx.drawImage(img, x, y);
+      const hotspot = CURSOR_HOTSPOTS[name];
+      if (hotspot) {
+        ctx.drawImage(img, x - hotspot.x, y - hotspot.y);
+      } else {
+        ctx.drawImage(img, x, y);
+      }
     } else {
       console.warn(`Missing sprite: ${name}`);
     }
