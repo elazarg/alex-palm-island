@@ -1,0 +1,139 @@
+import { InputController } from './input.js';
+
+export const WIDTH = 320;
+export const HEIGHT = 200;
+export const TICK_MS = 55;
+
+export class Engine {
+  constructor(canvas) {
+    canvas.width = WIDTH;
+    canvas.height = HEIGHT;
+    this.width = WIDTH;
+    this.height = HEIGHT;
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.ctx.imageSmoothingEnabled = false;
+    this.ctx.direction = 'ltr';
+
+    this.assets = new Map();
+    this.cursor = null;
+    this.cursorHotspots = new Map();
+    this.scene = null;
+    this.running = false;
+    this.lastTick = 0;
+
+    this.input = new InputController(this);
+    this.input.attach();
+  }
+
+  get mouseX() {
+    return this.input.mouseX;
+  }
+
+  get mouseY() {
+    return this.input.mouseY;
+  }
+
+  registerCursorHotspot(name, hotspot) {
+    this.cursorHotspots.set(name, hotspot);
+  }
+
+  async loadImages(paths) {
+    const entries = Object.entries(paths);
+    await Promise.all(entries.map(([name, url]) => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        this.assets.set(name, img);
+        resolve();
+      };
+      img.onerror = () => reject(new Error(`Failed to load: ${url}`));
+      img.src = url;
+    })));
+  }
+
+  async loadSounds(paths) {
+    const entries = Object.entries(paths);
+    for (const [name, url] of entries) {
+      try {
+        const resp = await fetch(url);
+        const buf = await resp.arrayBuffer();
+        if (!this.audioCtx) {
+          this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        const decoded = await this.audioCtx.decodeAudioData(buf);
+        this.assets.set(name, decoded);
+      } catch (error) {
+        console.warn(`Failed to load sound ${name}: ${error.message}`);
+      }
+    }
+  }
+
+  resumeAudio() {
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      this.audioCtx.resume();
+    }
+  }
+
+  playSound(name) {
+    const buffer = this.assets.get(name);
+    if (!buffer || !this.audioCtx) return null;
+    const source = this.audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.audioCtx.destination);
+    source.start();
+    return source;
+  }
+
+  getAsset(name) {
+    return this.assets.get(name);
+  }
+
+  setScene(scene) {
+    if (this.scene && typeof this.scene.destroy === 'function') {
+      this.scene.destroy();
+    }
+    this.scene = scene;
+    scene.attach(this);
+    scene.init();
+  }
+
+  start() {
+    this.running = true;
+    this.lastTick = performance.now();
+    this._frame(performance.now());
+  }
+
+  drawSprite(ctx, name, x, y) {
+    const img = this.assets.get(name);
+    if (!img) {
+      console.warn(`Missing sprite: ${name}`);
+      return;
+    }
+    const hotspot = this.cursorHotspots.get(name);
+    if (hotspot) {
+      ctx.drawImage(img, x - hotspot.x, y - hotspot.y);
+    } else {
+      ctx.drawImage(img, x, y);
+    }
+  }
+
+  _frame(now) {
+    if (!this.running) return;
+
+    while (now - this.lastTick >= TICK_MS) {
+      this.lastTick += TICK_MS;
+      this.scene?.tick();
+    }
+
+    const ctx = this.ctx;
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, this.width, this.height);
+    this.scene?.render(ctx);
+
+    if (this.cursor && this.mouseX >= 0) {
+      this.drawSprite(ctx, this.cursor, this.mouseX, this.mouseY);
+    }
+
+    requestAnimationFrame((t) => this._frame(t));
+  }
+}

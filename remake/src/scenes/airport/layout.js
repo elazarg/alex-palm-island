@@ -1,0 +1,87 @@
+export const AIRPORT_DIALOG_LAYOUT = Object.freeze({
+  dialogWindow: {
+    asset: 'TALKWINDOW',
+    x: 0,
+    y: 0,
+  },
+  foregroundOverlays: [
+    { asset: 'TALKMASK1', x: 125, y: 26 },
+  ],
+  speakerClip: {
+    dialog: {
+      x: 17,
+      y: 5,
+      w: 130,
+      h: 90,
+    },
+    response: {
+      x: 14,
+      y: 16,
+      w: 130,
+      h: 92,
+    },
+  },
+  speakerPlacement: {
+    dialog: { x: 17, y: 5 },
+    response: { x: 14, y: 16 },
+  },
+  alexPortrait: {
+    prefix: 'ALTALK',
+    idleFrame: 1,
+    talkingFrames: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+    x: 210,
+    y: 65,
+  },
+  prompt: {
+    x: 169,
+    y: 12,
+    maxWidth: 130,
+    lineHeight: 11,
+    color: '#000000',
+  },
+  question: {
+    x: 15,
+    y: 104,
+    maxWidth: 150,
+    lineHeight: 11,
+    color: '#000000',
+    selectedColor: '#ff0000',
+    placeholder: '____',
+  },
+  choices: {
+    y: 127,
+    numberX: 17,
+    bodyX: 30,
+    bodyGap: 20,
+    maxWidth: 154,
+    highlightX: 35,
+    highlightRight: 170,
+    lineHeight: 10,
+    highlightPadTop: 1,
+    highlightPadBottom: -1,
+    textColor: '#000000',
+    selectedTextColor: '#ffffff',
+    selectedNumberColor: '#000000',
+    highlightColor: '#000000',
+  },
+  exitButton: {
+    asset: 'TLKEXIT1',
+    x: 189,
+    y: 151,
+  },
+  responseWindow: {
+    asset: 'HEARWINDOW',
+    x: 10,
+    y: 12,
+  },
+  responseForegroundOverlays: [
+    { asset: 'HEARMASK', x: 121, y: 37 },
+  ],
+  responseText: {
+    x: 165,
+    y: 26,
+    maxWidth: 134,
+    lineHeight: 11,
+    color: '#000000',
+  },
+});

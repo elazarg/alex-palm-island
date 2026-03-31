@@ -1,4 +1,19 @@
-import { tokenizePreservingSpaces, wrapText } from './text.js';
+function wrapText(font, text, maxWidth) {
+  const words = text.split(/(\s+)/).filter(Boolean);
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const test = line ? `${line}${word}` : word;
+    if (line && !/^\s+$/.test(word) && font.measureText(test) > maxWidth) {
+      lines.push(line);
+      line = word.trimStart();
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
 
 function makeTransparentSlice(source, slice) {
   const canvas = document.createElement('canvas');
@@ -125,20 +140,22 @@ function drawQuestionSelection(ctx, font, modal, layout) {
     cx += width;
   };
 
-  for (const token of tokenizePreservingSpaces(prefix)) {
+  const tokenize = (text) => text.split(/(\s+)/).filter(Boolean);
+
+  for (const token of tokenize(prefix)) {
     drawToken(token, question.color);
   }
 
   if (modal.selectedChoice != null) {
-    for (const token of tokenizePreservingSpaces(selectedText)) {
+    for (const token of tokenize(selectedText)) {
       drawToken(token, question.selectedColor);
     }
   } else {
-    for (const token of tokenizePreservingSpaces(selectedText)) {
+    for (const token of tokenize(selectedText)) {
       drawToken(token, question.color);
     }
   }
-  for (const token of tokenizePreservingSpaces(suffix)) {
+  for (const token of tokenize(suffix)) {
     drawToken(token, question.color);
   }
   return cy;
@@ -199,7 +216,7 @@ export function renderTalkDialog(ctx, { engine, font, modal, uiTick, layout }) {
   let y = layout.choices.y;
   for (let i = 0; i < modal.choices.length; i++) {
     const choiceText = modal.choices[i].label;
-    const bodyX = layout.choices.bodyX ?? (layout.choices.numberX + layout.choices.bodyGap);
+    const bodyX = layout.choices.numberX + layout.choices.bodyGap;
     const lineCount = wrapText(font, choiceText, layout.choices.maxWidth).length || 1;
     const boxHeight = lineCount * layout.choices.lineHeight + layout.choices.highlightPadTop + layout.choices.highlightPadBottom;
 
