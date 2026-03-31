@@ -85,7 +85,7 @@ function drawSpeakerPortrait(ctx, engine, modal, uiTick, layout) {
   ctx.clip();
   ctx.drawImage(npc, placement.x, placement.y);
 
-  const shouldAnimateOverlay = Boolean(modal.speakerTalking || modal.presentation === 'talk');
+  const shouldAnimateOverlay = Boolean(modal.speakerTalking);
   const overlay = modal.speakerOverlay;
   if (shouldAnimateOverlay && overlay?.sequence?.length) {
     const idx = Math.floor(uiTick / (overlay.rate || 8)) % overlay.sequence.length;
@@ -116,37 +116,48 @@ function drawSpeakerPortrait(ctx, engine, modal, uiTick, layout) {
 
 function drawQuestionSelection(ctx, font, modal, layout) {
   const question = layout.question;
-  const baseQuestion = modal.question.replace(/:\s*$/, '');
-  const prefix = modal.selectedChoice != null ? `${baseQuestion} ` : `${baseQuestion}: `;
+  const template = modal.question || question.placeholder;
+  const [prefix = '', suffix = ''] = template.split('@');
   const selectedText = modal.selectedChoice != null
     ? modal.choices[modal.selectedChoice].label
     : question.placeholder;
 
   let cx = question.x;
   let cy = question.y;
+  const maxX = question.x + question.maxWidth;
 
-  const drawWord = (word, color) => {
-    const width = font.measureText(word);
-    if (cx > question.x && cx + width > question.x + question.maxWidth) {
+  const drawToken = (token, color) => {
+    if (!token) return;
+    const isSpace = /^\s+$/.test(token);
+    const width = font.measureText(token);
+    if (!isSpace && cx > question.x && cx + width > maxX) {
       cy += question.lineHeight;
       cx = question.x;
     }
-    font.drawText(ctx, word, cx, cy, color);
+    if (isSpace && cx === question.x) return;
+    if (isSpace && cx + width > maxX) return;
+    font.drawText(ctx, token, cx, cy, color);
     cx += width;
   };
 
-  for (const token of prefix.match(/\S+\s*/g) || [prefix]) {
-    drawWord(token, question.color);
+  const tokenize = (text) => text.split(/(\s+)/).filter(Boolean);
+
+  for (const token of tokenize(prefix)) {
+    drawToken(token, question.color);
   }
 
   if (modal.selectedChoice != null) {
-    for (const token of selectedText.match(/\S+\s*/g) || [selectedText]) {
-      drawWord(token, question.selectedColor);
+    for (const token of tokenize(selectedText)) {
+      drawToken(token, question.selectedColor);
     }
   } else {
-    drawWord(selectedText, question.color);
+    for (const token of tokenize(selectedText)) {
+      drawToken(token, question.color);
+    }
   }
-
+  for (const token of tokenize(suffix)) {
+    drawToken(token, question.color);
+  }
   return cy;
 }
 

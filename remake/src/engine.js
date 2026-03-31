@@ -61,6 +61,9 @@ export class Engine {
   }
 
   setScene(scene) {
+    if (this.scene && typeof this.scene.destroy === 'function') {
+      this.scene.destroy();
+    }
     this.scene = scene;
     scene.engine = this;
     scene.init();

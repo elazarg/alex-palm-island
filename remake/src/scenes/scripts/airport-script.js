@@ -1,3 +1,21 @@
+import { AIRPORT_RESOURCES } from './airport-resources.js';
+
+const guardQuestionResource = AIRPORT_RESOURCES.dialogs.guardQuestion;
+const clerkQuestionResource = AIRPORT_RESOURCES.dialogs.clerkQuestion;
+const {
+  guardHotel: guardHotelResource,
+  guardBag: guardBagResource,
+  guardFood: guardFoodResource,
+  guardTaxi: guardTaxiResource,
+  passportBlocked: passportBlockedResource,
+  doorWarning1: doorWarning1Resource,
+  doorWarning2: doorWarning2Resource,
+  doorWarning3: doorWarning3Resource,
+  clerkRepeat1: clerkRepeat1Resource,
+  clerkRepeat2: clerkRepeat2Resource,
+  clerkRepeat3: clerkRepeat3Resource,
+} = AIRPORT_RESOURCES.messages;
+
 export const AIRPORT_SCRIPT = {
   initialState: {
     bagReceived: false,
@@ -216,27 +234,27 @@ export const AIRPORT_SCRIPT = {
       speakerBase: 'GRDTLK0',
       speakerStaticOverlay: { asset: 'GRDPNT1', ox: 49, oy: 11 },
       speakerOverlay: { prefix: 'GRDTLK', ox: 49, oy: 11, rate: 8, sequence: [1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1] },
-      prompt: 'Good morning.  Can I help you?',
-      promptSound: 'SDESCL6',
-      question: 'Yes, please. I am looking for ',
+      prompt: guardQuestionResource.prompt,
+      promptSound: guardQuestionResource.speaker.sound,
+      question: guardQuestionResource.question,
       choices: [
-        { label: 'a hotel', responseText: 'Yes, please. I am looking for a hotel.', responseSound: 'SDAL62', event: [{ type: 'message', id: 'guardHotel' }] },
-        { label: 'my bag', responseText: 'Yes, please. I am looking for my bag.', responseSound: 'SDAL63', event: [{ type: 'message', id: 'guardBag' }] },
-        { label: 'something to eat', responseText: 'Yes, please. I am looking for something to eat.', responseSound: 'SDAL64', event: [{ type: 'message', id: 'guardFood' }] },
-        { label: 'a taxi to town', responseText: 'Yes, please. I am looking for a taxi to town.', responseSound: 'SDAL65', event: [{ type: 'message', id: 'guardTaxi' }] },
+        { label: guardQuestionResource.choices[0], responseText: guardQuestionResource.responses[0].text, responseSound: guardQuestionResource.responses[0].sound, event: [{ type: 'message', id: 'guardHotel' }] },
+        { label: guardQuestionResource.choices[1], responseText: guardQuestionResource.responses[1].text, responseSound: guardQuestionResource.responses[1].sound, event: [{ type: 'message', id: 'guardBag' }] },
+        { label: guardQuestionResource.choices[2], responseText: guardQuestionResource.responses[2].text, responseSound: guardQuestionResource.responses[2].sound, event: [{ type: 'message', id: 'guardFood' }] },
+        { label: guardQuestionResource.choices[3], responseText: guardQuestionResource.responses[3].text, responseSound: guardQuestionResource.responses[3].sound, event: [{ type: 'message', id: 'guardTaxi' }] },
       ],
     },
 
     clerkQuestion: {
       speaker: 'Clerk',
       speakerSprite: 'LOST0',
-      prompt: 'Good morning. Can I help you?',
-      question: 'Yes, please. I am looking for ',
+      prompt: clerkQuestionResource.prompt,
+      question: clerkQuestionResource.question,
       choices: [
-        { label: 'a hotel', event: [{ type: 'message', id: 'clerkNotInfo' }] },
-        { label: 'my bag', event: [{ type: 'event', id: 'receiveBag' }] },
-        { label: 'something to eat', event: [{ type: 'message', id: 'clerkNotInfo' }] },
-        { label: 'a taxi to town', event: [{ type: 'message', id: 'clerkNotInfo' }] },
+        { label: clerkQuestionResource.choices[0], event: [{ type: 'message', id: 'clerkNotInfo' }] },
+        { label: clerkQuestionResource.choices[1], event: [{ type: 'event', id: 'receiveBag' }] },
+        { label: clerkQuestionResource.choices[2], event: [{ type: 'message', id: 'clerkNotInfo' }] },
+        { label: clerkQuestionResource.choices[3], event: [{ type: 'message', id: 'clerkNotInfo' }] },
       ],
     },
   },
@@ -245,39 +263,42 @@ export const AIRPORT_SCRIPT = {
     guardTooSoon: {
       speaker: 'Guard',
       presentation: 'note',
-      text: 'Not so fast, young man! You just got here!',
+      text: 'Not so fast, young man!  You just got here!',
     },
     guardHotel: {
       speaker: 'Guard',
       presentation: 'talk',
       speakerBase: 'GRDTLK0',
       speakerStaticOverlay: { asset: 'GRDPNT1', ox: 49, oy: 11 },
-      sound: 'SDESCL2',
-      text: 'Read this sign.',
+      sound: guardHotelResource.speaker.sound,
+      text: guardHotelResource.text,
     },
     guardBag: {
       speaker: 'Guard',
       presentation: 'talk',
       speakerBase: 'GRDTLK0',
+      speakerStaticOverlay: { asset: 'GRDPNT1', ox: 49, oy: 11 },
       speakerOverlay: { prefix: 'GRDTLK', ox: 49, oy: 11, rate: 8, sequence: [1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1] },
-      sound: 'SDESCL3',
-      text: 'Go to the "Lost and Found".',
+      sound: guardBagResource.speaker.sound,
+      text: guardBagResource.text,
     },
     guardFood: {
       speaker: 'Guard',
       presentation: 'talk',
       speakerBase: 'GRDTLK0',
+      speakerStaticOverlay: { asset: 'GRDPNT1', ox: 49, oy: 11 },
       speakerOverlay: { prefix: 'GRDTLK', ox: 49, oy: 11, rate: 8, sequence: [1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1] },
-      sound: 'SDESCL4',
-      text: 'Go to Big Bob\'s Burger Bar. The food is great there.',
+      sound: guardFoodResource.speaker.sound,
+      text: guardFoodResource.text,
     },
     guardTaxi: {
       speaker: 'Guard',
       presentation: 'talk',
       speakerBase: 'GRDTLK0',
+      speakerStaticOverlay: { asset: 'GRDPNT1', ox: 49, oy: 11 },
       speakerOverlay: { prefix: 'GRDTLK', ox: 49, oy: 11, rate: 8, sequence: [1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1] },
-      sound: 'SDESCL5',
-      text: 'Sorry, there are no taxis today. All the drivers are on strike.',
+      sound: guardTaxiResource.speaker.sound,
+      text: guardTaxiResource.text,
     },
     clerkNotInfo: {
       speaker: 'Clerk',
@@ -297,22 +318,22 @@ export const AIRPORT_SCRIPT = {
     clerkRepeat1: {
       speaker: 'Clerk',
       presentation: 'note',
-      text: 'What do you want from me now? I already gave you your bag!',
+      text: clerkRepeat1Resource.text,
     },
     clerkRepeat2: {
       speaker: 'Clerk',
       presentation: 'note',
-      text: 'Leave me alone! How many bags did you lose?',
+      text: clerkRepeat2Resource.text,
     },
     clerkRepeat3: {
       speaker: 'Clerk',
       presentation: 'note',
-      text: 'Go away! Stop bothering me!',
+      text: clerkRepeat3Resource.text,
     },
     passportBlocked: {
       speaker: 'Passport Officer',
       presentation: 'note',
-      text: 'Read the sign!',
+      text: passportBlockedResource.text,
     },
     passportAsk: {
       speaker: 'Passport Officer',
@@ -327,7 +348,7 @@ export const AIRPORT_SCRIPT = {
     passportRepeat: {
       speaker: 'Passport Officer',
       presentation: 'note',
-      text: 'Why are you giving me your passport again, bubble-brain? I said, "Go!"',
+      text: 'Why are you giving me your passport again, bubble-brain?  I said, "Go!"',
     },
     familyWaiting: {
       speaker: 'Narrator',
@@ -347,17 +368,17 @@ export const AIRPORT_SCRIPT = {
     doorWarning1: {
       speaker: 'Woman Guard',
       presentation: 'note',
-      text: 'Not so fast, young man! You must show your passport to the passport officer.',
+      text: doorWarning1Resource.text,
     },
     doorWarning2: {
       speaker: 'Woman Guard',
       presentation: 'note',
-      text: 'Wasn\'t I clear the first time? The passport officer must check your passport before you leave.',
+      text: doorWarning2Resource.text,
     },
     doorWarning3: {
       speaker: 'Woman Guard',
       presentation: 'note',
-      text: 'You must show your passport to the passport officer! Now you are in trouble!',
+      text: doorWarning3Resource.text,
     },
     upstairsLater: {
       speaker: 'Narrator',

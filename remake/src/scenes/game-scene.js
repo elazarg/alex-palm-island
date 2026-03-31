@@ -9,6 +9,7 @@ import { buildTalkResponseSlices, renderTalkDialog, renderTalkResponse } from '.
 const ANIM_TICK_SCALE = 2;
 const FADE_TICKS = 18;
 const DIALOG_RESPONSE_DELAY_TICKS = 3;
+const WHEEL_INPUT_MODES = ['walk', 'talk', 'look', 'touch'];
 
 const ACHU_SEQUENCE = [
   1, 1, 1, 1, 1, 1, 2, 1,
@@ -429,6 +430,17 @@ export class GameScene {
       this._pendingButtonMode = null;
     };
     canvas.addEventListener('mouseleave', this._onMouseLeave);
+
+    this._onWheel = (e) => {
+      if (this.modal) return;
+      const currentIdx = WHEEL_INPUT_MODES.indexOf(this.inputMode);
+      const baseIdx = currentIdx >= 0 ? currentIdx : 0;
+      const dir = e.deltaY > 0 ? 1 : -1;
+      const nextIdx = (baseIdx + dir + WHEEL_INPUT_MODES.length) % WHEEL_INPUT_MODES.length;
+      this._setInputMode(WHEEL_INPUT_MODES[nextIdx]);
+      e.preventDefault();
+    };
+    canvas.addEventListener('wheel', this._onWheel, { passive: false });
 
     this._onKeyDown = (e) => {
       if (!this.modal) return;
@@ -1100,7 +1112,7 @@ export class GameScene {
   }
 
   _renderNotePopup(ctx) {
-    const lines = this._wrapText(this._formatNoteText(this.modal.text), 160);
+    const lines = this._wrapText(this.modal.text, 160);
     const winName = lines.length <= 2 ? 'TEXTWIN2'
       : lines.length === 3 ? 'TEXTWIN3'
         : lines.length === 4 ? 'TEXTWIN4'
@@ -1117,10 +1129,6 @@ export class GameScene {
     }
     this._choiceBoxes = [];
     this._dialogExitBox = null;
-  }
-
-  _formatNoteText(text) {
-    return text.replace(/([.!?]) (?=[A-Z"])/g, '$1  ');
   }
 
   _renderMoneyDigits(ctx, boxX, boxY, amount) {
@@ -1188,6 +1196,7 @@ export class GameScene {
     canvas.removeEventListener('mousedown', this._onMouseDown);
     canvas.removeEventListener('mouseup', this._onMouseUp);
     canvas.removeEventListener('mouseleave', this._onMouseLeave);
+    canvas.removeEventListener('wheel', this._onWheel);
     window.removeEventListener('keydown', this._onKeyDown);
   }
 }

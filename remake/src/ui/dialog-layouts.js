@@ -80,7 +80,7 @@ export const AIRPORT_DIALOG_LAYOUT = Object.freeze({
   responseText: {
     x: 165,
     y: 26,
-    maxWidth: 136,
+    maxWidth: 134,
     lineHeight: 11,
     color: '#000000',
   },
