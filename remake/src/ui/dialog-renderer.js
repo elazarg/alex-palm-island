@@ -63,28 +63,55 @@ function makeTransparentSlice(source, slice) {
   return canvas;
 }
 
+function getSpeakerPlacement(modal, layout) {
+  const bucket = modal.presentation === 'talk' ? 'response' : 'dialog';
+  return layout.speakerPlacement?.[bucket]
+    || layout.speakerPlacement?.default
+    || { x: 0, y: 0 };
+}
+
 function drawSpeakerPortrait(ctx, engine, modal, uiTick, layout) {
   const baseName = modal.speakerBase || modal.speakerSprite;
   const npc = engine.assets.get(baseName);
   if (!npc) return;
+  const placement = getSpeakerPlacement(modal, layout);
 
-  const clip = layout.speakerClip;
+  const clip = modal.presentation === 'talk'
+    ? layout.speakerClip.response
+    : layout.speakerClip.dialog;
   ctx.save();
   ctx.beginPath();
   ctx.rect(clip.x, clip.y, clip.w, clip.h);
   ctx.clip();
-  ctx.drawImage(npc, modal.speakerX, modal.speakerY);
+  ctx.drawImage(npc, placement.x, placement.y);
 
+  const shouldAnimateOverlay = Boolean(modal.speakerTalking || modal.presentation === 'talk');
   const overlay = modal.speakerOverlay;
-  if (overlay?.sequence?.length) {
+  if (shouldAnimateOverlay && overlay?.sequence?.length) {
     const idx = Math.floor(uiTick / (overlay.rate || 8)) % overlay.sequence.length;
     const frameNum = overlay.sequence[idx];
     if (frameNum) {
       const img = engine.assets.get(`${overlay.prefix}${frameNum}`);
-      if (img) ctx.drawImage(img, modal.speakerX + overlay.ox, modal.speakerY + overlay.oy);
+      if (img) ctx.drawImage(img, placement.x + overlay.ox, placement.y + overlay.oy);
+    }
+  } else if (modal.speakerStaticOverlay?.asset) {
+    const img = engine.assets.get(modal.speakerStaticOverlay.asset);
+    if (img) {
+      ctx.drawImage(
+        img,
+        placement.x + (modal.speakerStaticOverlay.ox || 0),
+        placement.y + (modal.speakerStaticOverlay.oy || 0)
+      );
     }
   }
   ctx.restore();
+
+  if (modal.presentation !== 'talk') {
+    for (const overlayAsset of layout.foregroundOverlays || []) {
+      const img = engine.assets.get(overlayAsset.asset);
+      if (img) ctx.drawImage(img, overlayAsset.x, overlayAsset.y);
+    }
+  }
 }
 
 function drawQuestionSelection(ctx, font, modal, layout) {
@@ -133,11 +160,22 @@ function drawChoiceText(ctx, font, text, x, y, maxWidth, lineHeight, color) {
   return Math.max(1, lines.length);
 }
 
+function getAlexPortraitAsset(engine, modal, layout) {
+  const portrait = layout.alexPortrait;
+  if (!portrait) return null;
+  let frame = portrait.idleFrame || 1;
+  if (modal.phase === 'alexReply' && modal.alexTalking && modal.replyDurationTicks > 0) {
+    const frames = portrait.talkingFrames || [frame];
+    const elapsed = Math.max(0, modal.replyTick || 0);
+    const progress = Math.min(0.999, elapsed / modal.replyDurationTicks);
+    frame = frames[Math.min(frames.length - 1, Math.floor(progress * frames.length))];
+  }
+  return engine.assets.get(`${portrait.prefix}${frame}`);
+}
+
 export function buildTalkResponseSlices(engine, layout) {
-  const talk = engine.assets.get(layout.responseSlices.sourceAsset);
-  if (!talk) return;
-  engine.assets.set(layout.responseSlices.left.asset, makeTransparentSlice(talk, layout.responseSlices.left));
-  engine.assets.set(layout.responseSlices.bubble.asset, makeTransparentSlice(talk, layout.responseSlices.bubble));
+  void engine;
+  void layout;
 }
 
 export function renderTalkDialog(ctx, { engine, font, modal, uiTick, layout }) {
@@ -146,7 +184,7 @@ export function renderTalkDialog(ctx, { engine, font, modal, uiTick, layout }) {
 
   drawSpeakerPortrait(ctx, engine, modal, uiTick, layout);
 
-  const alex = engine.assets.get(layout.alexPortrait.asset);
+  const alex = getAlexPortraitAsset(engine, modal, layout);
   if (alex) ctx.drawImage(alex, layout.alexPortrait.x, layout.alexPortrait.y);
 
   const topLines = wrapText(font, modal.prompt, layout.prompt.maxWidth);
@@ -156,9 +194,14 @@ export function renderTalkDialog(ctx, { engine, font, modal, uiTick, layout }) {
     promptY += layout.prompt.lineHeight;
   }
 
+  const phase = modal.phase || 'choice';
+  const choiceBoxes = [];
+  if (phase === 'npcPrompt') {
+    return { choiceBoxes, dialogExitBox: null };
+  }
+
   drawQuestionSelection(ctx, font, modal, layout);
 
-  const choiceBoxes = [];
   let y = layout.choices.y;
   for (let i = 0; i < modal.choices.length; i++) {
     const choiceText = modal.choices[i].label;
@@ -189,6 +232,10 @@ export function renderTalkDialog(ctx, { engine, font, modal, uiTick, layout }) {
     y += lineCount * layout.choices.lineHeight;
   }
 
+  if (phase === 'alexReply') {
+    return { choiceBoxes: [], dialogExitBox: null };
+  }
+
   const exit = engine.assets.get(layout.exitButton.asset);
   let dialogExitBox = null;
   if (exit) {
@@ -205,13 +252,13 @@ export function renderTalkDialog(ctx, { engine, font, modal, uiTick, layout }) {
 }
 
 export function renderTalkResponse(ctx, { engine, font, modal, uiTick, layout }) {
-  const leftTile = engine.assets.get(layout.responseSlices.left.asset);
-  if (leftTile) ctx.drawImage(leftTile, layout.responseSlices.left.x, layout.responseSlices.left.y);
-
+  const responseWindow = engine.assets.get(layout.responseWindow.asset);
+  if (responseWindow) ctx.drawImage(responseWindow, layout.responseWindow.x, layout.responseWindow.y);
   drawSpeakerPortrait(ctx, engine, modal, uiTick, layout);
-
-  const bubble = engine.assets.get(layout.responseSlices.bubble.asset);
-  if (bubble) ctx.drawImage(bubble, layout.responseSlices.bubble.x, layout.responseSlices.bubble.y);
+  for (const overlayAsset of layout.responseForegroundOverlays || []) {
+    const img = engine.assets.get(overlayAsset.asset);
+    if (img) ctx.drawImage(img, overlayAsset.x, overlayAsset.y);
+  }
 
   const lines = wrapText(font, modal.text, layout.responseText.maxWidth);
   let y = layout.responseText.y;

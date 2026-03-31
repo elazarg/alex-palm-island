@@ -8,6 +8,7 @@ import { buildTalkResponseSlices, renderTalkDialog, renderTalkResponse } from '.
 
 const ANIM_TICK_SCALE = 2;
 const FADE_TICKS = 18;
+const DIALOG_RESPONSE_DELAY_TICKS = 3;
 
 const ACHU_SEQUENCE = [
   1, 1, 1, 1, 1, 1, 2, 1,
@@ -57,6 +58,10 @@ export class GameScene {
     this.uiTick = 0;
     this._pressedButtonMode = null;
     this._pendingButtonMode = null;
+    this.currentSound = null;
+    this._gestureLockedDialog = null;
+    this._pendingDialogChoiceEvent = null;
+    this._pendingDialogDelayTicks = 0;
 
     this.uiButtons = [
       { mode: 'bag', normal: 'NOBAG', active: 'CASEBUTTON', pressed: 'CASEPRESSED', x: 4, y: 167, w: 44, h: 33 },
@@ -206,6 +211,7 @@ export class GameScene {
     for (let i = 1; i <= 10; i++) sceneImgs[`FEMGRD${i}`] = `${base}/FEMGRD${i}.png`;
     for (let i = 0; i <= 11; i++) sceneImgs[`BRDTLK${i}`] = `${base}/BRDTLK${i}.png`;
     for (let i = 1; i <= 10; i++) sceneImgs[`GRDTLK${i}`] = `${base}/GRDTLK${i}.png`;
+    sceneImgs.GRDPNT1 = `${base}/GRDPNT1.png`;
     for (let i = 1; i <= 7; i++) sceneImgs[`FEMTLK${i}`] = `${base}/FEMTLK${i}.png`;
     for (let i = 1; i <= 6; i++) sceneImgs[`FAMTLK${i}`] = `${base}/FAMTLK${i}.png`;
     for (let i = 1; i <= 11; i++) sceneImgs[`ACHU${i}`] = `${base}/ACHU${i}.png`;
@@ -241,7 +247,6 @@ export class GameScene {
       MONEY3: `assets/ui/MONEY3.png?v=${uiVersion}`,
       MONEY4: `assets/ui/MONEY4.png?v=${uiVersion}`,
       TALKWINDOW: `assets/ui/TALKWINDOW.png?v=${uiVersion}`,
-      ALTALK1: `assets/ui/ALTALK1.png?v=${uiVersion}`,
       TEXTWIN2: `assets/ui/TEXTWIN2.png?v=${uiVersion}`,
       TEXTWIN3: `assets/ui/TEXTWIN3.png?v=${uiVersion}`,
       TEXTWIN4: `assets/ui/TEXTWIN4.png?v=${uiVersion}`,
@@ -249,11 +254,32 @@ export class GameScene {
       TLKEXIT1: `assets/ui/TLKEXIT1.png?v=${uiVersion}`,
       TLKEXIT2: `assets/ui/TLKEXIT2.png?v=${uiVersion}`,
       TALKTOP: `assets/ui/TALKTOP.png?v=${uiVersion}`,
+      HEARWINDOW: `assets/ui/HEARWINDOW.png?v=${uiVersion}`,
+      HEARMASK: `assets/ui/HEARMASK.png?v=${uiVersion}`,
+      TALKMASK1: `assets/ui/TALKMASK1.png?v=${uiVersion}`,
+      TALKMASK2: `assets/ui/TALKMASK2.png?v=${uiVersion}`,
       GRDTLK0: `assets/airport/GRDTLK0.png?v=${uiVersion}`,
       FEMTLK0: `assets/airport/FEMTLK0.png?v=${uiVersion}`,
       FAMTLK0: `assets/airport/FAMTLK0.png?v=${uiVersion}`,
     });
+    const alexTalkImgs = {};
+    for (let i = 1; i <= 18; i++) {
+      alexTalkImgs[`ALTALK${i}`] = `assets/ui/ALTALK${i}.png?v=${uiVersion}`;
+    }
+    await engine.loadImages(alexTalkImgs);
     buildTalkResponseSlices(engine, this.dialogLayout);
+
+    await engine.loadSounds({
+      SDESCL2: '../re/renders/sounds/AIRPOR/SDESCL2.wav',
+      SDESCL3: '../re/renders/sounds/AIRPOR/SDESCL3.wav',
+      SDESCL4: '../re/renders/sounds/AIRPOR/SDESCL4.wav',
+      SDESCL5: '../re/renders/sounds/AIRPOR/SDESCL5.wav',
+      SDESCL6: '../re/renders/sounds/AIRPOR/SDESCL6.wav',
+      SDAL62: '../re/renders/sounds/AIRPOR/SDAL62.wav',
+      SDAL63: '../re/renders/sounds/AIRPOR/SDAL63.wav',
+      SDAL64: '../re/renders/sounds/AIRPOR/SDAL64.wav',
+      SDAL65: '../re/renders/sounds/AIRPOR/SDAL65.wav',
+    });
 
     const fontImg = new Image();
     const fontData = await (await fetch('assets/mainfont.json')).json();
@@ -325,13 +351,22 @@ export class GameScene {
     ];
 
     this._fadeIn();
-
     // Click handler
     const canvas = this.engine.ctx.canvas;
     this._onMouseDown = (e) => {
       const rect = canvas.getBoundingClientRect();
       const mx = (e.clientX - rect.left) / (rect.width / 320);
       const my = (e.clientY - rect.top) / (rect.height / 200);
+      if (this.engine.audioCtx && this.engine.audioCtx.state === 'suspended') {
+        this.engine.audioCtx.resume();
+      }
+
+      if (this._gestureLockedDialog) {
+        const dialog = this._gestureLockedDialog;
+        this._gestureLockedDialog = null;
+        this._startDialogPrompt(dialog);
+        return;
+      }
 
       if (this.modal) {
         this._handleModalClick(mx, my);
@@ -398,6 +433,7 @@ export class GameScene {
     this._onKeyDown = (e) => {
       if (!this.modal) return;
       if (this.modal.type === 'dialog' && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+        if (this.modal.phase !== 'choice') return;
         const dir = e.key === 'ArrowDown' ? 1 : -1;
         const count = this.modal.choices.length;
         const current = this.modal.selectedChoice == null ? -1 : this.modal.selectedChoice;
@@ -406,15 +442,10 @@ export class GameScene {
         return;
       }
       if (e.key !== 'Enter') return;
-      if (this.modal.type === 'dialog' && this.modal.selectedChoice != null) {
-        const choice = this.modal.choices[this.modal.selectedChoice];
-        this.modal = null;
-        this._choiceBoxes = [];
-        this._dialogExitBox = null;
-        this._enqueueSteps(choice.event);
-        this._refreshCursor();
-        this._processActionQueue();
+      if (this.modal.type === 'dialog' && this.modal.phase === 'choice' && this.modal.selectedChoice != null) {
+        this._confirmDialogChoice(this.modal.selectedChoice);
       } else if (this.modal.type === 'message') {
+        this._stopSound();
         this.modal = null;
         this._refreshCursor();
         this._processActionQueue();
@@ -423,7 +454,7 @@ export class GameScene {
     window.addEventListener('keydown', this._onKeyDown);
 
     if (this.options.previewDialogId) {
-      this._openDialog(this.options.previewDialogId);
+      this._openDialog(this.options.previewDialogId, { deferPromptSound: true });
     }
   }
 
@@ -623,35 +654,135 @@ export class GameScene {
   _openMessage(messageId) {
     const message = this.sceneScript?.messages?.[messageId];
     if (!message) return;
+    this._stopSound();
     this._dialogExitBox = null;
-    this.modal = { type: 'message', presentation: message.presentation || 'note', ...message };
+    this.modal = {
+      type: 'message',
+      presentation: message.presentation || 'note',
+      speakerTalking: false,
+      locked: false,
+      ...message,
+    };
     this._refreshCursor();
+    if (this.modal.presentation === 'talk' && this.modal.sound) {
+      this.modal.speakerTalking = true;
+      this.modal.locked = true;
+      this._playModalSound(this.modal.sound, () => {
+        if (this.modal?.type !== 'message') return;
+        this.modal.speakerTalking = false;
+        this.modal.locked = false;
+      });
+    }
   }
 
-  _openDialog(dialogId) {
+  _openDialog(dialogId, options = {}) {
     const dialog = this.sceneScript?.dialogs?.[dialogId];
     if (!dialog) return;
+    this._stopSound();
     this._dialogExitBox = null;
     this.modal = {
       type: 'dialog',
       speaker: dialog.speaker,
       speakerSprite: dialog.speakerSprite,
       speakerBase: dialog.speakerBase,
+      speakerStaticOverlay: dialog.speakerStaticOverlay,
       speakerOverlay: dialog.speakerOverlay,
-      speakerX: dialog.speakerX,
-      speakerY: dialog.speakerY,
       prompt: dialog.prompt,
+      promptSound: dialog.promptSound || null,
       question: dialog.question,
+      replyText: null,
       choices: dialog.choices,
       selectedChoice: null,
+      phase: dialog.promptSound ? 'npcPrompt' : 'choice',
+      speakerTalking: false,
+      alexTalking: false,
+      replyTick: 0,
+      replyDurationTicks: 0,
     };
     this._refreshCursor();
+    if (dialog.promptSound) {
+      if (options.deferPromptSound) {
+        this._gestureLockedDialog = dialog;
+      } else {
+        this._startDialogPrompt(dialog);
+      }
+    }
+  }
+
+  _startDialogPrompt(dialog) {
+    if (!this.modal || this.modal.type !== 'dialog') return;
+    this.modal.phase = 'npcPrompt';
+    this.modal.speakerTalking = true;
+    this._playModalSound(dialog.promptSound, () => {
+      if (this.modal?.type !== 'dialog') return;
+      this.modal.phase = 'choice';
+      this.modal.speakerTalking = false;
+    });
+  }
+
+  _confirmDialogChoice(choiceIdx) {
+    if (!this.modal || this.modal.type !== 'dialog') return;
+    const choice = this.modal.choices[choiceIdx];
+    if (!choice) return;
+
+    this.modal.selectedChoice = choiceIdx;
+    this.modal.phase = 'alexReply';
+    this.modal.speakerTalking = false;
+    this.modal.alexTalking = true;
+    this.modal.replyTick = 0;
+    this._choiceBoxes = [];
+    this._dialogExitBox = null;
+
+    const finish = () => {
+      if (this.modal?.type !== 'dialog') return;
+      this.modal.alexTalking = false;
+      this.modal.phase = 'alexPause';
+      this._choiceBoxes = [];
+      this._dialogExitBox = null;
+      this._pendingDialogChoiceEvent = choice.event;
+      this._pendingDialogDelayTicks = DIALOG_RESPONSE_DELAY_TICKS;
+    };
+
+    this.modal.replyText = choice.responseText || '';
+
+    if (choice.responseSound) {
+      this._playModalSound(choice.responseSound, finish);
+    } else {
+      finish();
+    }
+  }
+
+  _playModalSound(name, onended) {
+    this._stopSound();
+    const src = this.engine.playSound(name);
+    this.currentSound = src;
+    if (src?.buffer && this.modal?.type === 'dialog' && this.modal.phase === 'alexReply') {
+      this.modal.replyDurationTicks = Math.max(1, Math.round((src.buffer.duration * 1000) / 55));
+    }
+    if (src) {
+      src.onended = () => {
+        if (this.currentSound === src) this.currentSound = null;
+        if (onended) onended();
+      };
+    } else if (onended) {
+      onended();
+    }
+    return src;
+  }
+
+  _stopSound() {
+    if (this.currentSound) {
+      try { this.currentSound.stop(); } catch (e) {}
+      this.currentSound = null;
+    }
   }
 
   _handleModalClick(mx, my) {
     if (!this.modal) return;
 
     if (this.modal.type === 'message') {
+      if (this.modal.locked) return;
+      this._stopSound();
       this.modal = null;
       this._refreshCursor();
       this._processActionQueue();
@@ -659,9 +790,11 @@ export class GameScene {
     }
 
     if (this.modal.type === 'dialog') {
+      if (this.modal.phase !== 'choice') return;
       if (this._dialogExitBox &&
           mx >= this._dialogExitBox.x1 && mx <= this._dialogExitBox.x2 &&
           my >= this._dialogExitBox.y1 && my <= this._dialogExitBox.y2) {
+        this._stopSound();
         this.modal = null;
         this._choiceBoxes = [];
         this._dialogExitBox = null;
@@ -682,6 +815,24 @@ export class GameScene {
 
   tick() {
     this.uiTick++;
+    if (this.modal?.type === 'dialog' && this.modal.phase === 'alexReply' && this.modal.alexTalking) {
+      this.modal.replyTick = Math.min(this.modal.replyDurationTicks || 0, (this.modal.replyTick || 0) + 1);
+    }
+    if (this._pendingDialogDelayTicks > 0) {
+      this._pendingDialogDelayTicks--;
+      if (this._pendingDialogDelayTicks === 0 && this._pendingDialogChoiceEvent) {
+        if (this.modal?.type === 'dialog') {
+          this.modal = null;
+        }
+        const pendingEvent = this._pendingDialogChoiceEvent;
+        this._pendingDialogChoiceEvent = null;
+        this._choiceBoxes = [];
+        this._dialogExitBox = null;
+        this._refreshCursor();
+        this._enqueueSteps(pendingEvent);
+        this._processActionQueue();
+      }
+    }
     // Fade
     if (this.fade === 'in') {
       this.fadeAlpha = Math.min(1, this.fadeAlpha + 1 / FADE_TICKS);
@@ -1032,6 +1183,7 @@ export class GameScene {
   _fadeOut(cb) { this.fade = 'out'; this.fadeAlpha = 1; this._fadeCb = cb || null; }
 
   destroy() {
+    this._stopSound();
     const canvas = this.engine.ctx.canvas;
     canvas.removeEventListener('mousedown', this._onMouseDown);
     canvas.removeEventListener('mouseup', this._onMouseUp);
