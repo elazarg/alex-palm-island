@@ -1,9 +1,7 @@
-import { AIRPORT_DIALOG_LAYOUT } from './layout.js';
+import { ALEX_DIALOG_ASSET_NAMES, CURSOR_ASSET_NAMES, UI_ASSET_NAMES, UI_VERSION } from '../../ui/assets.js';
 
 export const ANIM_TICK_SCALE = 2;
 export const DIALOG_RESPONSE_DELAY_TICKS = 3;
-export const WHEEL_INPUT_MODES = ['walk', 'talk', 'look', 'touch'];
-export const UI_VERSION = '20260330f';
 
 export const ACHU_SEQUENCE = [
   1, 1, 1, 1, 1, 1, 2, 1,
@@ -18,48 +16,6 @@ export const WALK_ZONES = [
   [350, 95, 960, 160],
   [785, 90, 960, 160],
 ];
-
-export const UI_BUTTONS = [
-  { mode: 'bag', normal: 'NOBAG', active: 'CASEBUTTON', pressed: 'CASEPRESSED', x: 4, y: 167, w: 44, h: 33 },
-  { mode: 'walk', normal: 'WALKBUTTON', pressed: 'WALKPRESSED', x: 68, y: 168, w: 48, h: 31 },
-  { mode: 'talk', normal: 'TALKBUTTON', pressed: 'TALKPRESSED', x: 120, y: 169, w: 40, h: 31 },
-  { mode: 'look', normal: 'LOOKBUTTON', pressed: 'LOOKPRESSED', x: 164, y: 168, w: 44, h: 31 },
-  { mode: 'touch', normal: 'TOUCHBUTTON', pressed: 'TOUCHPRESSED', x: 212, y: 168, w: 40, h: 32 },
-  { mode: 'exit', normal: 'EXITBUTTON', pressed: 'EXITPRESSED', x: 276, y: 168, w: 40, h: 31 },
-];
-
-export const NOTE_LAYOUT = {
-  screenWidth: 320,
-  y: 24,
-  maxWidth: 160,
-  textOffsetX: 10,
-  textOffsetY: 20,
-  lineHeight: 11,
-  color: '#000000',
-  windowAssets: { 2: 'TEXTWIN2', 3: 'TEXTWIN3', 4: 'TEXTWIN4', 5: 'TEXTWIN5' },
-};
-
-export const PANEL_LAYOUT = {
-  meter: { asset: 'METER', x: 0, y: 180 },
-  panel: { asset: 'PANEL', x: 0, y: 167, revealY: 166 },
-  money: {
-    x: 142,
-    y: 185,
-    digitWidth: 5,
-    gap: 2,
-    colors: { on: '#0ccc0c', off: '#744c0c' },
-  },
-};
-
-export const CURSOR_HOTSPOTS = {
-  ARROWCURSOR: { x: 0, y: 7 },
-  WALKCURSOR: { x: 0, y: 0 },
-  LOOKCURSOR: { x: 0, y: 0 },
-  TALKCURSOR: { x: 0, y: 0 },
-  TOUCHCURSOR: { x: 0, y: 0 },
-};
-
-export const DIALOG_LAYOUT = AIRPORT_DIALOG_LAYOUT;
 
 export function createAirportObjects() {
   const behind = [
@@ -119,11 +75,13 @@ export function buildAssetManifest() {
     images[name] = `${base}/${name}.png`;
   }
   const ui = 'assets/ui';
-  const uiNames = ['PANEL','LOOKBUTTON','LOOKPRESSED','TALKBUTTON','TALKPRESSED','TOUCHBUTTON','TOUCHPRESSED','WALKBUTTON','WALKPRESSED','CASEBUTTON','CASEPRESSED','NOBAG','EXITBUTTON','EXITPRESSED','METER','MONEYBOX','MONEY1','MONEY2','MONEY3','MONEY4','TALKWINDOW','TEXTWIN2','TEXTWIN3','TEXTWIN4','TEXTWIN5','TLKEXIT1','TLKEXIT2','TALKTOP','HEARWINDOW','HEARMASK','TALKMASK1','TALKMASK2','DIALOGBOX'];
-  for (const name of uiNames) images[name] = `${ui}/${name}.png?v=${UI_VERSION}`;
-  for (let i = 1; i <= 18; i++) images[`ALTALK${i}`] = `${ui}/ALTALK${i}.png?v=${UI_VERSION}`;
+  for (const name of UI_ASSET_NAMES) images[name] = `${ui}/${name}.png?v=${UI_VERSION}`;
+  for (const name of ALEX_DIALOG_ASSET_NAMES) images[name] = `${ui}/${name}.png?v=${UI_VERSION}`;
+  images.GRDTLK0 = `${base}/GRDTLK0.png?v=${UI_VERSION}`;
+  images.FEMTLK0 = `${base}/FEMTLK0.png?v=${UI_VERSION}`;
+  images.FAMTLK0 = `${base}/FAMTLK0.png?v=${UI_VERSION}`;
   const cursorBase = 'assets/cursors';
-  for (const name of ['ARROWCURSOR', 'LOOKCURSOR', 'TALKCURSOR', 'TOUCHCURSOR', 'WALKCURSOR']) {
+  for (const name of CURSOR_ASSET_NAMES) {
     images[name] = `${cursorBase}/${name}.png?v=${UI_VERSION}`;
   }
   return { images, frameCounts };

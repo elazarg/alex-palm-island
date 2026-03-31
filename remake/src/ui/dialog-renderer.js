@@ -199,7 +199,7 @@ export function renderTalkDialog(ctx, { engine, font, modal, uiTick, layout }) {
   let y = layout.choices.y;
   for (let i = 0; i < modal.choices.length; i++) {
     const choiceText = modal.choices[i].label;
-    const bodyX = layout.choices.bodyX ?? (layout.choices.numberX + layout.choices.bodyGap);
+    const bodyX = layout.choices.numberX + layout.choices.bodyGap;
     const lineCount = wrapText(font, choiceText, layout.choices.maxWidth).length || 1;
     const boxHeight = lineCount * layout.choices.lineHeight + layout.choices.highlightPadTop + layout.choices.highlightPadBottom;
 

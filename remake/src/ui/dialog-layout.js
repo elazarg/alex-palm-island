@@ -1,4 +1,4 @@
-export const AIRPORT_DIALOG_LAYOUT = Object.freeze({
+export const STANDARD_DIALOG_LAYOUT = Object.freeze({
   dialogWindow: {
     asset: 'TALKWINDOW',
     x: 0,
@@ -51,7 +51,6 @@ export const AIRPORT_DIALOG_LAYOUT = Object.freeze({
   choices: {
     y: 127,
     numberX: 17,
-    bodyX: 30,
     bodyGap: 20,
     maxWidth: 154,
     highlightX: 35,
