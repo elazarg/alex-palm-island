@@ -13,6 +13,7 @@ import { pickAirportRouteState } from './state.js';
 import {
   ANIM_TICK_SCALE,
   DIALOG_RESPONSE_DELAY_TICKS,
+  INVENTORY_ITEM_DEFS,
   SOUND_MANIFEST,
   WALK_ZONES,
   buildAssetManifest,
@@ -58,6 +59,8 @@ export class AirportScene extends ScriptedScene {
     for (const [name, hotspot] of Object.entries(CURSOR_HOTSPOTS)) {
       engine.registerCursorHotspot(name, hotspot);
     }
+    engine.registerCursorHotspot('PASSPORTICON', { x: 0, y: 0 });
+    engine.registerCursorHotspot('LETTERICON', { x: 0, y: 0 });
 
     const fontImg = new Image();
     const fontData = await (await fetch('assets/mainfont.json')).json();
@@ -94,9 +97,11 @@ export class AirportScene extends ScriptedScene {
     this.fadeAlpha = 0;
     this._fadeCb = null;
     this.inputMode = 'walk';
+    this.selectedItem = null;
     this.uiTick = 0;
     this._pressedButtonMode = null;
     this._pendingButtonMode = null;
+    this._pressedInventoryControlMode = null;
     this._sceneAnimation = null;
 
     this.initScriptRuntime();
@@ -110,6 +115,8 @@ export class AirportScene extends ScriptedScene {
       this._openDialog(this.route.dialogId, { deferPromptSound: true });
     } else if (this.route.view === 'form') {
       this._openForm(this.route.formId || 'lostAndFoundForm');
+    } else if (this.route.view === 'inventory') {
+      this._openInventory(this.route.inventoryId || 'bag');
     } else if (this.route.view === 'resource' && Number.isFinite(this.route.resourceSectionId)) {
       this._openTextRefSection(this.route.resourceSectionId);
     } else if (this.route.debug?.noteSectionId) {
@@ -126,6 +133,18 @@ export class AirportScene extends ScriptedScene {
       return;
     }
     if (this.modal) {
+      if (this.modal.type === 'inventory') {
+        if (this.modal.inspectItem) {
+          this._handleModalClick(x, y);
+          return;
+        }
+        const control = this._inventoryControlBoxes.find((box) => x >= box.x1 && x <= box.x2 && y >= box.y1 && y <= box.y2);
+        if (control) {
+          this._pressedInventoryControlMode = control.mode;
+          this.modal.pressedControlMode = control.mode;
+          return;
+        }
+      }
       if (this.modal.type === 'form') {
         this._handleFormMouseDown(x, y);
         return;
@@ -147,6 +166,10 @@ export class AirportScene extends ScriptedScene {
       this._handleInteractionAction(interaction.action);
       return;
     }
+    if (this.inputMode === 'item') {
+      this._queueEvent('bagDefault');
+      return;
+    }
     if (this.inputMode !== 'walk') {
       this._queueFallbackEvent(this.inputMode);
       return;
@@ -156,6 +179,20 @@ export class AirportScene extends ScriptedScene {
   }
 
   onMouseUp({ x, y }) {
+    if (this.modal?.type === 'inventory' && this._pressedInventoryControlMode) {
+      const mode = this._pressedInventoryControlMode;
+      this._pressedInventoryControlMode = null;
+      this.modal.pressedControlMode = null;
+      const control = this._inventoryControlBoxes.find((box) => box.mode === mode && x >= box.x1 && x <= box.x2 && y >= box.y1 && y <= box.y2);
+      if (control) {
+        if (control.mode === 'exit') this._closeInventory();
+        else {
+          this.modal.mode = control.mode;
+          this._refreshCursor();
+        }
+      }
+      return;
+    }
     const pressedMode = this._pressedButtonMode;
     const pendingMode = this._pendingButtonMode;
     this._pressedButtonMode = null;
@@ -169,27 +206,23 @@ export class AirportScene extends ScriptedScene {
       return;
     }
     if (button.mode === 'bag' && this.state?.bag?.length) {
-      this._setInputMode('bag');
-      this._stopSound();
-      this.modal = {
-        type: 'message',
-        presentation: 'resource',
-        asset: 'DALPAK',
-        locked: false,
-      };
-      this._refreshCursor();
+      this._openInventory('bag');
       return;
     }
+    this.selectedItem = null;
     this._setInputMode(button.mode);
   }
 
   onMouseLeave() {
     this._pressedButtonMode = null;
     this._pendingButtonMode = null;
+    this._pressedInventoryControlMode = null;
+    if (this.modal?.type === 'inventory') this.modal.pressedControlMode = null;
   }
 
   onWheel({ deltaY, originalEvent }) {
     if (this.modal) return;
+    this.selectedItem = null;
     const currentIdx = WHEEL_INPUT_MODES.indexOf(this.inputMode);
     const nextIdx = ((currentIdx >= 0 ? currentIdx : 0) + (deltaY > 0 ? 1 : -1) + WHEEL_INPUT_MODES.length) % WHEEL_INPUT_MODES.length;
     this._setInputMode(WHEEL_INPUT_MODES[nextIdx]);
@@ -200,6 +233,31 @@ export class AirportScene extends ScriptedScene {
     if (!this.modal) return;
     if (this.modal.type === 'form') {
       this._handleFormKeyDown(key, originalEvent);
+      return;
+    }
+    if (this.modal.type === 'inventory') {
+      if (key === 'Escape') {
+        if (this.modal.inspectItem) {
+          this.modal.inspectItem = null;
+          this._afterModalChanged();
+          this._refreshCursor();
+        } else {
+          this._closeInventory();
+        }
+        originalEvent.preventDefault();
+        return;
+      }
+      if (this.modal.inspectItem) return;
+      if (key === 'ArrowLeft' || key === 'ArrowUp') {
+        this.modal.mode = this.modal.mode === 'take' ? 'look' : 'take';
+        originalEvent.preventDefault();
+        return;
+      }
+      if (key === 'ArrowRight' || key === 'ArrowDown') {
+        this.modal.mode = this.modal.mode === 'look' ? 'take' : 'look';
+        originalEvent.preventDefault();
+        return;
+      }
       return;
     }
     if (this.modal.type === 'dialog' && (key === 'ArrowDown' || key === 'ArrowUp')) {
@@ -246,7 +304,7 @@ export class AirportScene extends ScriptedScene {
     for (const obj of this.objectsFront) this._renderObject(ctx, obj);
 
     this.renderScriptModal(ctx, this.font, this.uiTick);
-    const suppressPanel = this.modal?.presentation === 'resource' || this.modal?.type === 'form';
+    const suppressPanel = this.modal?.presentation === 'resource' || this.modal?.type === 'form' || this.modal?.type === 'inventory';
     if (!suppressPanel) {
       renderPanel(ctx, {
         assets: this.engine.assets,
@@ -443,7 +501,19 @@ export class AirportScene extends ScriptedScene {
 
   _refreshCursor() {
     if (this.modal) {
+      if (this.modal.type === 'inventory') {
+        if (this.modal.inspectItem) {
+          this.engine.cursor = 'ARROWCURSOR';
+          return;
+        }
+        this.engine.cursor = this.modal.mode === 'look' ? 'LOOKCURSOR' : 'TOUCHCURSOR';
+        return;
+      }
       this.engine.cursor = 'ARROWCURSOR';
+      return;
+    }
+    if (this.inputMode === 'item' && this.selectedItem) {
+      this.engine.cursor = `${this.selectedItem.toUpperCase()}ICON`;
       return;
     }
     this.engine.cursor = ({
@@ -483,6 +553,14 @@ export class AirportScene extends ScriptedScene {
 
   _handleInteractionAction(action) {
     if (!action) return;
+    if (this.inputMode === 'item') {
+      if (this.selectedItem === 'passport' && action.kind === 'flow' && action.id === 'passport.control.usePassport') {
+        this._queueEvent(action.id);
+      } else {
+        this._queueEvent('bagDefault');
+      }
+      return;
+    }
     if (action.kind === 'flow') {
       this._queueEvent(action.id);
       return;
@@ -521,6 +599,58 @@ export class AirportScene extends ScriptedScene {
     };
     this._afterModalChanged();
     this._refreshCursor();
+  }
+
+  _openInventory(inventoryId = 'bag') {
+    this._stopSound();
+    this.modal = {
+      id: inventoryId,
+      type: 'inventory',
+      mode: 'take',
+      pressedControlMode: null,
+      inspectItem: null,
+      items: (this.state?.bag || [])
+        .map((itemId) => INVENTORY_ITEM_DEFS[itemId])
+        .filter(Boolean)
+        .map((item) => ({
+          id: item.id,
+          asset: item.iconAsset,
+          pictureAsset: item.pictureAsset,
+          description: item.description,
+        })),
+    };
+    this._afterModalChanged();
+    this._refreshCursor();
+  }
+
+  _closeInventory() {
+    if (this.modal?.type !== 'inventory') return;
+    this.modal = null;
+    this._afterModalChanged();
+    this._refreshCursor();
+  }
+
+  _selectInventoryItem(itemId) {
+    this.selectedItem = itemId;
+    this.inputMode = 'item';
+    this.modal = null;
+    this._afterModalChanged();
+    this._refreshCursor();
+  }
+
+  _handleInventoryItemClick(itemId) {
+    if (!this.modal || this.modal.type !== 'inventory') return;
+    const item = this.modal.items.find((entry) => entry.id === itemId);
+    if (!item) return;
+    if (this.modal.mode === 'take') {
+      this._selectInventoryItem(itemId);
+      return;
+    }
+    if (this.modal.mode === 'look') {
+      this.modal.inspectItem = item;
+      this._afterModalChanged();
+      this._refreshCursor();
+    }
   }
 
   _handleFormMouseDown(mx, my) {
@@ -601,8 +731,16 @@ export class AirportScene extends ScriptedScene {
     if (!modal || modal.type !== 'form') return;
     const fieldIdx = modal.activeField;
     const expected = this._getLostAndFoundExpectedValues();
-    const actual = this._normalizeFormValue(modal.values[fieldIdx]);
-    if (actual === expected[fieldIdx]) {
+    const rawActual = this._normalizeFormValue(modal.values[fieldIdx]);
+    const actual = rawActual.toLowerCase();
+    const expectedValue = expected[fieldIdx];
+    const expectedNormalized = expectedValue.toLowerCase();
+    if (actual === expectedNormalized && rawActual !== expectedValue) {
+      this._openFormReminderNote(800);
+      return;
+    }
+    if (actual === expectedNormalized) {
+      modal.values[fieldIdx] = expectedValue;
       modal.accepted[fieldIdx] = true;
       modal.errorText = '';
       this._advanceLostAndFoundForm();
@@ -680,6 +818,26 @@ export class AirportScene extends ScriptedScene {
     return (value || '').trim().replace(/\s+/g, ' ');
   }
 
+  _openFormReminderNote(sectionId) {
+    if (!this.modal || this.modal.type !== 'form') return;
+    const returnModal = this.modal;
+    const textRef = AIRPORT_RESOURCES.textRefBySection[sectionId];
+    if (!textRef) return;
+    this._stopSound();
+    this.modal = {
+      id: `textRef:${sectionId}`,
+      type: 'message',
+      presentation: 'note',
+      speaker: 'Narrator',
+      text: textRef.text,
+      sourceSectionId: sectionId,
+      locked: false,
+      returnModal,
+    };
+    this._afterModalChanged();
+    this._refreshCursor();
+  }
+
   _applyRouteStateOverrides() {
     const overrides = this.route.state || {};
     for (const [key, value] of Object.entries(overrides)) {
@@ -707,6 +865,9 @@ export class AirportScene extends ScriptedScene {
     }
     if (this.modal?.type === 'form' && this.modal.id) {
       return { scene: 'airport', view: 'form', formId: this.modal.id, state };
+    }
+    if (this.modal?.type === 'inventory') {
+      return { scene: 'airport', view: 'inventory', inventoryId: 'bag', state };
     }
     if (this.modal?.presentation === 'resource' && Number.isFinite(this.modal.sourceSectionId)) {
       return { scene: 'airport', view: 'resource', resourceSectionId: this.modal.sourceSectionId, state };

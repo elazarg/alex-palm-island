@@ -18,3 +18,11 @@ export const CURSOR_HOTSPOTS = Object.freeze({
   TALKCURSOR: { x: 0, y: 0 },
   TOUCHCURSOR: { x: 0, y: 0 },
 });
+
+export function resolveActionButtonSprite(button, { pressedMode = null, bagReceived = false } = {}) {
+  if (button.mode === 'bag') {
+    if (pressedMode === 'bag') return button.pressed;
+    return bagReceived ? button.active : button.normal;
+  }
+  return pressedMode === button.mode ? button.pressed : button.normal;
+}

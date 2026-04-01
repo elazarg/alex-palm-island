@@ -105,4 +105,26 @@ export class BitmapFont {
     }
     return lines.length;
   }
+
+  drawWrappedLeft(ctx, text, x, y, maxWidth, lineHeight, color = '#ffffff') {
+    const lh = lineHeight || this.height + 2;
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    for (const word of words) {
+      const test = line + (line ? ' ' : '') + word;
+      if (this.measureText(test) > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    lines.push(line);
+
+    for (let i = 0; i < lines.length; i++) {
+      this.drawText(ctx, lines[i], x, y + i * lh, color);
+    }
+    return lines.length;
+  }
 }

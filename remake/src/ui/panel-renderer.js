@@ -1,3 +1,5 @@
+import { resolveActionButtonSprite } from './action-modes.js';
+
 function drawSevenSegmentDigit(ctx, x, y, ch, colors) {
   const { on, off } = colors;
   const segs = {
@@ -51,9 +53,10 @@ export function renderPanel(ctx, { assets, mouseY, modalOpen, buttons, pressedMo
   if (panel) ctx.drawImage(panel, layout.panel.x, layout.panel.y);
 
   for (const button of buttons) {
-    const sprite = button.mode === 'bag'
-      ? (pressedMode === 'bag' ? button.pressed : (bagReceived ? button.active : button.normal))
-      : (pressedMode === button.mode ? button.pressed : button.normal);
+    const sprite = resolveActionButtonSprite(button, {
+      pressedMode,
+      bagReceived,
+    });
     const img = assets.get(sprite);
     if (img) ctx.drawImage(img, button.x, button.y);
   }

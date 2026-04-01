@@ -3,6 +3,21 @@ import { ALEX_DIALOG_ASSET_NAMES, CURSOR_ASSET_NAMES, UI_ASSET_NAMES, UI_VERSION
 export const ANIM_TICK_SCALE = 2;
 export const DIALOG_RESPONSE_DELAY_TICKS = 3;
 
+export const INVENTORY_ITEM_DEFS = Object.freeze({
+  passport: {
+    id: 'passport',
+    iconAsset: 'PASSPORTICON',
+    pictureAsset: 'PASSPORTPICT',
+    description: 'This is your passport.',
+  },
+  letter: {
+    id: 'letter',
+    iconAsset: 'LETTERICON',
+    pictureAsset: 'LETTERPICT',
+    description: 'This is a letter from the Spy Master to Walter.',
+  },
+});
+
 export const ACHU_SEQUENCE = [
   1, 1, 1, 1, 1, 1, 2, 1,
   1, 1, 1, 1, 1, 2, 1, 1,
@@ -79,6 +94,12 @@ export function buildAssetManifest() {
   for (const name of ['TRUP1','STAFFB1','DOOR1','DOOR2','FEMGRD1','ALEXDN1','WALL_B','WALL_K','MAAKE','ARRIVE','DEPART','LINESIGN','DALPAK','HOTELAD','ORANGEAD','FORM']) {
     images[name] = `${base}/${name}.png`;
   }
+  images.SUITCASE = `assets/ui/SUITCASE.png?v=${UI_VERSION}`;
+  images.ICONWINDOW = `assets/ui/ICONWINDOW.png?v=${UI_VERSION}`;
+  images.PASSPORTICON = `assets/icons/PASSPORTICON.png?v=${UI_VERSION}`;
+  images.LETTERICON = `assets/icons/LETTERICON.png?v=${UI_VERSION}`;
+  images.PASSPORTPICT = `assets/icons/PASSPORTPICT.png?v=${UI_VERSION}`;
+  images.LETTERPICT = `assets/icons/LETTERPICT.png?v=${UI_VERSION}`;
   const ui = 'assets/ui';
   for (const name of UI_ASSET_NAMES) images[name] = `${ui}/${name}.png?v=${UI_VERSION}`;
   for (const name of ALEX_DIALOG_ASSET_NAMES) images[name] = `${ui}/${name}.png?v=${UI_VERSION}`;

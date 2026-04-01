@@ -1,5 +1,6 @@
 import { renderTalkDialog, renderTalkResponse } from '../ui/dialog-renderer.js';
 import { renderTextForm } from '../ui/form-renderer.js';
+import { renderInventoryScreen } from '../ui/inventory-renderer.js';
 import { renderNotePopup } from '../ui/note-renderer.js';
 import { renderResourcePopup } from '../ui/resource-renderer.js';
 
@@ -15,6 +16,8 @@ export class ScriptedScene {
     this.state = {};
     this._choiceBoxes = [];
     this._dialogExitBox = null;
+    this._inventoryItemBoxes = [];
+    this._inventoryControlBoxes = [];
     this._interactionEnabled = {};
     this.currentSound = null;
     this._gestureLockedDialog = null;
@@ -32,6 +35,8 @@ export class ScriptedScene {
     this.modal = null;
     this._choiceBoxes = [];
     this._dialogExitBox = null;
+    this._inventoryItemBoxes = [];
+    this._inventoryControlBoxes = [];
     this.currentSound = null;
     this._gestureLockedDialog = null;
     this._pendingDialogChoiceEvent = null;
@@ -60,6 +65,8 @@ export class ScriptedScene {
         this._pendingDialogChoiceEvent = null;
         this._choiceBoxes = [];
         this._dialogExitBox = null;
+        this._inventoryItemBoxes = [];
+        this._inventoryControlBoxes = [];
         this._refreshCursor?.();
         this._enqueueSteps(pending);
         this._processActionQueue();
@@ -81,23 +88,44 @@ export class ScriptedScene {
       renderTextForm(ctx, { assets: this.engine.assets, font, modal: this.modal, uiTick });
       this._choiceBoxes = [];
       this._dialogExitBox = null;
+      this._inventoryItemBoxes = [];
+      this._inventoryControlBoxes = [];
+      return;
+    }
+    if (this.modal.type === 'inventory') {
+      const result = renderInventoryScreen(ctx, {
+        assets: this.engine.assets,
+        font,
+        modal: this.modal,
+        selectedItem: this.selectedItem,
+      });
+      this._choiceBoxes = [];
+      this._dialogExitBox = null;
+      this._inventoryItemBoxes = result.itemBoxes;
+      this._inventoryControlBoxes = result.controlBoxes;
       return;
     }
     if (this.modal.presentation === 'resource') {
       renderResourcePopup(ctx, { assets: this.engine.assets, modal: this.modal });
       this._choiceBoxes = [];
       this._dialogExitBox = null;
+      this._inventoryItemBoxes = [];
+      this._inventoryControlBoxes = [];
       return;
     }
     if (this.modal.presentation === 'talk') {
       const result = renderTalkResponse(ctx, { engine: this.engine, font, modal: this.modal, uiTick, layout: this.dialogLayout });
       this._choiceBoxes = result.choiceBoxes;
       this._dialogExitBox = result.dialogExitBox;
+      this._inventoryItemBoxes = [];
+      this._inventoryControlBoxes = [];
       return;
     }
     renderNotePopup(ctx, { assets: this.engine.assets, font, modal: this.modal, layout: this.noteLayout });
     this._choiceBoxes = [];
     this._dialogExitBox = null;
+    this._inventoryItemBoxes = [];
+    this._inventoryControlBoxes = [];
   }
 
   _queueEvent(eventId) {
@@ -174,6 +202,8 @@ export class ScriptedScene {
     if (!message) return;
     this._stopSound();
     this._dialogExitBox = null;
+    this._inventoryItemBoxes = [];
+    this._inventoryControlBoxes = [];
     this.modal = { id: messageId, type: 'message', presentation: message.presentation || 'note', speakerTalking: false, locked: false, ...message };
     this._afterModalChanged?.();
     this._refreshCursor?.();
@@ -193,6 +223,8 @@ export class ScriptedScene {
     if (!dialog) return;
     this._stopSound();
     this._dialogExitBox = null;
+    this._inventoryItemBoxes = [];
+    this._inventoryControlBoxes = [];
     this.modal = {
       id: dialogId,
       type: 'dialog',
@@ -226,6 +258,8 @@ export class ScriptedScene {
     if (!form) return;
     this._stopSound();
     this._dialogExitBox = null;
+    this._inventoryItemBoxes = [];
+    this._inventoryControlBoxes = [];
     this.modal = {
       type: 'form',
       id: formId,
@@ -307,10 +341,37 @@ export class ScriptedScene {
     if (this.modal.type === 'message') {
       if (this.modal.locked) return;
       this._stopSound();
-      this.modal = null;
+      const resumeModal = this.modal.returnModal || null;
+      this.modal = resumeModal;
       this._afterModalChanged?.();
       this._refreshCursor?.();
-      this._processActionQueue();
+      if (!resumeModal) this._processActionQueue();
+      return;
+    }
+    if (this.modal.type === 'inventory') {
+      if (this.modal.inspectItem) {
+        this.modal.inspectItem = null;
+        this._afterModalChanged?.();
+        this._refreshCursor?.();
+        return;
+      }
+      for (const box of this._inventoryControlBoxes) {
+        if (mx >= box.x1 && mx <= box.x2 && my >= box.y1 && my <= box.y2) {
+          if (box.mode === 'exit') {
+            this._closeInventory?.();
+          } else if (this.modal) {
+            this.modal.mode = box.mode;
+          }
+          return;
+        }
+      }
+      for (const box of this._inventoryItemBoxes) {
+        if (mx >= box.x1 && mx <= box.x2 && my >= box.y1 && my <= box.y2) {
+          this._handleInventoryItemClick?.(box.itemId);
+          return;
+        }
+      }
+      this._closeInventory?.();
       return;
     }
     if (this.modal.type !== 'dialog' || this.modal.phase !== 'choice') return;
