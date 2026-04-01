@@ -32,8 +32,8 @@ function speakerVisualFromSpritePart(spritePart) {
     case 'Lost':
       return {
         speaker: 'Clerk',
-        speakerBase: 'CLRK0',
-        speakerFrames: { prefix: 'CLRK', rate: 8, sequence: CLERK_SEQUENCE },
+        speakerBase: 'G-LOST0',
+        speakerOverlay: { prefix: 'LOST', ox: 38, oy: 15, rate: 8, sequence: CLERK_SEQUENCE },
       };
     case 'BrdTlk':
       return {
