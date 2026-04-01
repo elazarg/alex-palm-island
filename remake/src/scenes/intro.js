@@ -24,28 +24,28 @@ const BSTREET_Y = 10;
 
 const ASSETS = {
   opening: {
-    base: 'assets/opening', bg: 'SNOPENING1',
+    base: '../assets/opening', bg: 'SNOPENING1',
     sprites: ['BPHONE', ...range('PHONE',1,25), 'BSTREET', ...range('STREET',1,8), ...range('LFILM',1,3), ...range('RFILM',1,3)],
     sounds: ['SDPHONE1','SDPHONE2','SDPHONE3','SDPHONE4','SDCAR1','SDSTREET1'],
   },
   open2: {
-    base: 'assets/open2', bg: 'SNOPEN21',
+    base: '../assets/open2', bg: 'SNOPEN21',
     sprites: ['BHALL','BHALL2','BHALL3', ...range('WALK',1,73), ...range('DOOR',1,13), ...range('LFILM',1,3), ...range('RFILM',1,3)],
     sounds: ['SDDOOR1','SDDOOR2','SDWALK1'],
   },
   spymastr: {
-    base: 'assets/spymastr', bg: 'SNSPYMASTER1',
+    base: '../assets/spymastr', bg: 'SNSPYMASTER1',
     sprites: [...range('SPYTLK',1,7), 'BAG', ...range('BAG',1,16), 'LAMP', 'PHONE', 'SPYPLAY1','SPYPLAY2','SPYREWIND1','SPYREWIND2'],
     sounds: range('SPY',1,11),
   },
   open3: {
-    base: 'assets/open3', bg: 'SNOPEN31',
+    base: '../assets/open3', bg: 'SNOPEN31',
     sprites: ['BPLANE', ...range('O3PLANE',1,23), ...range('LFILM',1,3), ...range('RFILM',1,3)],
     sounds: ['SDPLANE1'],
     remap: Object.fromEntries(range('O3PLANE',1,23).map((k,i) => [k, `PLANE${i+1}`])),
   },
   open4: {
-    base: 'assets/open4', bg: 'SNOPEN41',
+    base: '../assets/open4', bg: 'SNOPEN41',
     sprites: [...range('O4PLANE',1,25), ...range('PROG',1,8), ...range('GRAPH',1,20), ...range('LANG',1,20), ...range('HEBR',1,9), ...range('ONDA',1,15), ...range('PROD',1,10)],
     sounds: ['SDPLANE1'],
     remap: Object.fromEntries(range('O4PLANE',1,25).map((k,i) => [k, `PLANE${i+1}`])),
@@ -111,14 +111,14 @@ export class IntroScene {
         await engine.loadSounds(snds);
       }
     }
-    await engine.loadImages({ MMARROWCURSOR: 'assets/menu/MMARROWCURSOR.png' });
+    await engine.loadImages({ MMARROWCURSOR: '../assets/menu/MMARROWCURSOR.png' });
 
     const fontImg = new Image();
-    const fontData = await (await fetch('assets/mainfont.json')).json();
+    const fontData = await (await fetch('../assets/mainfont.json')).json();
     await new Promise((resolve, reject) => {
       fontImg.onload = resolve;
       fontImg.onerror = reject;
-      fontImg.src = 'assets/mainfont.png';
+      fontImg.src = '../assets/mainfont.png';
     });
     this.font = new BitmapFont(fontImg, fontData);
   }

@@ -1,4 +1,4 @@
-const ASSET_BASE = 'assets/menu';
+const ASSET_BASE = '../assets/menu';
 
 const BUTTONS = [
   { name: 'intro', normal: 'MMINTRO2', hover: 'MMINTRO1', x: 11, y: 24, w: 236, h: 34 },

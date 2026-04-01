@@ -38,14 +38,14 @@ export class PrisonScene {
 
   async load(engine) {
     const images = {
-      SNPRISON1: '../re/renders/sprites/cutscenes/PRISON/SNPRISON1.png',
-      ARROWCURSOR: 'assets/cursors/ARROWCURSOR.png',
+      SNPRISON1: '../assets/prison/SNPRISON1.png',
+      ARROWCURSOR: '../assets/cursors/ARROWCURSOR.png',
     };
     for (let i = 1; i <= 4; i++) {
-      images[`DIG${i}`] = `../re/renders/sprites/cutscenes/PRISON/DIG${i}.png`;
+      images[`DIG${i}`] = `../assets/prison/DIG${i}.png`;
     }
     for (const count of [2, 3, 4, 5]) {
-      images[`TEXTWIN${count}`] = `assets/ui/TEXTWIN${count}.png`;
+      images[`TEXTWIN${count}`] = `../assets/ui/TEXTWIN${count}.png`;
     }
     await engine.loadImages(images);
 
@@ -53,18 +53,18 @@ export class PrisonScene {
     for (const sectionId of PRISON_RESOURCES.sections.messages) {
       const message = PRISON_RESOURCES.messageBySection[sectionId];
       if (message.sound) {
-        soundManifest[message.sound] = `../re/renders/sounds/PRISON/${message.sound}.wav`;
+        soundManifest[message.sound] = `../assets/prison/${message.sound}.wav`;
       }
     }
     await engine.loadSounds(soundManifest);
     engine.registerCursorHotspot('ARROWCURSOR', CURSOR_HOTSPOTS.ARROWCURSOR);
 
     const fontImg = new Image();
-    const fontData = await (await fetch('assets/mainfont.json')).json();
+    const fontData = await (await fetch('../assets/mainfont.json')).json();
     await new Promise((resolve, reject) => {
       fontImg.onload = resolve;
       fontImg.onerror = reject;
-      fontImg.src = 'assets/mainfont.png';
+      fontImg.src = '../assets/mainfont.png';
     });
     this.font = new BitmapFont(fontImg, fontData);
   }

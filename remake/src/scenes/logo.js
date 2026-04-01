@@ -1,6 +1,6 @@
 import { AnimationPlayer, parseAnimationCommands, parsePositionData } from '../runtime/animation-player.js';
 
-const ASSET_BASE = 'assets/logo';
+const ASSET_BASE = '../assets/logo';
 const TITLE_X = 28;
 const TITLE_Y = 134;
 

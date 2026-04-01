@@ -47,15 +47,15 @@ export class ArrestScene {
 
   async load(engine) {
     const images = {
-      SNARREST1: '../re/renders/sprites/cutscenes/ARREST/SNARREST1.png',
-      ARROWCURSOR: 'assets/cursors/ARROWCURSOR.png',
+      SNARREST1: '../assets/arrest/SNARREST1.png',
+      ARROWCURSOR: '../assets/cursors/ARROWCURSOR.png',
     };
     for (let i = 1; i <= 8; i++) {
-      images[`POLICE${i}`] = `../re/renders/sprites/cutscenes/ARREST/POLICE${i}.png`;
+      images[`POLICE${i}`] = `../assets/arrest/POLICE${i}.png`;
     }
     await engine.loadImages(images);
     await engine.loadSounds({
-      SDPOLICE1: '../re/renders/sounds/ARREST/SDPOLICE1.wav',
+      SDPOLICE1: '../assets/arrest/SDPOLICE1.wav',
     });
     engine.registerCursorHotspot('ARROWCURSOR', CURSOR_HOTSPOTS.ARROWCURSOR);
   }

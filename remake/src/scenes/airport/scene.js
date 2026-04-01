@@ -63,11 +63,11 @@ export class AirportScene extends ScriptedScene {
     engine.registerCursorHotspot('LETTERICON', { x: 0, y: 0 });
 
     const fontImg = new Image();
-    const fontData = await (await fetch('assets/mainfont.json')).json();
+    const fontData = await (await fetch('../assets/mainfont.json')).json();
     await new Promise((resolve, reject) => {
       fontImg.onload = resolve;
       fontImg.onerror = reject;
-      fontImg.src = 'assets/mainfont.png';
+      fontImg.src = '../assets/mainfont.png';
     });
     this.font = new BitmapFont(fontImg, fontData);
   }

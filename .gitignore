@@ -25,9 +25,6 @@ alex-sounds.zip
 alex-music-fonts-palettes.zip
 .wrangler/
 
-# Remake generated assets (re-export from game data)
-remake/assets/
-
 # Ghidra project files
 ghidra.gpr
 ghidra.lock

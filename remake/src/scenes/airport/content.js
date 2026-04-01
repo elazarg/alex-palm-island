@@ -65,12 +65,12 @@ export function createAirportObjects() {
 }
 
 export function buildAssetManifest() {
-  const base = 'assets/airport';
+  const base = '../assets/airport';
   const images = { SCENE_BG: `${base}/SNAIRPORT_FULL.png` };
   const frameCounts = {1:8, 2:7, 3:8, 4:8, 6:8, 7:8, 8:7, 9:8};
   for (const [dir, count] of Object.entries(frameCounts)) {
     for (let frame = 0; frame < count; frame++) {
-      images[`ALEX${dir}-${frame}`] = `assets/alex/ALEX${dir}-${frame}.png`;
+      images[`ALEX${dir}-${frame}`] = `../assets/alex/ALEX${dir}-${frame}.png`;
     }
   }
   const { behind, front } = createAirportObjects();
@@ -94,19 +94,19 @@ export function buildAssetManifest() {
   for (const name of ['TRUP1','STAFFB1','DOOR1','DOOR2','FEMGRD1','ALEXDN1','WALL_B','WALL_K','MAAKE','ARRIVE','DEPART','LINESIGN','DALPAK','HOTELAD','ORANGEAD','FORM']) {
     images[name] = `${base}/${name}.png`;
   }
-  images.SUITCASE = `assets/ui/SUITCASE.png?v=${UI_VERSION}`;
-  images.ICONWINDOW = `assets/ui/ICONWINDOW.png?v=${UI_VERSION}`;
-  images.PASSPORTICON = `assets/icons/PASSPORTICON.png?v=${UI_VERSION}`;
-  images.LETTERICON = `assets/icons/LETTERICON.png?v=${UI_VERSION}`;
-  images.PASSPORTPICT = `assets/icons/PASSPORTPICT.png?v=${UI_VERSION}`;
-  images.LETTERPICT = `assets/icons/LETTERPICT.png?v=${UI_VERSION}`;
-  const ui = 'assets/ui';
+  images.SUITCASE = `../assets/ui/SUITCASE.png?v=${UI_VERSION}`;
+  images.ICONWINDOW = `../assets/ui/ICONWINDOW.png?v=${UI_VERSION}`;
+  images.PASSPORTICON = `../assets/icons/PASSPORTICON.png?v=${UI_VERSION}`;
+  images.LETTERICON = `../assets/icons/LETTERICON.png?v=${UI_VERSION}`;
+  images.PASSPORTPICT = `../assets/icons/PASSPORTPICT.png?v=${UI_VERSION}`;
+  images.LETTERPICT = `../assets/icons/LETTERPICT.png?v=${UI_VERSION}`;
+  const ui = '../assets/ui';
   for (const name of UI_ASSET_NAMES) images[name] = `${ui}/${name}.png?v=${UI_VERSION}`;
   for (const name of ALEX_DIALOG_ASSET_NAMES) images[name] = `${ui}/${name}.png?v=${UI_VERSION}`;
   images.GRDTLK0 = `${base}/GRDTLK0.png?v=${UI_VERSION}`;
   images.FEMTLK0 = `${base}/FEMTLK0.png?v=${UI_VERSION}`;
   images.FAMTLK0 = `${base}/FAMTLK0.png?v=${UI_VERSION}`;
-  const cursorBase = 'assets/cursors';
+  const cursorBase = '../assets/cursors';
   for (const name of CURSOR_ASSET_NAMES) {
     images[name] = `${cursorBase}/${name}.png?v=${UI_VERSION}`;
   }
@@ -130,6 +130,6 @@ const AIRPORT_SOUND_NAMES = [
 
 export const SOUND_MANIFEST = Object.freeze(
   Object.fromEntries(
-    AIRPORT_SOUND_NAMES.map((name) => [name, `../re/renders/sounds/AIRPOR/${name}.wav`])
+    AIRPORT_SOUND_NAMES.map((name) => [name, `../assets/airport/${name}.wav`])
   )
 );
