@@ -99,6 +99,23 @@ export class Engine {
     return source;
   }
 
+  playBeep({ frequency = 660, duration = 0.12, type = 'square', gain = 0.035 } = {}) {
+    if (!this.audioCtx) return null;
+    const osc = this.audioCtx.createOscillator();
+    const amp = this.audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = frequency;
+    amp.gain.value = gain;
+    osc.connect(amp);
+    amp.connect(this.audioCtx.destination);
+    const now = this.audioCtx.currentTime;
+    osc.start(now);
+    amp.gain.setValueAtTime(gain, now);
+    amp.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    osc.stop(now + duration);
+    return osc;
+  }
+
   getAsset(name) {
     return this.assets.get(name);
   }

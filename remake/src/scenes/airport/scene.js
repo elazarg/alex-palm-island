@@ -95,11 +95,14 @@ export class AirportScene extends ScriptedScene {
     this._pendingButtonMode = null;
 
     this.initScriptRuntime();
+    this._applyRouteStateOverrides();
     this.scrollX = Math.max(0, this.alexX - 160);
     this._setInputMode('walk');
 
     if (this.options.previewDialogId) {
       this._openDialog(this.options.previewDialogId, { deferPromptSound: true });
+    } else if (this.options.screen === 'form') {
+      this._openForm('lostAndFoundForm');
     }
   }
 
@@ -111,6 +114,10 @@ export class AirportScene extends ScriptedScene {
       return;
     }
     if (this.modal) {
+      if (this.modal.type === 'form') {
+        this._handleFormMouseDown(x, y);
+        return;
+      }
       this._handleModalClick(x, y);
       return;
     }
@@ -179,6 +186,10 @@ export class AirportScene extends ScriptedScene {
 
   onKeyDown({ key, originalEvent }) {
     if (!this.modal) return;
+    if (this.modal.type === 'form') {
+      this._handleFormKeyDown(key, originalEvent);
+      return;
+    }
     if (this.modal.type === 'dialog' && (key === 'ArrowDown' || key === 'ArrowUp')) {
       if (this.modal.phase !== 'choice') return;
       const dir = key === 'ArrowDown' ? 1 : -1;
@@ -222,7 +233,7 @@ export class AirportScene extends ScriptedScene {
     for (const obj of this.objectsFront) this._renderObject(ctx, obj);
 
     this.renderScriptModal(ctx, this.font, this.uiTick);
-    const suppressPanel = this.modal?.presentation === 'resource';
+    const suppressPanel = this.modal?.presentation === 'resource' || this.modal?.type === 'form';
     if (!suppressPanel) {
       renderPanel(ctx, {
         assets: this.engine.assets,
@@ -454,6 +465,133 @@ export class AirportScene extends ScriptedScene {
       locked: false,
     };
     this._refreshCursor();
+  }
+
+  _handleFormMouseDown(mx, my) {
+    if (!this.modal || this.modal.type !== 'form') return;
+    for (let i = 0; i < this.modal.fields.length; i++) {
+      const field = this.modal.fields[i];
+      const top = field.y;
+      const bottom = field.y + 18;
+      if (my >= top && my <= bottom) {
+        this.modal.activeField = i;
+        this.modal.errorText = '';
+        return;
+      }
+    }
+  }
+
+  _handleFormKeyDown(key, originalEvent) {
+    const modal = this.modal;
+    if (!modal || modal.type !== 'form') return;
+    const field = modal.fields[modal.activeField];
+    const current = modal.values[modal.activeField] || '';
+    const accepted = Boolean(modal.accepted?.[modal.activeField]);
+    const setValue = (next) => {
+      if (this.font.measureText((field.prefix || '') + next) > (field.maxWidth || 999)) return;
+      modal.values[modal.activeField] = next;
+      modal.errorText = '';
+    };
+
+    if (key === 'ArrowUp') {
+      modal.activeField = (modal.activeField + modal.fields.length - 1) % modal.fields.length;
+      modal.errorText = '';
+      originalEvent.preventDefault();
+      return;
+    }
+    if (key === 'ArrowDown' || key === 'Tab') {
+      modal.activeField = (modal.activeField + 1) % modal.fields.length;
+      modal.errorText = '';
+      originalEvent.preventDefault();
+      return;
+    }
+    if (key === 'Backspace') {
+      if (accepted) {
+        originalEvent.preventDefault();
+        return;
+      }
+      setValue(current.slice(0, -1));
+      originalEvent.preventDefault();
+      return;
+    }
+    if (key === 'Enter') {
+      this._submitLostAndFoundFormField();
+      originalEvent.preventDefault();
+      return;
+    }
+    if (key.length === 1 && /[a-zA-Z -]/.test(key)) {
+      if (accepted) {
+        originalEvent.preventDefault();
+        return;
+      }
+      setValue(current + key);
+      originalEvent.preventDefault();
+    }
+  }
+
+  _submitLostAndFoundFormField() {
+    const modal = this.modal;
+    if (!modal || modal.type !== 'form') return;
+    const fieldIdx = modal.activeField;
+    const expected = this._getLostAndFoundExpectedValues();
+    const actual = this._normalizeFormValue(modal.values[fieldIdx]);
+    if (actual === expected[fieldIdx]) {
+      modal.accepted[fieldIdx] = true;
+      modal.errorText = '';
+      this._advanceLostAndFoundForm();
+      return;
+    }
+    modal.values[fieldIdx] = '';
+    modal.mistakes[fieldIdx] = (modal.mistakes[fieldIdx] || 0) + 1;
+    modal.errorText = '';
+    this.engine.playBeep?.();
+    if (modal.mistakes[fieldIdx] >= 3) {
+      modal.values[fieldIdx] = expected[fieldIdx];
+      modal.accepted[fieldIdx] = true;
+      modal.autoFilled[fieldIdx] = true;
+      this._advanceLostAndFoundForm();
+    }
+  }
+
+  _advanceLostAndFoundForm() {
+    const modal = this.modal;
+    if (!modal || modal.type !== 'form') return;
+    const nextIdx = modal.accepted.findIndex((accepted) => !accepted);
+    if (nextIdx >= 0) {
+      modal.activeField = nextIdx;
+      return;
+    }
+    this._submitLostAndFoundForm();
+  }
+
+  _submitLostAndFoundForm() {
+    const modal = this.modal;
+    if (!modal || modal.type !== 'form') return;
+    this.modal = null;
+    this._refreshCursor();
+    this._enqueueSteps(this.state.correctBag ? this.sceneScript.events.receiveBag : this.sceneScript.events.wrongBag);
+    this._processActionQueue();
+  }
+
+  _getLostAndFoundExpectedValues() {
+    return [
+      'Alex',
+      'bag',
+      ({ big: 'big', medium: 'medium-size', small: 'small' })[this.state.bagSize] || '',
+      ({ grey: 'grey', purple: 'purple', pink: 'pink' })[this.state.bagColor] || '',
+    ];
+  }
+
+  _normalizeFormValue(value) {
+    return (value || '').trim().replace(/\s+/g, ' ');
+  }
+
+  _applyRouteStateOverrides() {
+    const overrides = this.options.stateOverrides || {};
+    for (const [key, value] of Object.entries(overrides)) {
+      this.state[key] = value;
+    }
+    this._applyBindings();
   }
 
   _getInteractionRect(interaction) {

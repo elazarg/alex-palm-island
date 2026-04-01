@@ -1,4 +1,5 @@
 import { renderTalkDialog, renderTalkResponse } from '../ui/dialog-renderer.js';
+import { renderTextForm } from '../ui/form-renderer.js';
 import { renderNotePopup } from '../ui/note-renderer.js';
 import { renderResourcePopup } from '../ui/resource-renderer.js';
 
@@ -73,6 +74,12 @@ export class ScriptedScene {
       this._dialogExitBox = result.dialogExitBox;
       return;
     }
+    if (this.modal.type === 'form') {
+      renderTextForm(ctx, { assets: this.engine.assets, font, modal: this.modal, uiTick });
+      this._choiceBoxes = [];
+      this._dialogExitBox = null;
+      return;
+    }
     if (this.modal.presentation === 'resource') {
       renderResourcePopup(ctx, { assets: this.engine.assets, modal: this.modal });
       this._choiceBoxes = [];
@@ -129,6 +136,10 @@ export class ScriptedScene {
       }
       if (step.type === 'dialog') {
         this._openDialog(step.id);
+        return;
+      }
+      if (step.type === 'form') {
+        this._openForm(step.id);
         return;
       }
       if (step.type === 'setState') {
@@ -198,6 +209,29 @@ export class ScriptedScene {
       if (options.deferPromptSound) this._gestureLockedDialog = dialog;
       else this._startDialogPrompt(dialog);
     }
+  }
+
+  _openForm(formId) {
+    const form = this.sceneScript.forms?.[formId];
+    if (!form) return;
+    this._stopSound();
+    this._dialogExitBox = null;
+    this.modal = {
+      type: 'form',
+      id: formId,
+      asset: form.asset,
+      fields: form.fields,
+      values: form.fields.map(() => ''),
+      accepted: form.fields.map(() => false),
+      mistakes: form.fields.map(() => 0),
+      autoFilled: form.fields.map(() => false),
+      activeField: 0,
+      errorText: '',
+      errorColor: form.errorColor || '#000000',
+      errorY: form.errorY || 172,
+      reminder: form.reminder || '',
+    };
+    this._refreshCursor?.();
   }
 
   _startDialogPrompt(dialog) {
