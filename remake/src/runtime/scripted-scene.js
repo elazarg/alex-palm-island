@@ -19,6 +19,7 @@ export class ScriptedScene {
     this._gestureLockedDialog = null;
     this._pendingDialogChoiceEvent = null;
     this._pendingDialogDelayTicks = 0;
+    this.onTransition = null;
   }
 
   attach(engine) {
@@ -140,6 +141,12 @@ export class ScriptedScene {
         this.state[step.key] = (this.state[step.key] || 0) + (step.amount ?? 1);
         this._applyBindings();
         this._afterStateChanged?.(step.key);
+        continue;
+      }
+      if (step.type === 'transition') {
+        this._stopSound();
+        this._requestTransition(step.target);
+        return;
       }
     }
   }
@@ -302,5 +309,10 @@ export class ScriptedScene {
   _queueFallbackEvent(mode) {
     const eventId = this.sceneScript.fallbacks?.[mode];
     if (eventId) this._queueEvent(eventId);
+  }
+
+  _requestTransition(target) {
+    if (!target || typeof this.onTransition !== 'function') return;
+    this.onTransition(target);
   }
 }

@@ -214,6 +214,7 @@ export const AIRPORT_SCRIPT = {
             then: [
               { type: 'message', id: 'doorWarning3' },
               { type: 'incState', key: 'doorWarnings', amount: 1 },
+              { type: 'transition', target: { scene: 'arrest', reasonCode: 503 } },
             ],
             else: [
               {
@@ -336,6 +337,7 @@ export const AIRPORT_SCRIPT = {
     ],
     wrongBag: [
       { type: 'message', id: 'clerkWrongBag' },
+      { type: 'transition', target: { scene: 'arrest', reasonCode: 504 } },
     ],
 
     passportHoliday: [
@@ -351,7 +353,7 @@ export const AIRPORT_SCRIPT = {
       { type: 'message', id: 'passportClear' },
     ],
     passportSpy: [
-      { type: 'message', id: 'passportSpy' },
+      { type: 'transition', target: { scene: 'arrest', reasonCode: 501 } },
     ],
   },
 
@@ -443,11 +445,6 @@ export const AIRPORT_SCRIPT = {
       speaker: 'Narrator',
       presentation: 'note',
       text: 'You lost your bag!',
-    },
-    passportSpy: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'It isn\'t clever to tell people that you are a spy!',
     },
     upstairsLater: {
       speaker: 'Narrator',
