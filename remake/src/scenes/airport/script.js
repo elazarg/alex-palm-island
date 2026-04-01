@@ -1,20 +1,101 @@
 import { AIRPORT_RESOURCES } from './resources.js';
+import { AIRPORT_ACTIVE_INTERACTIONS } from './theme-layout.js';
 
-const guardQuestionResource = AIRPORT_RESOURCES.dialogs.guardQuestion;
-const clerkQuestionResource = AIRPORT_RESOURCES.dialogs.clerkQuestion;
-const {
-  guardHotel: guardHotelResource,
-  guardBag: guardBagResource,
-  guardFood: guardFoodResource,
-  guardTaxi: guardTaxiResource,
-  passportBlocked: passportBlockedResource,
-  doorWarning1: doorWarning1Resource,
-  doorWarning2: doorWarning2Resource,
-  doorWarning3: doorWarning3Resource,
-  clerkRepeat1: clerkRepeat1Resource,
-  clerkRepeat2: clerkRepeat2Resource,
-  clerkRepeat3: clerkRepeat3Resource,
-} = AIRPORT_RESOURCES.messages;
+const DIALOGS = AIRPORT_RESOURCES.dialogBySection;
+const MESSAGES = AIRPORT_RESOURCES.messageBySection;
+
+const GUARD_SEQUENCE = Object.freeze([1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1]);
+const CLERK_SEQUENCE = Object.freeze([1, 2, 3, 4, 5, 6, 7, 8]);
+const BRDTLK_SEQUENCE = Object.freeze([1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,3,4,3,4,3,1,1,1,5,6,5,6,7,8,7,8,5,6,1,1,9,10,9,10,11,10,9,1,1,1,1,1]);
+const FEMTLK_SEQUENCE = Object.freeze([1, 2, 3, 4, 5, 6, 7]);
+const FAMTLK_SEQUENCE = Object.freeze([1, 2, 3, 4, 5, 6]);
+
+function speakerVisualFromSpritePart(spritePart) {
+  const family = spritePart.split(/\s+/)[0];
+  switch (family) {
+    case 'GrdTlk':
+      return {
+        speaker: 'Guard',
+        speakerBase: 'GRDTLK0',
+        speakerOverlay: { prefix: 'GRDTLK', ox: 49, oy: 11, rate: 8, sequence: GUARD_SEQUENCE },
+        speakerStaticOverlay: { asset: 'GRDPNT1', ox: 49, oy: 11 },
+      };
+    case 'GrdPnt':
+      return {
+        speaker: 'Guard',
+        speakerBase: 'GRDPNT0',
+        speakerOverlay: { prefix: 'GRDPNT', ox: 49, oy: 11, rate: 8, sequence: GUARD_SEQUENCE },
+        speakerStaticOverlay: { asset: 'GRDPNT1', ox: 49, oy: 11 },
+      };
+    case 'Lost':
+      return {
+        speaker: 'Clerk',
+        speakerBase: 'CLRK0',
+        speakerFrames: { prefix: 'CLRK', rate: 8, sequence: CLERK_SEQUENCE },
+      };
+    case 'BrdTlk':
+      return {
+        speaker: 'Passport Officer',
+        speakerBase: 'BRDTLK0',
+        speakerOverlay: { prefix: 'BRDTLK', ox: 73, oy: 21, rate: 8, sequence: BRDTLK_SEQUENCE },
+      };
+    case 'FemTlk':
+      return {
+        speaker: 'Woman Guard',
+        speakerBase: 'FEMTLK0',
+        speakerOverlay: { prefix: 'FEMTLK', ox: 59, oy: 15, rate: 8, sequence: FEMTLK_SEQUENCE },
+        speakerStaticOverlay: { asset: 'FEMTLK1', ox: 59, oy: 15 },
+      };
+    case 'FamTlk':
+      return {
+        speaker: 'Family',
+        speakerBase: 'FAMTLK0',
+        speakerOverlay: { prefix: 'FAMTLK', ox: 48, oy: 41, rate: 8, sequence: FAMTLK_SEQUENCE },
+        speakerStaticOverlay: { asset: 'FAMTLK1', ox: 48, oy: 41 },
+      };
+    default:
+      return {};
+  }
+}
+
+function eventStep(id) {
+  return [{ type: 'event', id }];
+}
+
+function messageStep(id) {
+  return [{ type: 'message', id }];
+}
+
+function talkMessageFromSection(sectionId, extra = {}) {
+  const message = MESSAGES[sectionId];
+  return {
+    presentation: 'talk',
+    sound: message.speaker.sound,
+    text: message.text,
+    ...speakerVisualFromSpritePart(message.speaker.spritePart),
+    ...extra,
+  };
+}
+
+function dialogFromSection(sectionId, gotoMap) {
+  const dialog = DIALOGS[sectionId];
+  return {
+    ...speakerVisualFromSpritePart(dialog.speaker.spritePart),
+    prompt: dialog.prompt,
+    promptSound: dialog.speaker.sound,
+    question: dialog.question,
+    choices: dialog.choices.map((label, index) => {
+      const response = dialog.responses[index];
+      const event = gotoMap[response.gotoSection] || [];
+      return {
+        label,
+        responseText: response.text,
+        responseSound: response.sound,
+        event,
+      };
+    }),
+  };
+}
 
 export const AIRPORT_SCRIPT = {
   initialState: {
@@ -22,12 +103,15 @@ export const AIRPORT_SCRIPT = {
     passportChecked: false,
     doorWarnings: 0,
     clerkRepeatCount: 0,
+    bagSize: null,
+    bagColor: null,
+    correctBag: false,
     palmettoes: 100,
   },
 
   bindings: [
     { type: 'objectVisible', object: 'Family', when: { state: 'bagReceived', equals: true } },
-    { type: 'interactionEnabled', interaction: 'family', when: { state: 'bagReceived', equals: true } },
+    { type: 'interactionEnabled', interaction: 'familyQueue', when: { state: 'bagReceived', equals: true } },
   ],
 
   fallbacks: {
@@ -37,82 +121,16 @@ export const AIRPORT_SCRIPT = {
     bag: 'bagDefault',
   },
 
-  interactions: [
-    {
-      id: 'upstairsExit',
-      rect: [825, 110, 915, 130],
-      modes: { look: 'lookExit', walk: 'upstairsExit' },
-    },
-    {
-      id: 'doorExit',
-      rect: [273, 85, 373, 100],
-      modes: { look: 'lookDoors', touch: 'touchDoors', walk: 'doorExit' },
-    },
-    {
-      id: 'guard',
-      object: 'Guard',
-      sprite: 'GUARD1',
-      pad: [8, 0, -12, -2],
-      modes: { look: 'lookGuard', touch: 'touchPeople', talk: 'guardIntro' },
-    },
-    {
-      id: 'clerk',
-      object: 'Achu',
-      sprite: 'ACHU1',
-      pad: [-8, -8, 8, 4],
-      modes: { look: 'lookLostCounter', touch: 'touchLostCounter', talk: 'clerkIntro' },
-    },
-    {
-      id: 'passportOfficer',
-      object: 'BrdTlk',
-      sprite: 'BRDTLK0',
-      pad: [28, 0, -6, 0],
-      modes: { look: 'lookPassportOfficer', touch: 'touchPeople', talk: 'passportCheck' },
-    },
-    {
-      id: 'family',
-      object: 'Family',
-      sprite: 'FAMILY1',
-      pad: [0, 0, -76, 0],
-      enabled: false,
-      modes: { look: 'familyQueue', touch: 'touchPeople', talk: 'familyTalk' },
-    },
-    {
-      id: 'womanGuard',
-      object: 'FemGrd',
-      sprite: 'FEMGRD1',
-      pad: [8, -6, -4, 0],
-      modes: { look: 'lookWomanGuard', touch: 'touchPeople', talk: 'womanGuardTalk' },
-    },
-    {
-      id: 'lineSign',
-      object: 'LineSign',
-      sprite: 'LINESIGN',
-      pad: [0, 0, 0, 0],
-      modes: { look: 'lookLineSign', touch: 'touchSign', talk: 'talkDefault' },
-    },
-    {
-      id: 'stairs',
-      object: 'Stairs',
-      sprite: 'STAIRS1',
-      pad: [0, 24, -60, 0],
-      modes: { look: 'lookStairs', touch: 'touchStairs', talk: 'talkDefault' },
-    },
-    {
-      id: 'floor',
-      rect: [0, 120, 960, 166],
-      modes: { look: 'lookFloor', touch: 'touchFloor', talk: 'talkDefault' },
-    },
-  ],
+  interactions: AIRPORT_ACTIVE_INTERACTIONS,
 
   events: {
-    guardIntro: [
+    'guard.directions': [
       { type: 'walkTo', x: 720, y: 120 },
       { type: 'face', dir: 9 },
       { type: 'dialog', id: 'guardQuestion' },
     ],
 
-    clerkIntro: [
+    'clerk.help': [
       { type: 'walkTo', x: 210, y: 125 },
       { type: 'face', dir: 7 },
       {
@@ -125,78 +143,59 @@ export const AIRPORT_SCRIPT = {
     clerkRepeat: [
       {
         if: { state: 'clerkRepeatCount', gte: 2 },
-        then: [{ type: 'message', id: 'clerkRepeat3' }],
+        then: messageStep('clerkRepeat3'),
         else: [
           {
             if: { state: 'clerkRepeatCount', equals: 1 },
-            then: [{ type: 'message', id: 'clerkRepeat2' }],
-            else: [{ type: 'message', id: 'clerkRepeat1' }],
+            then: messageStep('clerkRepeat2'),
+            else: messageStep('clerkRepeat1'),
           },
         ],
       },
       { type: 'incState', key: 'clerkRepeatCount', amount: 1 },
     ],
 
-    receiveBag: [
-      { type: 'message', id: 'clerkThanks' },
-      { type: 'message', id: 'clerkBag' },
-      { type: 'setState', key: 'palmettoes', value: 90 },
-      { type: 'setState', key: 'bagReceived', value: true },
-    ],
-
-    passportCheck: [
+    'passport.control': [
       { type: 'walkTo', x: 490, y: 140 },
       { type: 'face', dir: 8 },
       {
         if: { state: 'passportChecked', equals: true },
-        then: [{ type: 'message', id: 'passportRepeat' }],
+        then: messageStep('passportRepeat'),
         else: [
           {
             if: { state: 'bagReceived', equals: true },
-            then: [
-              { type: 'message', id: 'passportAsk' },
-              { type: 'message', id: 'passportClear' },
-              { type: 'setState', key: 'passportChecked', value: true },
-            ],
-            else: [{ type: 'message', id: 'passportBlocked' }],
+            then: messageStep('passportBlocked'),
+            else: messageStep('passportAsk'),
           },
         ],
       },
     ],
 
-    familyQueue: [
-      { type: 'message', id: 'familyWaiting' },
-    ],
-
-    familyTalk: [
+    'family.queue': [
+      { type: 'walkTo', x: 520, y: 150 },
+      { type: 'face', dir: 9 },
       { type: 'message', id: 'familyNoEnglish' },
     ],
-    womanGuardTalk: [
-      { type: 'message', id: 'doorWarning1' },
+    'womanGuard.block': [
+      { type: 'walkTo', x: 330, y: 130 },
+      { type: 'face', dir: 7 },
+      { type: 'dialog', id: 'womanGuardQuestion' },
     ],
-
-    lookGuard: [{ type: 'message', id: 'lookGuard' }],
-    lookLostCounter: [{ type: 'message', id: 'lookLostCounter' }],
-    lookPassportOfficer: [{ type: 'message', id: 'lookPassportOfficer' }],
-    lookWomanGuard: [{ type: 'message', id: 'lookWomanGuard' }],
-    lookLineSign: [{ type: 'message', id: 'lookLineSign' }],
-    lookStairs: [{ type: 'message', id: 'lookStairs' }],
+    'womanGuard.touch': [
+      { type: 'walkTo', x: 330, y: 130 },
+      { type: 'face', dir: 7 },
+      { type: 'message', id: 'womanGuardTouch' },
+    ],
     lookFloor: [{ type: 'message', id: 'lookFloor' }],
-    lookExit: [{ type: 'message', id: 'lookExit' }],
-    lookDoors: [{ type: 'message', id: 'lookDoors' }],
-    touchDoors: [{ type: 'message', id: 'touchDoors' }],
     touchFloor: [{ type: 'message', id: 'touchFloor' }],
-    touchStairs: [{ type: 'message', id: 'touchStairs' }],
-    touchSign: [{ type: 'message', id: 'touchSign' }],
-    touchPeople: [{ type: 'message', id: 'touchPeople' }],
-    touchLostCounter: [{ type: 'message', id: 'touchLostCounter' }],
     lookDefault: [{ type: 'message', id: 'lookDefault' }],
     talkDefault: [{ type: 'message', id: 'talkDefault' }],
     touchDefault: [{ type: 'message', id: 'touchDefault' }],
     bagDefault: [{ type: 'message', id: 'bagDefault' }],
     bagMissing: [{ type: 'message', id: 'bagMissing' }],
 
-    upstairsExit: [
+    'upstairs.block': [
+      { type: 'walkTo', x: 820, y: 135 },
       {
         if: { state: 'passportChecked', equals: true },
         then: [{ type: 'message', id: 'upstairsLater' }],
@@ -204,7 +203,7 @@ export const AIRPORT_SCRIPT = {
       },
     ],
 
-    doorExit: [
+    'exit.doors': [
       {
         if: { state: 'passportChecked', equals: true },
         then: [{ type: 'message', id: 'doorReady' }],
@@ -212,173 +211,243 @@ export const AIRPORT_SCRIPT = {
           { type: 'walkTo', x: 323, y: 130 },
           {
             if: { state: 'doorWarnings', gte: 2 },
-            then: [{ type: 'message', id: 'doorWarning3' }],
+            then: [
+              { type: 'message', id: 'doorWarning3' },
+              { type: 'incState', key: 'doorWarnings', amount: 1 },
+            ],
             else: [
               {
                 if: { state: 'doorWarnings', equals: 1 },
-                then: [{ type: 'message', id: 'doorWarning2' }],
-                else: [{ type: 'message', id: 'doorWarning1' }],
+                then: [
+                  { type: 'message', id: 'doorWarning2' },
+                  { type: 'incState', key: 'doorWarnings', amount: 1 },
+                ],
+                else: [
+                  { type: 'message', id: 'doorWarning1' },
+                  { type: 'incState', key: 'doorWarnings', amount: 1 },
+                ],
               },
             ],
           },
-          { type: 'incState', key: 'doorWarnings', amount: 1 },
         ],
       },
+    ],
+    'passport.control.usePassport': [
+      { type: 'walkTo', x: 490, y: 140 },
+      { type: 'face', dir: 8 },
+      {
+        if: { state: 'passportChecked', equals: true },
+        then: messageStep('passportRepeat'),
+        else: [
+          {
+            if: { state: 'bagReceived', equals: true },
+            then: [
+              { type: 'message', id: 'passportThanks' },
+              { type: 'dialog', id: 'passportQuestion' },
+            ],
+            else: messageStep('passportBlocked'),
+          },
+        ],
+      },
+    ],
+
+    clerkBig: [
+      { type: 'setState', key: 'bagSize', value: 'big' },
+      { type: 'message', id: 'clerkBig' },
+      { type: 'dialog', id: 'clerkColorQuestion' },
+    ],
+    clerkSmall: [
+      { type: 'setState', key: 'bagSize', value: 'small' },
+      { type: 'message', id: 'clerkSmall' },
+      { type: 'dialog', id: 'clerkColorQuestion' },
+    ],
+    clerkMedium: [
+      { type: 'setState', key: 'bagSize', value: 'medium' },
+      { type: 'message', id: 'clerkMedium' },
+      { type: 'dialog', id: 'clerkColorQuestion' },
+    ],
+    clerkGrey: [
+      { type: 'setState', key: 'bagColor', value: 'grey' },
+      { type: 'setState', key: 'correctBag', value: false },
+      {
+        if: { state: 'bagSize', equals: 'big' },
+        then: messageStep('clerkGreyBig'),
+        else: [
+          {
+            if: { state: 'bagSize', equals: 'medium' },
+            then: messageStep('clerkGreyMedium'),
+            else: messageStep('clerkGreySmall'),
+          },
+        ],
+      },
+      { type: 'event', id: 'clerkForm' },
+    ],
+    clerkPurple: [
+      { type: 'setState', key: 'bagColor', value: 'purple' },
+      { type: 'setState', key: 'correctBag', value: false },
+      {
+        if: { state: 'bagSize', equals: 'big' },
+        then: messageStep('clerkPurpleBig'),
+        else: [
+          {
+            if: { state: 'bagSize', equals: 'medium' },
+            then: messageStep('clerkPurpleMedium'),
+            else: messageStep('clerkPurpleSmall'),
+          },
+        ],
+      },
+      { type: 'event', id: 'clerkForm' },
+    ],
+    clerkPink: [
+      { type: 'setState', key: 'bagColor', value: 'pink' },
+      {
+        if: { state: 'bagSize', equals: 'small' },
+        then: [{ type: 'setState', key: 'correctBag', value: true }],
+        else: [{ type: 'setState', key: 'correctBag', value: false }],
+      },
+      {
+        if: { state: 'bagSize', equals: 'big' },
+        then: messageStep('clerkPinkBig'),
+        else: [
+          {
+            if: { state: 'bagSize', equals: 'medium' },
+            then: messageStep('clerkPinkMedium'),
+            else: messageStep('clerkPinkSmall'),
+          },
+        ],
+      },
+      { type: 'event', id: 'clerkForm' },
+    ],
+    clerkForm: [
+      { type: 'message', id: 'clerkFillForm' },
+      { type: 'message', id: 'lostAndFoundForm' },
+      {
+        if: { state: 'correctBag', equals: true },
+        then: eventStep('receiveBag'),
+        else: eventStep('wrongBag'),
+      },
+    ],
+    receiveBag: [
+      { type: 'message', id: 'clerkThanks' },
+      { type: 'message', id: 'clerkBag' },
+      { type: 'setState', key: 'palmettoes', value: 90 },
+      { type: 'setState', key: 'bagReceived', value: true },
+      { type: 'setState', key: 'clerkRepeatCount', value: 0 },
+    ],
+    wrongBag: [
+      { type: 'message', id: 'clerkWrongBag' },
+    ],
+
+    passportHoliday: [
+      { type: 'message', id: 'passportHolidayFee' },
+      { type: 'setState', key: 'palmettoes', value: 85 },
+      { type: 'setState', key: 'passportChecked', value: true },
+      { type: 'message', id: 'passportClear' },
+    ],
+    passportBusiness: [
+      { type: 'message', id: 'passportBusinessFee' },
+      { type: 'setState', key: 'palmettoes', value: 85 },
+      { type: 'setState', key: 'passportChecked', value: true },
+      { type: 'message', id: 'passportClear' },
+    ],
+    passportSpy: [
+      { type: 'message', id: 'passportSpy' },
     ],
   },
 
   dialogs: {
-    guardQuestion: {
-      speaker: 'Guard',
-      speakerSprite: 'GRDTLK0',
-      speakerBase: 'GRDTLK0',
-      speakerStaticOverlay: { asset: 'GRDPNT1', ox: 49, oy: 11 },
-      speakerOverlay: { prefix: 'GRDTLK', ox: 49, oy: 11, rate: 8, sequence: [1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1] },
-      prompt: guardQuestionResource.prompt,
-      promptSound: guardQuestionResource.speaker.sound,
-      question: guardQuestionResource.question,
-      choices: [
-        { label: guardQuestionResource.choices[0], responseText: guardQuestionResource.responses[0].text, responseSound: guardQuestionResource.responses[0].sound, event: [{ type: 'message', id: 'guardHotel' }] },
-        { label: guardQuestionResource.choices[1], responseText: guardQuestionResource.responses[1].text, responseSound: guardQuestionResource.responses[1].sound, event: [{ type: 'message', id: 'guardBag' }] },
-        { label: guardQuestionResource.choices[2], responseText: guardQuestionResource.responses[2].text, responseSound: guardQuestionResource.responses[2].sound, event: [{ type: 'message', id: 'guardFood' }] },
-        { label: guardQuestionResource.choices[3], responseText: guardQuestionResource.responses[3].text, responseSound: guardQuestionResource.responses[3].sound, event: [{ type: 'message', id: 'guardTaxi' }] },
-      ],
-    },
-
-    clerkQuestion: {
-      speaker: 'Clerk',
-      speakerSprite: 'LOST0',
-      prompt: clerkQuestionResource.prompt,
-      question: clerkQuestionResource.question,
-      choices: [
-        { label: clerkQuestionResource.choices[0], event: [{ type: 'message', id: 'clerkNotInfo' }] },
-        { label: clerkQuestionResource.choices[1], event: [{ type: 'event', id: 'receiveBag' }] },
-        { label: clerkQuestionResource.choices[2], event: [{ type: 'message', id: 'clerkNotInfo' }] },
-        { label: clerkQuestionResource.choices[3], event: [{ type: 'message', id: 'clerkNotInfo' }] },
-      ],
-    },
+    guardQuestion: dialogFromSection(2010, {
+      151: messageStep('guardHotel'),
+      152: messageStep('guardBag'),
+      153: messageStep('guardFood'),
+      154: messageStep('guardTaxi'),
+    }),
+    clerkQuestion: dialogFromSection(2100, {
+      311: messageStep('clerkNotInfo'),
+      2110: [{ type: 'dialog', id: 'clerkBigQuestion' }],
+    }),
+    clerkBigQuestion: dialogFromSection(2110, {
+      316: eventStep('clerkBig'),
+      2120: [{ type: 'dialog', id: 'clerkSmallQuestion' }],
+    }),
+    clerkSmallQuestion: dialogFromSection(2120, {
+      317: eventStep('clerkSmall'),
+      318: eventStep('clerkMedium'),
+    }),
+    clerkColorQuestion: dialogFromSection(2150, {
+      321: eventStep('clerkGrey'),
+      322: eventStep('clerkPurple'),
+      323: eventStep('clerkPink'),
+    }),
+    passportQuestion: dialogFromSection(2300, {
+      225: eventStep('passportHoliday'),
+      226: eventStep('passportBusiness'),
+      227: eventStep('passportSpy'),
+    }),
+    womanGuardQuestion: dialogFromSection(2310, {
+      461: messageStep('womanGuardHotel'),
+      462: messageStep('womanGuardBag'),
+      463: messageStep('womanGuardFood'),
+      464: messageStep('womanGuardTaxi'),
+    }),
   },
 
   messages: {
-    guardTooSoon: {
-      speaker: 'Guard',
-      presentation: 'note',
-      text: 'Not so fast, young man!  You just got here!',
-    },
-    guardHotel: {
-      speaker: 'Guard',
-      presentation: 'talk',
-      speakerBase: 'GRDTLK0',
-      speakerStaticOverlay: { asset: 'GRDPNT1', ox: 49, oy: 11 },
-      sound: guardHotelResource.speaker.sound,
-      text: guardHotelResource.text,
-    },
-    guardBag: {
-      speaker: 'Guard',
-      presentation: 'talk',
-      speakerBase: 'GRDTLK0',
-      speakerStaticOverlay: { asset: 'GRDPNT1', ox: 49, oy: 11 },
-      speakerOverlay: { prefix: 'GRDTLK', ox: 49, oy: 11, rate: 8, sequence: [1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1] },
-      sound: guardBagResource.speaker.sound,
-      text: guardBagResource.text,
-    },
-    guardFood: {
-      speaker: 'Guard',
-      presentation: 'talk',
-      speakerBase: 'GRDTLK0',
-      speakerStaticOverlay: { asset: 'GRDPNT1', ox: 49, oy: 11 },
-      speakerOverlay: { prefix: 'GRDTLK', ox: 49, oy: 11, rate: 8, sequence: [1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1] },
-      sound: guardFoodResource.speaker.sound,
-      text: guardFoodResource.text,
-    },
-    guardTaxi: {
-      speaker: 'Guard',
-      presentation: 'talk',
-      speakerBase: 'GRDTLK0',
-      speakerStaticOverlay: { asset: 'GRDPNT1', ox: 49, oy: 11 },
-      speakerOverlay: { prefix: 'GRDTLK', ox: 49, oy: 11, rate: 8, sequence: [1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1] },
-      sound: guardTaxiResource.speaker.sound,
-      text: guardTaxiResource.text,
-    },
-    clerkNotInfo: {
-      speaker: 'Clerk',
-      presentation: 'note',
-      text: 'You bubble-brain! What do I look like? Information?',
-    },
-    clerkThanks: {
-      speaker: 'Clerk',
-      presentation: 'note',
-      text: 'Thank you.',
-    },
-    clerkBag: {
-      speaker: 'Clerk',
-      presentation: 'note',
-      text: 'Here is your bag. You have to pay to play. That\'ll be ten Palmettoes.',
-    },
-    clerkRepeat1: {
-      speaker: 'Clerk',
-      presentation: 'note',
-      text: clerkRepeat1Resource.text,
-    },
-    clerkRepeat2: {
-      speaker: 'Clerk',
-      presentation: 'note',
-      text: clerkRepeat2Resource.text,
-    },
-    clerkRepeat3: {
-      speaker: 'Clerk',
-      presentation: 'note',
-      text: clerkRepeat3Resource.text,
-    },
-    passportBlocked: {
-      speaker: 'Passport Officer',
-      presentation: 'note',
-      text: passportBlockedResource.text,
-    },
-    passportAsk: {
-      speaker: 'Passport Officer',
-      presentation: 'note',
-      text: 'May I see your passport, please?',
-    },
-    passportClear: {
-      speaker: 'Passport Officer',
-      presentation: 'note',
-      text: 'Thank you, sir. You may go.',
-    },
-    passportRepeat: {
-      speaker: 'Passport Officer',
-      presentation: 'note',
-      text: 'Why are you giving me your passport again, bubble-brain?  I said, "Go!"',
-    },
-    familyWaiting: {
+    guardTooSoon: talkMessageFromSection(1010),
+    guardHotel: talkMessageFromSection(1021),
+    guardBag: talkMessageFromSection(1022),
+    guardFood: talkMessageFromSection(1023),
+    guardTaxi: talkMessageFromSection(1024),
+    passportAsk: talkMessageFromSection(1030),
+    passportBlocked: talkMessageFromSection(1031),
+    passportClear: talkMessageFromSection(1032),
+    passportThanks: talkMessageFromSection(1040),
+    passportRepeat: talkMessageFromSection(1050),
+    passportHolidayFee: talkMessageFromSection(1060),
+    passportBusinessFee: talkMessageFromSection(1070),
+    doorWarning1: talkMessageFromSection(1080),
+    doorWarning2: talkMessageFromSection(1081),
+    doorWarning3: talkMessageFromSection(1082),
+    clerkBig: talkMessageFromSection(1100),
+    clerkSmall: talkMessageFromSection(1110),
+    clerkMedium: talkMessageFromSection(1120),
+    clerkGreyBig: talkMessageFromSection(1121),
+    clerkGreyMedium: talkMessageFromSection(1122),
+    clerkGreySmall: talkMessageFromSection(1123),
+    clerkPurpleBig: talkMessageFromSection(1124),
+    clerkPurpleMedium: talkMessageFromSection(1125),
+    clerkPurpleSmall: talkMessageFromSection(1126),
+    clerkPinkBig: talkMessageFromSection(1127),
+    clerkPinkMedium: talkMessageFromSection(1128),
+    clerkPinkSmall: talkMessageFromSection(1129),
+    clerkFillForm: talkMessageFromSection(1135),
+    clerkThanks: talkMessageFromSection(1136),
+    clerkBag: talkMessageFromSection(1137),
+    clerkRepeat1: talkMessageFromSection(1191),
+    clerkRepeat2: talkMessageFromSection(1192),
+    clerkRepeat3: talkMessageFromSection(1193),
+    clerkNotInfo: talkMessageFromSection(1194),
+    clerkWrongBag: talkMessageFromSection(1195),
+    familyNoEnglish: talkMessageFromSection(1210),
+    womanGuardTouch: talkMessageFromSection(1220),
+    womanGuardHotel: talkMessageFromSection(1221),
+    womanGuardBag: talkMessageFromSection(1222),
+    womanGuardFood: talkMessageFromSection(1223),
+    womanGuardTaxi: talkMessageFromSection(1224),
+    lostAndFoundForm: {
       speaker: 'Narrator',
-      presentation: 'note',
-      text: 'The family is waiting in line for the passport officer.',
-    },
-    familyNoEnglish: {
-      speaker: 'Family',
-      presentation: 'note',
-      text: 'Sorry, we don\'t speak English.',
+      presentation: 'resource',
+      asset: 'FORM',
     },
     bagMissing: {
       speaker: 'Narrator',
       presentation: 'note',
       text: 'You lost your bag!',
     },
-    doorWarning1: {
-      speaker: 'Woman Guard',
+    passportSpy: {
+      speaker: 'Narrator',
       presentation: 'note',
-      text: doorWarning1Resource.text,
-    },
-    doorWarning2: {
-      speaker: 'Woman Guard',
-      presentation: 'note',
-      text: doorWarning2Resource.text,
-    },
-    doorWarning3: {
-      speaker: 'Woman Guard',
-      presentation: 'note',
-      text: doorWarning3Resource.text,
+      text: 'It isn\'t clever to tell people that you are a spy!',
     },
     upstairsLater: {
       speaker: 'Narrator',
@@ -390,80 +459,15 @@ export const AIRPORT_SCRIPT = {
       presentation: 'note',
       text: 'The automatic doors are ready, but the next airport scene is not wired yet.',
     },
-    lookGuard: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'This man is a guard. He keeps people and places safe.',
-    },
-    lookLostCounter: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'This is the "Lost and Found" counter. People look for lost belongings here. There are lots of bags on the shelves. Look carefully. Can you see your bag?',
-    },
-    lookPassportOfficer: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'This is the passport officer. He is standing behind the counter.',
-    },
-    lookWomanGuard: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'This woman is guarding the exit.',
-    },
-    lookLineSign: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'People should stand in line here.',
-    },
-    lookStairs: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'These stairs go up to the departure lounge.',
-    },
     lookFloor: {
       speaker: 'Narrator',
       presentation: 'note',
       text: 'It is the airport floor.',
     },
-    lookExit: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'The sign says "Exit".',
-    },
-    lookDoors: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'These are automatic doors. They open and shut automatically.',
-    },
-    touchDoors: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'You shouldn\'t touch these automatic doors. You might get your fingers caught.',
-    },
     touchFloor: {
       speaker: 'Narrator',
       presentation: 'note',
       text: 'Touching the floor will not help.',
-    },
-    touchStairs: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'You should use the stairs, not touch them.',
-    },
-    touchSign: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'There is no need to touch the sign.',
-    },
-    touchPeople: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'You shouldn\'t go around touching people.',
-    },
-    touchLostCounter: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'If you want a bag, ask for help.',
     },
     lookDefault: {
       speaker: 'Narrator',

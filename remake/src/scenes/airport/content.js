@@ -66,12 +66,14 @@ export function buildAssetManifest() {
   for (let i = 1; i <= 10; i++) images[`FEMGRD${i}`] = `${base}/FEMGRD${i}.png`;
   for (let i = 0; i <= 11; i++) images[`BRDTLK${i}`] = `${base}/BRDTLK${i}.png`;
   for (let i = 1; i <= 10; i++) images[`GRDTLK${i}`] = `${base}/GRDTLK${i}.png`;
-  images.GRDPNT1 = `${base}/GRDPNT1.png`;
+  for (let i = 0; i <= 10; i++) images[`GRDPNT${i}`] = `${base}/GRDPNT${i}.png`;
   for (let i = 1; i <= 7; i++) images[`FEMTLK${i}`] = `${base}/FEMTLK${i}.png`;
   for (let i = 1; i <= 6; i++) images[`FAMTLK${i}`] = `${base}/FAMTLK${i}.png`;
   for (let i = 1; i <= 11; i++) images[`ACHU${i}`] = `${base}/ACHU${i}.png`;
+  for (let i = 0; i <= 8; i++) images[`CLRK${i}`] = `${base}/CLRK${i}.png`;
+  for (let i = 0; i <= 8; i++) images[`LOST${i}`] = `${base}/LOST${i}.png`;
   for (let i = 1; i <= 6; i++) images[`BORDER${i}`] = `${base}/BORDER${i}.png`;
-  for (const name of ['TRUP1','STAFFB1','DOOR1','DOOR2','FEMGRD1','ALEXDN1','WALL_B','WALL_K','MAAKE','ARRIVE','DEPART','LINESIGN','DALPAK']) {
+  for (const name of ['TRUP1','STAFFB1','DOOR1','DOOR2','FEMGRD1','ALEXDN1','WALL_B','WALL_K','MAAKE','ARRIVE','DEPART','LINESIGN','DALPAK','HOTELAD','ORANGEAD','FORM']) {
     images[name] = `${base}/${name}.png`;
   }
   const ui = 'assets/ui';
@@ -87,14 +89,22 @@ export function buildAssetManifest() {
   return { images, frameCounts };
 }
 
-export const SOUND_MANIFEST = {
-  SDESCL2: '../re/renders/sounds/AIRPOR/SDESCL2.wav',
-  SDESCL3: '../re/renders/sounds/AIRPOR/SDESCL3.wav',
-  SDESCL4: '../re/renders/sounds/AIRPOR/SDESCL4.wav',
-  SDESCL5: '../re/renders/sounds/AIRPOR/SDESCL5.wav',
-  SDESCL6: '../re/renders/sounds/AIRPOR/SDESCL6.wav',
-  SDAL62: '../re/renders/sounds/AIRPOR/SDAL62.wav',
-  SDAL63: '../re/renders/sounds/AIRPOR/SDAL63.wav',
-  SDAL64: '../re/renders/sounds/AIRPOR/SDAL64.wav',
-  SDAL65: '../re/renders/sounds/AIRPOR/SDAL65.wav',
-};
+const AIRPORT_SOUND_NAMES = [
+  'SDACHU1',
+  'SDAL62', 'SDAL63', 'SDAL64', 'SDAL65', 'SDAL66', 'SDAL67', 'SDAL68', 'SDAL69',
+  'SDAL70', 'SDAL71', 'SDAL72', 'SDAL73', 'SDAL74', 'SDAL75', 'SDAL76', 'SDAL77',
+  'SDAL78', 'SDAL79', 'SDAL80', 'SDAL81', 'SDAL82', 'SDAL83',
+  'SDESCL1', 'SDESCL2', 'SDESCL3', 'SDESCL4', 'SDESCL5', 'SDESCL6',
+  'SDFAML1',
+  'SDJUDY1', 'SDJUDY2', 'SDJUDY3', 'SDJUDY4', 'SDJUDY5', 'SDJUDY6', 'SDJUDY7', 'SDJUDY8', 'SDJUDY9',
+  'SDLOST1', 'SDLOST2', 'SDLOST3', 'SDLOST4', 'SDLOST5', 'SDLOST6', 'SDLOST7', 'SDLOST8', 'SDLOST9',
+  'SDLOST10', 'SDLOST11', 'SDLOST12', 'SDLOST13', 'SDLOST14', 'SDLOST15', 'SDLOST16', 'SDLOST17',
+  'SDLOST18', 'SDLOST19', 'SDLOST20', 'SDLOST21', 'SDLOST22', 'SDLOST23', 'SDLOST24', 'SDLOST25',
+  'SDPASS1', 'SDPASS2', 'SDPASS3', 'SDPASS4', 'SDPASS5', 'SDPASS6', 'SDPASS7', 'SDPASS8',
+];
+
+export const SOUND_MANIFEST = Object.freeze(
+  Object.fromEntries(
+    AIRPORT_SOUND_NAMES.map((name) => [name, `../re/renders/sounds/AIRPOR/${name}.wav`])
+  )
+);

@@ -56,7 +56,12 @@ function getSpeakerPlacement(modal, layout) {
 }
 
 function drawSpeakerPortrait(ctx, engine, modal, uiTick, layout) {
-  const baseName = modal.speakerBase || modal.speakerSprite;
+  let baseName = modal.speakerBase || modal.speakerSprite;
+  if (modal.speakerTalking && modal.speakerFrames?.prefix && modal.speakerFrames.sequence?.length) {
+    const idx = Math.floor(uiTick / (modal.speakerFrames.rate || 8)) % modal.speakerFrames.sequence.length;
+    const frameNum = modal.speakerFrames.sequence[idx];
+    baseName = `${modal.speakerFrames.prefix}${frameNum}`;
+  }
   const npc = engine.assets.get(baseName);
   if (!npc) return;
   const placement = getSpeakerPlacement(modal, layout);

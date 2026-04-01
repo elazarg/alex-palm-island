@@ -1,7 +1,7 @@
 export const STANDARD_NOTE_LAYOUT = Object.freeze({
   screenWidth: 320,
   y: 24,
-  maxWidth: 180,
+  maxWidth: 184,
   textOffsetX: 10,
   textOffsetY: 20,
   lineHeight: 11,

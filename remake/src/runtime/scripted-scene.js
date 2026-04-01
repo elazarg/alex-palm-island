@@ -1,5 +1,6 @@
 import { renderTalkDialog, renderTalkResponse } from '../ui/dialog-renderer.js';
 import { renderNotePopup } from '../ui/note-renderer.js';
+import { renderResourcePopup } from '../ui/resource-renderer.js';
 
 export class ScriptedScene {
   constructor({ sceneScript, dialogLayout, noteLayout, dialogResponseDelayTicks = 0 } = {}) {
@@ -69,6 +70,12 @@ export class ScriptedScene {
       const result = renderTalkDialog(ctx, { engine: this.engine, font, modal: this.modal, uiTick, layout: this.dialogLayout });
       this._choiceBoxes = result.choiceBoxes;
       this._dialogExitBox = result.dialogExitBox;
+      return;
+    }
+    if (this.modal.presentation === 'resource') {
+      renderResourcePopup(ctx, { assets: this.engine.assets, modal: this.modal });
+      this._choiceBoxes = [];
+      this._dialogExitBox = null;
       return;
     }
     if (this.modal.presentation === 'talk') {
@@ -165,6 +172,7 @@ export class ScriptedScene {
       speaker: dialog.speaker,
       speakerSprite: dialog.speakerSprite,
       speakerBase: dialog.speakerBase,
+      speakerFrames: dialog.speakerFrames,
       speakerStaticOverlay: dialog.speakerStaticOverlay,
       speakerOverlay: dialog.speakerOverlay,
       prompt: dialog.prompt,

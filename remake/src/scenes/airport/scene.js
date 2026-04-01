@@ -6,6 +6,7 @@ import { STANDARD_PANEL_LAYOUT } from '../../ui/panel-layout.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
 import { ScriptedScene } from '../../runtime/scripted-scene.js';
 import { AIRPORT_SCRIPT } from './script.js';
+import { AIRPORT_RESOURCES } from './resources.js';
 import {
   ANIM_TICK_SCALE,
   DIALOG_RESPONSE_DELAY_TICKS,
@@ -124,7 +125,7 @@ export class AirportScene extends ScriptedScene {
     const worldY = y;
     const interaction = this._findInteraction(worldX, worldY, this.inputMode);
     if (interaction) {
-      this._queueEvent(interaction.eventId);
+      this._handleInteractionAction(interaction.action);
       return;
     }
     if (this.inputMode !== 'walk') {
@@ -146,6 +147,18 @@ export class AirportScene extends ScriptedScene {
     if (button.mode === 'exit') return;
     if (button.mode === 'bag' && !this.state?.bagReceived) {
       this._queueEvent('bagMissing');
+      return;
+    }
+    if (button.mode === 'bag' && this.state?.bagReceived) {
+      this._setInputMode('bag');
+      this._stopSound();
+      this.modal = {
+        type: 'message',
+        presentation: 'resource',
+        asset: 'DALPAK',
+        locked: false,
+      };
+      this._refreshCursor();
       return;
     }
     this._setInputMode(button.mode);
@@ -209,17 +222,20 @@ export class AirportScene extends ScriptedScene {
     for (const obj of this.objectsFront) this._renderObject(ctx, obj);
 
     this.renderScriptModal(ctx, this.font, this.uiTick);
-    renderPanel(ctx, {
-      assets: this.engine.assets,
-      mouseY: this.engine.mouseY,
-      modalOpen: Boolean(this.modal),
-      buttons: this.uiButtons,
-      pressedMode: this._pressedButtonMode,
-      amount: this.state?.palmettoes ?? 100,
-      bagReceived: Boolean(this.state?.bagReceived),
-      inputMode: this.inputMode,
-      layout: this.panelLayout,
-    });
+    const suppressPanel = this.modal?.presentation === 'resource';
+    if (!suppressPanel) {
+      renderPanel(ctx, {
+        assets: this.engine.assets,
+        mouseY: this.engine.mouseY,
+        modalOpen: Boolean(this.modal),
+        buttons: this.uiButtons,
+        pressedMode: this._pressedButtonMode,
+        amount: this.state?.palmettoes ?? 100,
+        bagReceived: Boolean(this.state?.bagReceived),
+        inputMode: this.inputMode,
+        layout: this.panelLayout,
+      });
+    }
 
     if (this.fadeAlpha < 1) {
       ctx.globalAlpha = 1 - this.fadeAlpha;
@@ -384,17 +400,60 @@ export class AirportScene extends ScriptedScene {
   }
 
   _findInteraction(worldX, worldY, mode) {
-    for (const interaction of this.sceneScript.interactions || []) {
+    let best = null;
+    const interactions = this.sceneScript.interactions || [];
+    for (let index = 0; index < interactions.length; index++) {
+      const interaction = interactions[index];
       if (!this._interactionEnabled[interaction.id]) continue;
       const rect = this._getInteractionRect(interaction);
       if (!rect) continue;
       const [x1, y1, x2, y2] = rect;
       if (worldX >= x1 && worldX <= x2 && worldY >= y1 && worldY <= y2) {
-        const eventId = interaction.modes?.[mode];
-        if (eventId) return { interaction, eventId };
+        const action = interaction.actions?.[mode];
+        if (!action) continue;
+        const area = Math.max(1, (x2 - x1) * (y2 - y1));
+        if (!best || area < best.area || (area === best.area && index > best.index)) {
+          best = { interaction, action, area, index };
+        }
       }
     }
-    return null;
+    return best ? { interaction: best.interaction, action: best.action } : null;
+  }
+
+  _handleInteractionAction(action) {
+    if (!action) return;
+    if (action.kind === 'flow') {
+      this._queueEvent(action.id);
+      return;
+    }
+    if (action.kind === 'textRef') {
+      this._openTextRefSection(action.sectionId);
+      return;
+    }
+  }
+
+  _openTextRefSection(sectionId) {
+    const textRef = AIRPORT_RESOURCES.textRefBySection[sectionId];
+    if (!textRef) return;
+    this._stopSound();
+    if (textRef.resource?.asset) {
+      this.modal = {
+        type: 'message',
+        presentation: 'resource',
+        asset: textRef.resource.asset,
+        locked: false,
+      };
+      this._refreshCursor();
+      return;
+    }
+    this.modal = {
+      type: 'message',
+      presentation: 'note',
+      speaker: 'Narrator',
+      text: textRef.text,
+      locked: false,
+    };
+    this._refreshCursor();
   }
 
   _getInteractionRect(interaction) {
