@@ -72,6 +72,9 @@ export function buildAssetManifest() {
   for (let i = 1; i <= 11; i++) images[`ACHU${i}`] = `${base}/ACHU${i}.png`;
   for (let i = 0; i <= 8; i++) images[`CLRK${i}`] = `${base}/CLRK${i}.png`;
   for (let i = 0; i <= 8; i++) images[`LOST${i}`] = `${base}/LOST${i}.png`;
+  for (let i = 0; i <= 19; i++) images[`G-LOST${i}`] = `${base}/G-LOST${i}.png`;
+  for (let i = 0; i <= 19; i++) images[`P-LOST${i}`] = `${base}/P-LOST${i}.png`;
+  for (let i = 1; i <= 19; i++) images[`L-LOST${i}`] = `${base}/L-LOST${i}.png`;
   for (let i = 1; i <= 6; i++) images[`BORDER${i}`] = `${base}/BORDER${i}.png`;
   for (const name of ['TRUP1','STAFFB1','DOOR1','DOOR2','FEMGRD1','ALEXDN1','WALL_B','WALL_K','MAAKE','ARRIVE','DEPART','LINESIGN','DALPAK','HOTELAD','ORANGEAD','FORM']) {
     images[name] = `${base}/${name}.png`;

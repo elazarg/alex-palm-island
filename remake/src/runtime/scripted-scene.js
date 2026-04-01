@@ -162,6 +162,10 @@ export class ScriptedScene {
         this._requestTransition(step.target);
         return;
       }
+      if (step.type === 'sceneAnimation') {
+        this._playSceneAnimation?.(step);
+        return;
+      }
     }
   }
 
@@ -232,6 +236,7 @@ export class ScriptedScene {
       mistakes: form.fields.map(() => 0),
       autoFilled: form.fields.map(() => false),
       activeField: 0,
+      awaitingSubmitConfirm: false,
       errorText: '',
       errorColor: form.errorColor || '#000000',
       errorY: form.errorY || 172,

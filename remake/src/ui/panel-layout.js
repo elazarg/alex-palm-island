@@ -6,6 +6,11 @@ export const STANDARD_PANEL_LAYOUT = Object.freeze({
     y: 185,
     digitWidth: 5,
     gap: 2,
+    coinStartX: 163,
+    coinEndX: 305,
+    coinY: 181,
+    coinDurationTicks: 24,
+    coinFrameTicks: 3,
     colors: { on: '#0ccc0c', off: '#744c0c' },
   },
 });

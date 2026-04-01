@@ -1,8 +1,10 @@
 import { AIRPORT_RESOURCES } from './resources.js';
+import { AIRPORT_DEFAULT_STATE } from './state.js';
 import { AIRPORT_ACTIVE_INTERACTIONS } from './theme-layout.js';
 
 const DIALOGS = AIRPORT_RESOURCES.dialogBySection;
 const MESSAGES = AIRPORT_RESOURCES.messageBySection;
+const TEXT_REFS = AIRPORT_RESOURCES.textRefBySection;
 
 const GUARD_SEQUENCE = Object.freeze([1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1]);
 const CLERK_SEQUENCE = Object.freeze([1, 2, 3, 4, 5, 6, 7, 8]);
@@ -98,20 +100,11 @@ function dialogFromSection(sectionId, gotoMap) {
 }
 
 export const AIRPORT_SCRIPT = {
-  initialState: {
-    bagReceived: false,
-    passportChecked: false,
-    doorWarnings: 0,
-    clerkRepeatCount: 0,
-    bagSize: null,
-    bagColor: null,
-    correctBag: false,
-    palmettoes: 100,
-  },
+  initialState: AIRPORT_DEFAULT_STATE,
 
   bindings: [
-    { type: 'objectVisible', object: 'Family', when: { state: 'bagReceived', equals: true } },
-    { type: 'interactionEnabled', interaction: 'familyQueue', when: { state: 'bagReceived', equals: true } },
+    { type: 'objectVisible', object: 'Family', when: { state: 'familyQueue', equals: 'queued' } },
+    { type: 'interactionEnabled', interaction: 'familyQueue', when: { state: 'familyQueue', equals: 'queued' } },
   ],
 
   fallbacks: {
@@ -122,6 +115,21 @@ export const AIRPORT_SCRIPT = {
   },
 
   interactions: AIRPORT_ACTIVE_INTERACTIONS,
+
+  forms: {
+    lostAndFoundForm: {
+      asset: 'FORM',
+      reminder: TEXT_REFS[800].text,
+      fields: Object.freeze([
+        { label: TEXT_REFS[830].lines[0], labelX: 20, inputX: 130, y: 84, maxWidth: 162, prefix: 'My name is ' },
+        { label: TEXT_REFS[830].lines[1], labelX: 20, inputX: 130, y: 102, maxWidth: 162, prefix: 'I lost my ' },
+        { label: TEXT_REFS[830].lines[2], labelX: 20, inputX: 130, y: 120, maxWidth: 162, prefix: 'It is ' },
+        { label: TEXT_REFS[830].lines[3], labelX: 20, inputX: 130, y: 138, maxWidth: 162, prefix: 'It is ' },
+      ]),
+      errorY: 172,
+      errorColor: '#000000',
+    },
+  },
 
   events: {
     'guard.directions': [
@@ -134,7 +142,7 @@ export const AIRPORT_SCRIPT = {
       { type: 'walkTo', x: 210, y: 125 },
       { type: 'face', dir: 7 },
       {
-        if: { state: 'bagReceived', equals: true },
+        if: { state: 'bag' },
         then: [{ type: 'event', id: 'clerkRepeat' }],
         else: [{ type: 'dialog', id: 'clerkQuestion' }],
       },
@@ -142,28 +150,28 @@ export const AIRPORT_SCRIPT = {
 
     clerkRepeat: [
       {
-        if: { state: 'clerkRepeatCount', gte: 2 },
+        if: { state: 'clerkAnnoyanceLevel', gte: 2 },
         then: messageStep('clerkRepeat3'),
         else: [
           {
-            if: { state: 'clerkRepeatCount', equals: 1 },
+            if: { state: 'clerkAnnoyanceLevel', equals: 1 },
             then: messageStep('clerkRepeat2'),
             else: messageStep('clerkRepeat1'),
           },
         ],
       },
-      { type: 'incState', key: 'clerkRepeatCount', amount: 1 },
+      { type: 'incState', key: 'clerkAnnoyanceLevel', amount: 1 },
     ],
 
     'passport.control': [
       { type: 'walkTo', x: 490, y: 140 },
       { type: 'face', dir: 8 },
       {
-        if: { state: 'passportChecked', equals: true },
+        if: { state: 'mayExit', equals: true },
         then: messageStep('passportRepeat'),
         else: [
           {
-            if: { state: 'bagReceived', equals: true },
+            if: { state: 'familyQueue', equals: 'queued' },
             then: messageStep('passportBlocked'),
             else: messageStep('passportAsk'),
           },
@@ -197,7 +205,7 @@ export const AIRPORT_SCRIPT = {
     'upstairs.block': [
       { type: 'walkTo', x: 820, y: 135 },
       {
-        if: { state: 'passportChecked', equals: true },
+        if: { state: 'mayExit', equals: true },
         then: [{ type: 'message', id: 'upstairsLater' }],
         else: [{ type: 'message', id: 'guardTooSoon' }],
       },
@@ -205,27 +213,27 @@ export const AIRPORT_SCRIPT = {
 
     'exit.doors': [
       {
-        if: { state: 'passportChecked', equals: true },
+        if: { state: 'mayExit', equals: true },
         then: [{ type: 'message', id: 'doorReady' }],
         else: [
           { type: 'walkTo', x: 323, y: 130 },
           {
-            if: { state: 'doorWarnings', gte: 2 },
+            if: { state: 'exitWarningLevel', gte: 2 },
             then: [
               { type: 'message', id: 'doorWarning3' },
-              { type: 'incState', key: 'doorWarnings', amount: 1 },
+              { type: 'incState', key: 'exitWarningLevel', amount: 1 },
               { type: 'transition', target: { scene: 'arrest', reasonCode: 503 } },
             ],
             else: [
               {
-                if: { state: 'doorWarnings', equals: 1 },
+                if: { state: 'exitWarningLevel', equals: 1 },
                 then: [
                   { type: 'message', id: 'doorWarning2' },
-                  { type: 'incState', key: 'doorWarnings', amount: 1 },
+                  { type: 'incState', key: 'exitWarningLevel', amount: 1 },
                 ],
                 else: [
                   { type: 'message', id: 'doorWarning1' },
-                  { type: 'incState', key: 'doorWarnings', amount: 1 },
+                  { type: 'incState', key: 'exitWarningLevel', amount: 1 },
                 ],
               },
             ],
@@ -237,11 +245,11 @@ export const AIRPORT_SCRIPT = {
       { type: 'walkTo', x: 490, y: 140 },
       { type: 'face', dir: 8 },
       {
-        if: { state: 'passportChecked', equals: true },
+        if: { state: 'mayExit', equals: true },
         then: messageStep('passportRepeat'),
         else: [
           {
-            if: { state: 'bagReceived', equals: true },
+            if: { state: 'familyQueue', equals: 'queued' },
             then: [
               { type: 'message', id: 'passportThanks' },
               { type: 'dialog', id: 'passportQuestion' },
@@ -253,29 +261,29 @@ export const AIRPORT_SCRIPT = {
     ],
 
     clerkBig: [
-      { type: 'setState', key: 'bagSize', value: 'big' },
+      { type: 'setState', key: 'claimSize', value: 'big' },
       { type: 'message', id: 'clerkBig' },
       { type: 'dialog', id: 'clerkColorQuestion' },
     ],
     clerkSmall: [
-      { type: 'setState', key: 'bagSize', value: 'small' },
+      { type: 'setState', key: 'claimSize', value: 'small' },
       { type: 'message', id: 'clerkSmall' },
       { type: 'dialog', id: 'clerkColorQuestion' },
     ],
     clerkMedium: [
-      { type: 'setState', key: 'bagSize', value: 'medium' },
+      { type: 'setState', key: 'claimSize', value: 'medium' },
       { type: 'message', id: 'clerkMedium' },
       { type: 'dialog', id: 'clerkColorQuestion' },
     ],
     clerkGrey: [
-      { type: 'setState', key: 'bagColor', value: 'grey' },
-      { type: 'setState', key: 'correctBag', value: false },
+      { type: 'setState', key: 'claimColor', value: 'grey' },
+      { type: 'setState', key: 'claimMatchesBag', value: false },
       {
-        if: { state: 'bagSize', equals: 'big' },
+        if: { state: 'claimSize', equals: 'big' },
         then: messageStep('clerkGreyBig'),
         else: [
           {
-            if: { state: 'bagSize', equals: 'medium' },
+            if: { state: 'claimSize', equals: 'medium' },
             then: messageStep('clerkGreyMedium'),
             else: messageStep('clerkGreySmall'),
           },
@@ -284,14 +292,14 @@ export const AIRPORT_SCRIPT = {
       { type: 'event', id: 'clerkForm' },
     ],
     clerkPurple: [
-      { type: 'setState', key: 'bagColor', value: 'purple' },
-      { type: 'setState', key: 'correctBag', value: false },
+      { type: 'setState', key: 'claimColor', value: 'purple' },
+      { type: 'setState', key: 'claimMatchesBag', value: false },
       {
-        if: { state: 'bagSize', equals: 'big' },
+        if: { state: 'claimSize', equals: 'big' },
         then: messageStep('clerkPurpleBig'),
         else: [
           {
-            if: { state: 'bagSize', equals: 'medium' },
+            if: { state: 'claimSize', equals: 'medium' },
             then: messageStep('clerkPurpleMedium'),
             else: messageStep('clerkPurpleSmall'),
           },
@@ -300,18 +308,18 @@ export const AIRPORT_SCRIPT = {
       { type: 'event', id: 'clerkForm' },
     ],
     clerkPink: [
-      { type: 'setState', key: 'bagColor', value: 'pink' },
+      { type: 'setState', key: 'claimColor', value: 'pink' },
       {
-        if: { state: 'bagSize', equals: 'small' },
-        then: [{ type: 'setState', key: 'correctBag', value: true }],
-        else: [{ type: 'setState', key: 'correctBag', value: false }],
+        if: { state: 'claimSize', equals: 'small' },
+        then: [{ type: 'setState', key: 'claimMatchesBag', value: true }],
+        else: [{ type: 'setState', key: 'claimMatchesBag', value: false }],
       },
       {
-        if: { state: 'bagSize', equals: 'big' },
+        if: { state: 'claimSize', equals: 'big' },
         then: messageStep('clerkPinkBig'),
         else: [
           {
-            if: { state: 'bagSize', equals: 'medium' },
+            if: { state: 'claimSize', equals: 'medium' },
             then: messageStep('clerkPinkMedium'),
             else: messageStep('clerkPinkSmall'),
           },
@@ -321,21 +329,24 @@ export const AIRPORT_SCRIPT = {
     ],
     clerkForm: [
       { type: 'message', id: 'clerkFillForm' },
-      { type: 'message', id: 'lostAndFoundForm' },
-      {
-        if: { state: 'correctBag', equals: true },
-        then: eventStep('receiveBag'),
-        else: eventStep('wrongBag'),
-      },
+      { type: 'form', id: 'lostAndFoundForm' },
     ],
     receiveBag: [
       { type: 'message', id: 'clerkThanks' },
+      { type: 'sceneAnimation', id: 'clerkHandOff' },
       { type: 'message', id: 'clerkBag' },
       { type: 'setState', key: 'palmettoes', value: 90 },
-      { type: 'setState', key: 'bagReceived', value: true },
-      { type: 'setState', key: 'clerkRepeatCount', value: 0 },
+      { type: 'setState', key: 'bag', value: ['passport', 'letter'] },
+      { type: 'setState', key: 'familyQueue', value: 'queued' },
+      { type: 'setState', key: 'clerkAnnoyanceLevel', value: 0 },
+      { type: 'setState', key: 'claimSize', value: null },
+      { type: 'setState', key: 'claimColor', value: null },
+      { type: 'setState', key: 'claimMatchesBag', value: false },
     ],
     wrongBag: [
+      { type: 'message', id: 'clerkThanks' },
+      { type: 'sceneAnimation', id: 'clerkHandOff' },
+      { type: 'message', id: 'clerkBag' },
       { type: 'message', id: 'clerkWrongBag' },
       { type: 'transition', target: { scene: 'arrest', reasonCode: 504 } },
     ],
@@ -343,13 +354,15 @@ export const AIRPORT_SCRIPT = {
     passportHoliday: [
       { type: 'message', id: 'passportHolidayFee' },
       { type: 'setState', key: 'palmettoes', value: 85 },
-      { type: 'setState', key: 'passportChecked', value: true },
+      { type: 'setState', key: 'mayExit', value: true },
+      { type: 'setState', key: 'familyQueue', value: 'cleared' },
       { type: 'message', id: 'passportClear' },
     ],
     passportBusiness: [
       { type: 'message', id: 'passportBusinessFee' },
       { type: 'setState', key: 'palmettoes', value: 85 },
-      { type: 'setState', key: 'passportChecked', value: true },
+      { type: 'setState', key: 'mayExit', value: true },
+      { type: 'setState', key: 'familyQueue', value: 'cleared' },
       { type: 'message', id: 'passportClear' },
     ],
     passportSpy: [
@@ -436,11 +449,6 @@ export const AIRPORT_SCRIPT = {
     womanGuardBag: talkMessageFromSection(1222),
     womanGuardFood: talkMessageFromSection(1223),
     womanGuardTaxi: talkMessageFromSection(1224),
-    lostAndFoundForm: {
-      speaker: 'Narrator',
-      presentation: 'resource',
-      asset: 'FORM',
-    },
     bagMissing: {
       speaker: 'Narrator',
       presentation: 'note',

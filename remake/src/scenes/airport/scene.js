@@ -3,10 +3,13 @@ import { ACTION_BUTTONS, CURSOR_HOTSPOTS, WHEEL_INPUT_MODES } from '../../ui/act
 import { STANDARD_DIALOG_LAYOUT } from '../../ui/dialog-layout.js';
 import { STANDARD_NOTE_LAYOUT } from '../../ui/note-layout.js';
 import { STANDARD_PANEL_LAYOUT } from '../../ui/panel-layout.js';
+import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimation } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
 import { ScriptedScene } from '../../runtime/scripted-scene.js';
 import { AIRPORT_SCRIPT } from './script.js';
+import { normalizeAirportRoute } from './route.js';
 import { AIRPORT_RESOURCES } from './resources.js';
+import { pickAirportRouteState } from './state.js';
 import {
   ANIM_TICK_SCALE,
   DIALOG_RESPONSE_DELAY_TICKS,
@@ -26,7 +29,7 @@ export class AirportScene extends ScriptedScene {
       noteLayout: STANDARD_NOTE_LAYOUT,
       dialogResponseDelayTicks: DIALOG_RESPONSE_DELAY_TICKS,
     });
-    this.options = options;
+    this.route = normalizeAirportRoute(options.route || {});
     this.onRouteChange = null;
     this.panelLayout = STANDARD_PANEL_LAYOUT;
     this.uiButtons = ACTION_BUTTONS;
@@ -94,18 +97,23 @@ export class AirportScene extends ScriptedScene {
     this.uiTick = 0;
     this._pressedButtonMode = null;
     this._pendingButtonMode = null;
+    this._sceneAnimation = null;
 
     this.initScriptRuntime();
     this._applyRouteStateOverrides();
+    this._applyDebugRouteOverrides();
+    this.meterAnimation = createMeterAnimationState(this.state?.palmettoes ?? 100);
     this.scrollX = Math.max(0, this.alexX - 160);
     this._setInputMode('walk');
 
-    if (this.options.dialogId) {
-      this._openDialog(this.options.dialogId, { deferPromptSound: true });
-    } else if (this.options.view === 'form') {
-      this._openForm(this.options.formId || 'lostAndFoundForm');
-    } else if (this.options.view === 'resource' && Number.isFinite(this.options.resourceSectionId)) {
-      this._openTextRefSection(this.options.resourceSectionId);
+    if (this.route.dialogId) {
+      this._openDialog(this.route.dialogId, { deferPromptSound: true });
+    } else if (this.route.view === 'form') {
+      this._openForm(this.route.formId || 'lostAndFoundForm');
+    } else if (this.route.view === 'resource' && Number.isFinite(this.route.resourceSectionId)) {
+      this._openTextRefSection(this.route.resourceSectionId);
+    } else if (this.route.debug?.noteSectionId) {
+      this._openTextRefSection(this.route.debug.noteSectionId);
     }
     this._publishRoute();
   }
@@ -156,11 +164,11 @@ export class AirportScene extends ScriptedScene {
     const button = this._getUiButton(x, y);
     if (!button || button.mode !== pendingMode) return;
     if (button.mode === 'exit') return;
-    if (button.mode === 'bag' && !this.state?.bagReceived) {
+    if (button.mode === 'bag' && !this.state?.bag?.length) {
       this._queueEvent('bagMissing');
       return;
     }
-    if (button.mode === 'bag' && this.state?.bagReceived) {
+    if (button.mode === 'bag' && this.state?.bag?.length) {
       this._setInputMode('bag');
       this._stopSound();
       this.modal = {
@@ -233,6 +241,7 @@ export class AirportScene extends ScriptedScene {
     if (bg) ctx.drawImage(bg, -this.scrollX, 0);
 
     for (const obj of this.objectsBehind) this._renderObject(ctx, obj);
+    this._renderSceneAnimation(ctx);
     this._renderAlex(ctx);
     for (const obj of this.objectsFront) this._renderObject(ctx, obj);
 
@@ -246,9 +255,10 @@ export class AirportScene extends ScriptedScene {
         buttons: this.uiButtons,
         pressedMode: this._pressedButtonMode,
         amount: this.state?.palmettoes ?? 100,
-        bagReceived: Boolean(this.state?.bagReceived),
+        bagReceived: Boolean(this.state?.bag?.length),
         inputMode: this.inputMode,
         layout: this.panelLayout,
+        moneyAnimation: this.meterAnimation,
       });
     }
 
@@ -269,6 +279,14 @@ export class AirportScene extends ScriptedScene {
   }
 
   _afterStateChanged() {
+    if (arguments[0] === 'palmettoes') {
+      startMeterAmountAnimation(
+        this.meterAnimation,
+        this.meterAnimation?.amount ?? AIRPORT_SCRIPT.initialState?.palmettoes ?? 100,
+        this.state?.palmettoes ?? 100,
+        this.panelLayout,
+      );
+    }
     this._publishRoute();
   }
 
@@ -303,6 +321,13 @@ export class AirportScene extends ScriptedScene {
     const screenX = this.alexX - this.scrollX - img.width / 2;
     const screenY = this.alexY - img.height;
     ctx.drawImage(img, Math.round(screenX), Math.round(screenY));
+  }
+
+  _renderSceneAnimation(ctx) {
+    if (!this._sceneAnimation) return;
+    const frame = this._sceneAnimation.sequence[this._sceneAnimation.index];
+    const img = this.engine.getAsset(`${this._sceneAnimation.prefix}${frame}`);
+    if (img) ctx.drawImage(img, this._sceneAnimation.x - this.scrollX, this._sceneAnimation.y);
   }
 
   _tickWalk() {
@@ -342,6 +367,7 @@ export class AirportScene extends ScriptedScene {
   }
 
   _tickObjects() {
+    tickMeterAnimation(this.meterAnimation);
     this.stairsTick++;
     if (this.stairsTick >= 3) {
       this.stairsTick = 0;
@@ -371,6 +397,18 @@ export class AirportScene extends ScriptedScene {
             obj.x = obj.anim.framePos[frameNum][0];
             obj.y = obj.anim.framePos[frameNum][1];
           }
+        }
+      }
+    }
+    if (this._sceneAnimation) {
+      const anim = this._sceneAnimation;
+      anim.tick++;
+      if (anim.tick >= anim.rate) {
+        anim.tick = 0;
+        anim.index++;
+        if (anim.index >= anim.sequence.length) {
+          this._sceneAnimation = null;
+          this._processActionQueue();
         }
       }
     }
@@ -487,6 +525,10 @@ export class AirportScene extends ScriptedScene {
 
   _handleFormMouseDown(mx, my) {
     if (!this.modal || this.modal.type !== 'form') return;
+    if (this.modal.awaitingSubmitConfirm) {
+      this._submitLostAndFoundForm();
+      return;
+    }
     for (let i = 0; i < this.modal.fields.length; i++) {
       const field = this.modal.fields[i];
       const top = field.y;
@@ -502,6 +544,13 @@ export class AirportScene extends ScriptedScene {
   _handleFormKeyDown(key, originalEvent) {
     const modal = this.modal;
     if (!modal || modal.type !== 'form') return;
+    if (modal.awaitingSubmitConfirm) {
+      if (key === 'Enter') {
+        this._submitLostAndFoundForm();
+        originalEvent.preventDefault();
+      }
+      return;
+    }
     const field = modal.fields[modal.activeField];
     const current = modal.values[modal.activeField] || '';
     const accepted = Boolean(modal.accepted?.[modal.activeField]);
@@ -579,7 +628,7 @@ export class AirportScene extends ScriptedScene {
       modal.activeField = nextIdx;
       return;
     }
-    this._submitLostAndFoundForm();
+    modal.awaitingSubmitConfirm = true;
   }
 
   _submitLostAndFoundForm() {
@@ -588,16 +637,42 @@ export class AirportScene extends ScriptedScene {
     this.modal = null;
     this._afterModalChanged();
     this._refreshCursor();
-    this._enqueueSteps(this.state.correctBag ? this.sceneScript.events.receiveBag : this.sceneScript.events.wrongBag);
+    this._enqueueSteps(this.state.claimMatchesBag ? this.sceneScript.events.receiveBag : this.sceneScript.events.wrongBag);
     this._processActionQueue();
+  }
+
+  _playSceneAnimation(step) {
+    if (step.id !== 'clerkHandOff') {
+      this._processActionQueue();
+      return;
+    }
+    const familyByColor = {
+      grey: { prefix: 'G-LOST', sequence: Array.from({ length: 20 }, (_, i) => i) },
+      purple: { prefix: 'L-LOST', sequence: Array.from({ length: 19 }, (_, i) => i + 1) },
+      pink: { prefix: 'P-LOST', sequence: Array.from({ length: 20 }, (_, i) => i) },
+    };
+    const chosen = familyByColor[this.state.claimColor];
+    if (!chosen) {
+      this._processActionQueue();
+      return;
+    }
+    this._sceneAnimation = {
+      prefix: chosen.prefix,
+      sequence: chosen.sequence,
+      x: 104,
+      y: 16,
+      rate: 2,
+      tick: 0,
+      index: 0,
+    };
   }
 
   _getLostAndFoundExpectedValues() {
     return [
       'Alex',
       'bag',
-      ({ big: 'big', medium: 'medium-size', small: 'small' })[this.state.bagSize] || '',
-      ({ grey: 'grey', purple: 'purple', pink: 'pink' })[this.state.bagColor] || '',
+      ({ big: 'big', medium: 'medium-size', small: 'small' })[this.state.claimSize] || '',
+      ({ grey: 'grey', purple: 'purple', pink: 'pink' })[this.state.claimColor] || '',
     ];
   }
 
@@ -606,11 +681,18 @@ export class AirportScene extends ScriptedScene {
   }
 
   _applyRouteStateOverrides() {
-    const overrides = this.options.stateOverrides || {};
+    const overrides = this.route.state || {};
     for (const [key, value] of Object.entries(overrides)) {
       this.state[key] = value;
     }
     this._applyBindings();
+  }
+
+  _applyDebugRouteOverrides() {
+    const debug = this.route.debug || {};
+    if (Number.isFinite(debug.alexX)) this.alexX = debug.alexX;
+    if (Number.isFinite(debug.alexY)) this.alexY = debug.alexY;
+    if (Number.isFinite(debug.alexDir)) this.alexDir = debug.alexDir;
   }
 
   _publishRoute() {
@@ -619,10 +701,7 @@ export class AirportScene extends ScriptedScene {
   }
 
   _buildRoute() {
-    const state = {};
-    for (const key of ['bagSize', 'bagColor', 'correctBag', 'bagReceived', 'passportChecked', 'palmettoes', 'doorWarnings', 'clerkRepeatCount']) {
-      if (this.state[key] != null) state[key] = this.state[key];
-    }
+    const state = pickAirportRouteState(this.state);
     if (this.modal?.type === 'dialog' && this.modal.id) {
       return { scene: 'airport', view: 'dialog', dialogId: this.modal.id, state };
     }
@@ -670,7 +749,7 @@ export class AirportScene extends ScriptedScene {
   }
 
   _isScriptBusy() {
-    return this.alexWalking;
+    return this.alexWalking || Boolean(this._sceneAnimation);
   }
 
   _inWalkZone(x, y) {

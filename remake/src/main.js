@@ -1,11 +1,6 @@
 import { Engine } from './core/engine.js';
-import { formatRouteHash, parseRouteHash, routeCacheKey } from './core/router.js';
-import { ArrestScene } from './scenes/arrest/scene.js';
-import { AirportScene } from './scenes/airport/scene.js';
-import { IntroScene } from './scenes/intro.js';
-import { LogoScene } from './scenes/logo.js';
-import { MainMenuScene } from './scenes/main-menu.js';
-import { PrisonScene } from './scenes/prison/scene.js';
+import { defaultRouteForScene, formatRouteHash, normalizeRoute, parseRouteHash, routeCacheKey } from './core/router.js';
+import { SCENE_REGISTRY } from './scenes/registry.js';
 
 async function main() {
   const canvas = document.getElementById('screen');
@@ -13,36 +8,11 @@ async function main() {
   const scenes = new Map();
   let currentRouteHash = null;
 
-  function createScene(route) {
-    switch (route.scene) {
-      case 'logo':
-        return new LogoScene();
-      case 'menu':
-        return new MainMenuScene();
-      case 'intro':
-        return new IntroScene({ startPart: route.part || null });
-      case 'airport':
-        return new AirportScene({
-          view: route.view || 'scene',
-          dialogId: route.dialogId || null,
-          formId: route.formId || null,
-          resourceSectionId: route.resourceSectionId ?? null,
-          stateOverrides: route.state || {},
-        });
-      case 'arrest':
-        return new ArrestScene({ reasonCode: route.reasonCode });
-      case 'prison':
-        return new PrisonScene({ reasonCode: route.reasonCode });
-      default:
-        console.warn(`Unknown route scene: ${route.scene}`);
-        return null;
-    }
-  }
-
   async function getScene(route) {
     const key = routeCacheKey(route);
     if (scenes.has(key)) return scenes.get(key);
-    const scene = createScene(route);
+    const descriptor = SCENE_REGISTRY[route.scene] || SCENE_REGISTRY.logo;
+    const scene = descriptor.create(route);
     if (!scene) return null;
     await scene.load(engine);
     scenes.set(key, scene);
@@ -50,7 +20,11 @@ async function main() {
   }
 
   async function openRoute(route, { updateUrl = true, replace = false } = {}) {
+    route = normalizeRoute(route);
     const hash = formatRouteHash(route);
+    if (engine.scene && hash === currentRouteHash && !updateUrl) {
+      return engine.scene;
+    }
     currentRouteHash = hash;
     if (updateUrl) {
       if (replace) history.replaceState(null, '', hash);
@@ -61,17 +35,22 @@ async function main() {
     if (!scene) return null;
 
     if (route.scene === 'logo') {
-      scene.onDone = async () => { await openRoute({ scene: 'menu' }, { replace: true }); };
+      scene.onDone = async () => { await openRoute(defaultRouteForScene('menu'), { replace: true }); };
     }
     if (route.scene === 'menu') {
       scene.onButton = async (name) => {
-        if (name === 'intro') await openRoute({ scene: 'intro' });
-        else if (name === 'play') await openRoute({ scene: 'airport', view: 'scene', state: {} });
+        if (name === 'intro') await openRoute(defaultRouteForScene('intro'));
+        else if (name === 'play') await openRoute(defaultRouteForScene('airport'));
       };
     }
     if (route.scene === 'intro') {
-      scene.onDone = async () => { await openRoute({ scene: 'airport', view: 'scene', state: {} }); };
-      scene.onRouteChange = async (nextRoute) => { await openRoute(nextRoute, { replace: true }); };
+      scene.onDone = async () => { await openRoute(defaultRouteForScene('airport')); };
+      scene.onRouteChange = async (nextRoute) => {
+        if (formatRouteHash(nextRoute) === currentRouteHash) return;
+        const nextHash = formatRouteHash(nextRoute);
+        currentRouteHash = nextHash;
+        history.replaceState(null, '', nextHash);
+      };
     }
     if (route.scene === 'airport') {
       scene.onTransition = async (target) => {
@@ -79,7 +58,10 @@ async function main() {
         await openRoute(target);
       };
       scene.onRouteChange = async (nextRoute) => {
-        await openRoute(nextRoute, { replace: true });
+        if (formatRouteHash(nextRoute) === currentRouteHash) return;
+        const nextHash = formatRouteHash(nextRoute);
+        currentRouteHash = nextHash;
+        history.replaceState(null, '', nextHash);
       };
     }
     if (route.scene === 'arrest') {
@@ -102,7 +84,7 @@ async function main() {
   }
 
   async function syncToLocation({ replace = false } = {}) {
-    const route = parseRouteHash(location.hash);
+    const route = normalizeRoute(parseRouteHash(location.hash));
     const hash = formatRouteHash(route);
     const updateUrl = replace || location.hash !== hash;
     await openRoute(route, { updateUrl, replace: replace || updateUrl });

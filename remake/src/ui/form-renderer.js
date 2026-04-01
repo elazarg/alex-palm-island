@@ -22,7 +22,7 @@ export function renderTextForm(ctx, { assets, font, modal, uiTick }) {
     if (accepted) {
       font.drawText(ctx, '.', valueX + font.measureText(value), field.y + 4, field.inputColor || '#000000');
     }
-    if (i === modal.activeField && !accepted) {
+    if (i === modal.activeField && !accepted && !modal.awaitingSubmitConfirm) {
       const caretX = valueX + font.measureText(value);
       drawCaret(ctx, caretX + 1, field.y + 10, field.caretWidth || 6, field.inputColor || '#000000', blink);
     }
