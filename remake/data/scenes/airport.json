@@ -1,0 +1,1165 @@
+{
+  "id": "airport",
+  "background": "SNAIRPORT1",
+  "TODO_background": "Verify background sprite name; check if _FULL composite needed",
+  "objects": [
+    {
+      "name": "Maake",
+      "x": 776,
+      "y": 120,
+      "type": "hotspot",
+      "handler": 200
+    },
+    {
+      "name": "Amud",
+      "x": 0,
+      "y": 0,
+      "type": "hotspot",
+      "handler": 200
+    },
+    {
+      "name": "Arrive",
+      "x": 811,
+      "y": 0,
+      "type": "hotspot",
+      "handler": 200
+    },
+    {
+      "name": "Depart",
+      "x": 811,
+      "y": 0,
+      "type": "hotspot",
+      "handler": 200
+    },
+    {
+      "name": "LineSign",
+      "x": 436,
+      "y": 69,
+      "type": "hotspot",
+      "handler": 69
+    },
+    {
+      "name": "Form",
+      "type": "object",
+      "ovrOffset": "0x35E86",
+      "TODO": "Find x,y position and sprite prefix from OVR disassembly"
+    },
+    {
+      "name": "What is your name?",
+      "type": "object",
+      "ovrOffset": "0x35E8B",
+      "TODO": "Find x,y position and sprite prefix from OVR disassembly"
+    },
+    {
+      "name": "What did you lose?",
+      "type": "object",
+      "ovrOffset": "0x35E9E",
+      "TODO": "Find x,y position and sprite prefix from OVR disassembly"
+    },
+    {
+      "name": "What size is it?",
+      "type": "object",
+      "ovrOffset": "0x35EB1",
+      "TODO": "Find x,y position and sprite prefix from OVR disassembly"
+    },
+    {
+      "name": "What colour is it?",
+      "type": "object",
+      "ovrOffset": "0x35EC2",
+      "TODO": "Find x,y position and sprite prefix from OVR disassembly"
+    },
+    {
+      "name": "My name is",
+      "type": "object",
+      "ovrOffset": "0x35ED5",
+      "TODO": "Find x,y position and sprite prefix from OVR disassembly"
+    },
+    {
+      "name": "I lost my",
+      "type": "object",
+      "ovrOffset": "0x35EE0",
+      "TODO": "Find x,y position and sprite prefix from OVR disassembly"
+    },
+    {
+      "name": "It is",
+      "type": "object",
+      "ovrOffset": "0x35EEA",
+      "TODO": "Find x,y position and sprite prefix from OVR disassembly"
+    },
+    {
+      "name": "Alex",
+      "type": "object",
+      "ovrOffset": "0x35EF0",
+      "TODO": "Find x,y position and sprite prefix from OVR disassembly"
+    }
+  ],
+  "walkZones": [
+    {
+      "rect": [
+        250,
+        105,
+        290,
+        130
+      ]
+    },
+    {
+      "rect": [
+        0,
+        0,
+        40,
+        200
+      ]
+    },
+    {
+      "rect": [
+        0,
+        0,
+        300,
+        107
+      ]
+    },
+    {
+      "rect": [
+        350,
+        0,
+        960,
+        105
+      ]
+    },
+    {
+      "rect": [
+        0,
+        190,
+        960,
+        220
+      ]
+    },
+    {
+      "rect": [
+        785,
+        100,
+        960,
+        110
+      ]
+    },
+    {
+      "rect": [
+        865,
+        110,
+        960,
+        130
+      ]
+    },
+    {
+      "rect": [
+        915,
+        125,
+        980,
+        200
+      ]
+    },
+    {
+      "rect": [
+        0,
+        0,
+        105,
+        108
+      ]
+    },
+    {
+      "rect": [
+        495,
+        123,
+        660,
+        138
+      ]
+    },
+    {
+      "rect": [
+        250,
+        60,
+        400,
+        85
+      ]
+    }
+  ],
+  "clickRects": [
+    {
+      "type": "C",
+      "rect": [
+        825,
+        110,
+        915,
+        130
+      ],
+      "name": null,
+      "exit": 140,
+      "walkTarget": null
+    },
+    {
+      "type": "B",
+      "rect": [
+        737,
+        12,
+        773,
+        94
+      ],
+      "name": "FamilyBlock",
+      "examine": 510,
+      "click": 635,
+      "talk": null
+    },
+    {
+      "type": "B",
+      "rect": [
+        525,
+        0,
+        600,
+        60
+      ],
+      "name": null,
+      "examine": 520,
+      "click": 525,
+      "talk": null
+    },
+    {
+      "type": "B",
+      "rect": [
+        670,
+        0,
+        700,
+        43
+      ],
+      "name": null,
+      "examine": 520,
+      "click": 525,
+      "talk": null
+    },
+    {
+      "type": "B",
+      "rect": [
+        380,
+        0,
+        405,
+        13
+      ],
+      "name": null,
+      "examine": 670,
+      "click": 525,
+      "talk": null
+    },
+    {
+      "type": "B",
+      "rect": [
+        105,
+        75,
+        255,
+        105
+      ],
+      "name": null,
+      "examine": 680,
+      "click": null,
+      "talk": null
+    },
+    {
+      "type": "B",
+      "rect": [
+        835,
+        0,
+        960,
+        130
+      ],
+      "name": null,
+      "examine": 640,
+      "click": 645,
+      "talk": null
+    },
+    {
+      "type": "B",
+      "rect": [
+        728,
+        0,
+        800,
+        13
+      ],
+      "name": null,
+      "examine": 530,
+      "click": 525,
+      "talk": null
+    },
+    {
+      "type": "B",
+      "rect": [
+        775,
+        13,
+        800,
+        55
+      ],
+      "name": null,
+      "examine": 530,
+      "click": 525,
+      "talk": null
+    },
+    {
+      "type": "B",
+      "rect": [
+        615,
+        6,
+        672,
+        93
+      ],
+      "name": null,
+      "examine": 540,
+      "click": 340,
+      "talk": null
+    },
+    {
+      "type": "B",
+      "rect": [
+        380,
+        62,
+        540,
+        120
+      ],
+      "name": null,
+      "examine": 550,
+      "click": null,
+      "talk": null
+    },
+    {
+      "type": "B",
+      "rect": [
+        447,
+        10,
+        507,
+        62
+      ],
+      "name": null,
+      "examine": 560,
+      "click": 635,
+      "talk": 220
+    },
+    {
+      "type": "B",
+      "rect": [
+        118,
+        41,
+        156,
+        70
+      ],
+      "name": "LineSign",
+      "examine": 620,
+      "click": 635,
+      "talk": null
+    },
+    {
+      "type": "B",
+      "rect": [
+        106,
+        0,
+        216,
+        40
+      ],
+      "name": null,
+      "examine": 580,
+      "click": 330,
+      "talk": null
+    },
+    {
+      "type": "B",
+      "rect": [
+        135,
+        10,
+        215,
+        30
+      ],
+      "name": null,
+      "examine": 580,
+      "click": 575,
+      "talk": null
+    },
+    {
+      "type": "C",
+      "rect": [
+        273,
+        85,
+        373,
+        100
+      ],
+      "name": "DoorBlock",
+      "exit": 410,
+      "walkTarget": null
+    },
+    {
+      "type": "D",
+      "rect": [
+        273,
+        0,
+        373,
+        85
+      ],
+      "name": null,
+      "exit": null,
+      "walkTarget": [
+        323,
+        95
+      ]
+    },
+    {
+      "type": "D",
+      "rect": [
+        830,
+        0,
+        960,
+        120
+      ],
+      "name": null,
+      "exit": null,
+      "walkTarget": [
+        845,
+        120
+      ]
+    },
+    {
+      "type": "B",
+      "rect": [
+        273,
+        50,
+        373,
+        70
+      ],
+      "name": null,
+      "examine": null,
+      "click": null,
+      "talk": null
+    }
+  ],
+  "animations": {
+    "5010": [
+      "G -1,0",
+      "Q 0,0"
+    ],
+    "5020": [
+      "F 1,0",
+      "P 5,20",
+      "F 2,0",
+      "P 1,0",
+      "F 1,0",
+      "P 5,20",
+      "F 2,0",
+      "P 1,0",
+      "F 1,0",
+      "P 5,20",
+      "F 2,0",
+      "P 1,0",
+      "F 1,0",
+      "P 5,20",
+      "F 2,0",
+      "P 1,0",
+      "F 1,0",
+      "P 5,20",
+      "F 2,0",
+      "P 1,0",
+      "F 1,0",
+      "P 5,20",
+      "G 4,0",
+      "P 1,1",
+      "F 3,0",
+      "P 1,1",
+      "F 4,0",
+      "P 1,1",
+      "F 3,0",
+      "P 1,1",
+      "G 6,0",
+      "P 4,4",
+      "F 7,0",
+      "P 4,4",
+      "F 6,0",
+      "P 4,4",
+      "G 11,0",
+      "P 4,4",
+      "G 12,0",
+      "P 1,1",
+      "R 0,0",
+      "Q"
+    ],
+    "5030": [
+      "F 1,0",
+      "P 5,20",
+      "F 2,0",
+      "P 1,0",
+      "F 1,0",
+      "P 5,20",
+      "F 2,0",
+      "P 1,0",
+      "F 1,0",
+      "P 5,20",
+      "F 2,0",
+      "P 1,0",
+      "F 1,0",
+      "P 5,20",
+      "F 2,0",
+      "P 1,0",
+      "F 1,0",
+      "P 5,20",
+      "F 2,0",
+      "P 1,0",
+      "F 1,0",
+      "P 5,20",
+      "G 4,0",
+      "P 1,1",
+      "F 3,0",
+      "P 1,1",
+      "F 5,0",
+      "P 1,1",
+      "F 6,0",
+      "P 2,2",
+      "F 7,0",
+      "P 1,1",
+      "F 8,0",
+      "P 1,1",
+      "S 1,0",
+      "F 7,0",
+      "P 1,1",
+      "F 8,0",
+      "P 4,4",
+      "G -1,0",
+      "R 0,0",
+      "Q"
+    ],
+    "5040": [
+      "D  0,0",
+      "G -1,0",
+      "P  1,0",
+      "F  1,0",
+      "T  1,0",
+      "D  1,0",
+      "G  1,0",
+      "P  1,1",
+      "F  0,0",
+      "T  6,0",
+      "Q"
+    ],
+    "5100": [
+      "F 2,0",
+      "P 10,20",
+      "F 1,0",
+      "P 1,1",
+      "F 2,0",
+      "P 10,20",
+      "F 1,0",
+      "P 1,1",
+      "G -1,0",
+      "R 0,0",
+      "Q"
+    ],
+    "5200": [
+      "G -1,0",
+      "Q"
+    ],
+    "5220": [
+      "P 4,0",
+      "G -1,0",
+      "P 1,0",
+      "Q"
+    ],
+    "5230": [
+      "D  0,0",
+      "F  1,5",
+      "G  4,0",
+      "P  1,0",
+      "F  5,1",
+      "F  6,3",
+      "G  9,0",
+      "F  8,1",
+      "F  10,1",
+      "F  8,1",
+      "F  10,1",
+      "F  8,1",
+      "F  10,1",
+      "F  8,3",
+      "F  7,1",
+      "F  6,2",
+      "F  3,1",
+      "F  2,1",
+      "R  0,0",
+      "Q"
+    ],
+    "5250": [
+      "G  -1,0",
+      "P   7,0",
+      "Q"
+    ]
+  },
+  "spriteGroups": {
+    "ACHU": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "ALEXDN": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18
+    ],
+    "BORDER": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "BRDTLK": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "DOOR": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "FAMGO": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "FAMILY": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "FAMTLK": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "FEMGRD": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "FEMTLK": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "GRDPNT": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "GRDTLK": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "GUARD": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "LOST": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ],
+    "SNAIRPORT": [
+      1,
+      2,
+      3
+    ],
+    "STAFFB": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "STAIRS": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "TRUP": [
+      1,
+      2,
+      3,
+      4
+    ]
+  },
+  "allSprites": [
+    "ACHU1",
+    "ACHU10",
+    "ACHU11",
+    "ACHU2",
+    "ACHU3",
+    "ACHU4",
+    "ACHU5",
+    "ACHU6",
+    "ACHU7",
+    "ACHU8",
+    "ACHU9",
+    "ALEXBAG",
+    "ALEXDN1",
+    "ALEXDN10",
+    "ALEXDN11",
+    "ALEXDN12",
+    "ALEXDN13",
+    "ALEXDN14",
+    "ALEXDN15",
+    "ALEXDN16",
+    "ALEXDN17",
+    "ALEXDN18",
+    "ALEXDN2",
+    "ALEXDN3",
+    "ALEXDN4",
+    "ALEXDN5",
+    "ALEXDN6",
+    "ALEXDN7",
+    "ALEXDN8",
+    "ALEXDN9",
+    "AMUD",
+    "ARRIVE",
+    "BORDER1",
+    "BORDER2",
+    "BORDER3",
+    "BORDER4",
+    "BORDER5",
+    "BORDER6",
+    "BRDTLK0",
+    "BRDTLK1",
+    "BRDTLK10",
+    "BRDTLK11",
+    "BRDTLK2",
+    "BRDTLK3",
+    "BRDTLK4",
+    "BRDTLK5",
+    "BRDTLK6",
+    "BRDTLK7",
+    "BRDTLK8",
+    "BRDTLK9",
+    "DALPAK",
+    "DEPART",
+    "DOOR1",
+    "DOOR2",
+    "DOOR3",
+    "DOOR4",
+    "FAMGO1",
+    "FAMGO2",
+    "FAMGO3",
+    "FAMGO4",
+    "FAMGO5",
+    "FAMGO6",
+    "FAMGO7",
+    "FAMGO8",
+    "FAMILY1",
+    "FAMILY2",
+    "FAMILY3",
+    "FAMILY4",
+    "FAMILY5",
+    "FAMILY6",
+    "FAMTLK0",
+    "FAMTLK1",
+    "FAMTLK2",
+    "FAMTLK3",
+    "FAMTLK4",
+    "FAMTLK5",
+    "FAMTLK6",
+    "FEMGRD1",
+    "FEMGRD10",
+    "FEMGRD2",
+    "FEMGRD3",
+    "FEMGRD4",
+    "FEMGRD5",
+    "FEMGRD6",
+    "FEMGRD7",
+    "FEMGRD8",
+    "FEMGRD9",
+    "FEMTLK0",
+    "FEMTLK1",
+    "FEMTLK2",
+    "FEMTLK3",
+    "FEMTLK4",
+    "FEMTLK5",
+    "FEMTLK6",
+    "FEMTLK7",
+    "FORM",
+    "G-LOST0",
+    "G-LOST1",
+    "G-LOST10",
+    "G-LOST11",
+    "G-LOST12",
+    "G-LOST13",
+    "G-LOST14",
+    "G-LOST15",
+    "G-LOST16",
+    "G-LOST17",
+    "G-LOST18",
+    "G-LOST19",
+    "G-LOST2",
+    "G-LOST3",
+    "G-LOST4",
+    "G-LOST5",
+    "G-LOST6",
+    "G-LOST7",
+    "G-LOST8",
+    "G-LOST9",
+    "GRDPNT0",
+    "GRDPNT1",
+    "GRDPNT10",
+    "GRDPNT2",
+    "GRDPNT3",
+    "GRDPNT4",
+    "GRDPNT5",
+    "GRDPNT6",
+    "GRDPNT7",
+    "GRDPNT8",
+    "GRDPNT9",
+    "GRDTLK0",
+    "GRDTLK1",
+    "GRDTLK10",
+    "GRDTLK2",
+    "GRDTLK3",
+    "GRDTLK4",
+    "GRDTLK5",
+    "GRDTLK6",
+    "GRDTLK7",
+    "GRDTLK8",
+    "GRDTLK9",
+    "GUARD1",
+    "GUARD10",
+    "GUARD11",
+    "GUARD12",
+    "GUARD2",
+    "GUARD3",
+    "GUARD4",
+    "GUARD5",
+    "GUARD6",
+    "GUARD7",
+    "GUARD8",
+    "GUARD9",
+    "HOTELAD",
+    "L-LOST1",
+    "L-LOST10",
+    "L-LOST11",
+    "L-LOST12",
+    "L-LOST13",
+    "L-LOST14",
+    "L-LOST15",
+    "L-LOST16",
+    "L-LOST17",
+    "L-LOST18",
+    "L-LOST19",
+    "L-LOST2",
+    "L-LOST3",
+    "L-LOST4",
+    "L-LOST5",
+    "L-LOST6",
+    "L-LOST7",
+    "L-LOST8",
+    "L-LOST9",
+    "LINESIGN",
+    "LOST0",
+    "LOST1",
+    "LOST2",
+    "LOST3",
+    "LOST4",
+    "LOST5",
+    "LOST6",
+    "LOST7",
+    "LOST8",
+    "MAAKE",
+    "ORANGEAD",
+    "P-LOST0",
+    "P-LOST1",
+    "P-LOST10",
+    "P-LOST11",
+    "P-LOST12",
+    "P-LOST13",
+    "P-LOST14",
+    "P-LOST15",
+    "P-LOST16",
+    "P-LOST17",
+    "P-LOST18",
+    "P-LOST19",
+    "P-LOST2",
+    "P-LOST3",
+    "P-LOST4",
+    "P-LOST5",
+    "P-LOST6",
+    "P-LOST7",
+    "P-LOST8",
+    "P-LOST9",
+    "SNAIRPORT1",
+    "SNAIRPORT2",
+    "SNAIRPORT3",
+    "STAFFB1",
+    "STAFFB2",
+    "STAFFB3",
+    "STAFFB4",
+    "STAIRS1",
+    "STAIRS2",
+    "STAIRS3",
+    "STAIRS4",
+    "STAIRS5",
+    "STAIRS6",
+    "TRUP1",
+    "TRUP2",
+    "TRUP3",
+    "TRUP4"
+  ],
+  "dataPositions": {
+    "5210": [
+      [
+        502,
+        52
+      ],
+      [
+        418,
+        30
+      ],
+      [
+        338,
+        0
+      ],
+      [
+        307,
+        0
+      ],
+      [
+        399,
+        28
+      ],
+      [
+        394,
+        28
+      ],
+      [
+        394,
+        30
+      ],
+      [
+        394,
+        30
+      ]
+    ],
+    "5240": [
+      [
+        246,
+        20
+      ],
+      [
+        259,
+        20
+      ],
+      [
+        260,
+        20
+      ],
+      [
+        261,
+        17
+      ],
+      [
+        261,
+        21
+      ],
+      [
+        261,
+        21
+      ],
+      [
+        260,
+        21
+      ],
+      [
+        254,
+        21
+      ],
+      [
+        254,
+        21
+      ],
+      [
+        254,
+        21
+      ]
+    ]
+  },
+  "alexPositions": [
+    {
+      "section": "110",
+      "mode": 0,
+      "x": 840,
+      "y": 140
+    },
+    {
+      "section": "140",
+      "mode": 0,
+      "x": 820,
+      "y": 135
+    },
+    {
+      "section": "150",
+      "mode": 0,
+      "x": 720,
+      "y": 120
+    },
+    {
+      "section": "170",
+      "mode": 0,
+      "x": 520,
+      "y": 150
+    },
+    {
+      "section": "210",
+      "mode": 1,
+      "x": 490,
+      "y": 140
+    },
+    {
+      "section": "220",
+      "mode": 1,
+      "x": 490,
+      "y": 140
+    },
+    {
+      "section": "310",
+      "mode": 1,
+      "x": 210,
+      "y": 125
+    },
+    {
+      "section": "420",
+      "mode": 0,
+      "x": 323,
+      "y": 60
+    },
+    {
+      "section": "430",
+      "mode": 0,
+      "x": 323,
+      "y": 130
+    },
+    {
+      "section": "450",
+      "mode": 0,
+      "x": 330,
+      "y": 130
+    },
+    {
+      "section": "460",
+      "mode": 0,
+      "x": 330,
+      "y": 130
+    }
+  ],
+  "entrySection": 110,
+  "alexStart": {
+    "x": 840,
+    "y": 140,
+    "dir": 4,
+    "TODO_dir": "Verify initial facing direction"
+  },
+  "TODO_manual": [
+    "Map objects to sprite prefixes (e.g., Guard \u2192 GUARD)",
+    "Assign animation sections to objects (push 0x13XX in OVR)",
+    "Determine render order (objectsBehind vs objectsFront)",
+    "Find overlay offsets for base+overlay sprites (pixel matching)",
+    "Set initial visibility for each object",
+    "Compute bottomAlign values from sprite heights",
+    "Verify walk zone Y ranges cover actual walk destinations"
+  ]
+}
