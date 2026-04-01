@@ -28,6 +28,8 @@ export class PrisonScene {
     this.fadeCb = null;
     this.digFrame = 1;
     this.digTick = 0;
+    this.spriteCache = new Map();
+    this.sequenceStarted = false;
   }
 
   attach(engine) {
@@ -75,7 +77,9 @@ export class PrisonScene {
     this.fade = 'in';
     this.fadeAlpha = 0;
     this.fadeCb = null;
-    this._playMessageSound();
+    this.sequenceStarted = false;
+    this.soundLocked = Boolean(this.message?.sound);
+    this.engine.runWhenAudioUnlocked(() => this._startSequence());
   }
 
   destroy() {
@@ -107,17 +111,19 @@ export class PrisonScene {
       }
     }
 
-    this.digTick++;
-    if (this.digTick >= DIG_FRAME_TICKS) {
-      this.digTick = 0;
-      this.digFrame = (this.digFrame % 4) + 1;
+    if (this.sequenceStarted) {
+      this.digTick++;
+      if (this.digTick >= DIG_FRAME_TICKS) {
+        this.digTick = 0;
+        this.digFrame = (this.digFrame % 4) + 1;
+      }
     }
   }
 
   render(ctx) {
     this.engine.drawSprite(ctx, 'SNPRISON1', 0, 0);
     const pos = DIG_POSITIONS[this.digFrame - 1];
-    this.engine.drawSprite(ctx, `DIG${this.digFrame}`, pos.x, pos.y);
+    this._drawCutoutSprite(ctx, `DIG${this.digFrame}`, pos.x, pos.y);
     if (this.message && this.font) {
       renderNotePopup(ctx, {
         assets: this.engine.assets,
@@ -161,5 +167,66 @@ export class PrisonScene {
   _fadeOut(cb) {
     this.fade = 'out';
     this.fadeCb = cb;
+  }
+
+  _startSequence() {
+    if (this.sequenceStarted) return;
+    this.sequenceStarted = true;
+    this._playMessageSound();
+  }
+
+  _drawCutoutSprite(ctx, name, x, y) {
+    const sprite = this._getCutoutSprite(name);
+    if (!sprite) return;
+    ctx.drawImage(sprite, x, y);
+  }
+
+  _getCutoutSprite(name) {
+    if (this.spriteCache.has(name)) return this.spriteCache.get(name);
+    const img = this.engine.getAsset(name);
+    if (!img) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const cctx = canvas.getContext('2d');
+    cctx.imageSmoothingEnabled = false;
+    cctx.drawImage(img, 0, 0);
+    const imageData = cctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    const width = canvas.width;
+    const height = canvas.height;
+    const seen = new Uint8Array(width * height);
+    const queue = [];
+    const push = (x0, y0) => {
+      if (x0 < 0 || y0 < 0 || x0 >= width || y0 >= height) return;
+      const idx = y0 * width + x0;
+      if (seen[idx]) return;
+      const off = idx * 4;
+      if (data[off] !== 0 || data[off + 1] !== 0 || data[off + 2] !== 0 || data[off + 3] !== 255) return;
+      seen[idx] = 1;
+      queue.push(idx);
+    };
+    for (let x0 = 0; x0 < width; x0++) {
+      push(x0, 0);
+      push(x0, height - 1);
+    }
+    for (let y0 = 1; y0 < height - 1; y0++) {
+      push(0, y0);
+      push(width - 1, y0);
+    }
+    while (queue.length) {
+      const idx = queue.pop();
+      const off = idx * 4;
+      data[off + 3] = 0;
+      const x0 = idx % width;
+      const y0 = (idx / width) | 0;
+      push(x0 - 1, y0);
+      push(x0 + 1, y0);
+      push(x0, y0 - 1);
+      push(x0, y0 + 1);
+    }
+    cctx.putImageData(imageData, 0, 0);
+    this.spriteCache.set(name, canvas);
+    return canvas;
   }
 }

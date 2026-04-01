@@ -21,6 +21,7 @@ export class Engine {
     this.scene = null;
     this.running = false;
     this.lastTick = 0;
+    this._audioUnlockQueue = [];
 
     this.input = new InputController(this);
     this.input.attach();
@@ -68,10 +69,24 @@ export class Engine {
     }
   }
 
-  resumeAudio() {
+  async resumeAudio() {
     if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume();
+      await this.audioCtx.resume();
     }
+    this._flushAudioUnlockQueue();
+  }
+
+  isAudioLocked() {
+    return Boolean(this.audioCtx && this.audioCtx.state === 'suspended');
+  }
+
+  runWhenAudioUnlocked(cb) {
+    if (typeof cb !== 'function') return;
+    if (!this.isAudioLocked()) {
+      cb();
+      return;
+    }
+    this._audioUnlockQueue.push(cb);
   }
 
   playSound(name) {
@@ -135,5 +150,12 @@ export class Engine {
     }
 
     requestAnimationFrame((t) => this._frame(t));
+  }
+
+  _flushAudioUnlockQueue() {
+    if (this.isAudioLocked()) return;
+    if (!this._audioUnlockQueue.length) return;
+    const queue = this._audioUnlockQueue.splice(0, this._audioUnlockQueue.length);
+    for (const cb of queue) cb();
   }
 }

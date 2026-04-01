@@ -16,9 +16,9 @@ export class InputController {
       this.mouseY = -1;
       this._dispatch('onMouseLeave', { originalEvent: e });
     };
-    this._onMouseDown = (e) => {
+    this._onMouseDown = async (e) => {
       const { x, y } = this._toGameCoords(e);
-      this.engine.resumeAudio();
+      await this.engine.resumeAudio();
       this._dispatch('onMouseDown', { x, y, button: e.button, originalEvent: e });
     };
     this._onMouseUp = (e) => {
@@ -29,7 +29,8 @@ export class InputController {
       const { x, y } = this._toGameCoords(e);
       this._dispatch('onWheel', { x, y, deltaX: e.deltaX, deltaY: e.deltaY, originalEvent: e });
     };
-    this._onKeyDown = (e) => {
+    this._onKeyDown = async (e) => {
+      await this.engine.resumeAudio();
       this._dispatch('onKeyDown', { key: e.key, originalEvent: e });
     };
   }
