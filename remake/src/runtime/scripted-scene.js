@@ -52,7 +52,10 @@ export class ScriptedScene {
     if (this._pendingDialogDelayTicks > 0) {
       this._pendingDialogDelayTicks--;
       if (this._pendingDialogDelayTicks === 0 && this._pendingDialogChoiceEvent) {
-        if (this.modal?.type === 'dialog') this.modal = null;
+        if (this.modal?.type === 'dialog') {
+          this.modal = null;
+          this._afterModalChanged?.();
+        }
         const pending = this._pendingDialogChoiceEvent;
         this._pendingDialogChoiceEvent = null;
         this._choiceBoxes = [];
@@ -167,7 +170,8 @@ export class ScriptedScene {
     if (!message) return;
     this._stopSound();
     this._dialogExitBox = null;
-    this.modal = { type: 'message', presentation: message.presentation || 'note', speakerTalking: false, locked: false, ...message };
+    this.modal = { id: messageId, type: 'message', presentation: message.presentation || 'note', speakerTalking: false, locked: false, ...message };
+    this._afterModalChanged?.();
     this._refreshCursor?.();
     if (this.modal.presentation === 'talk' && this.modal.sound) {
       this.modal.speakerTalking = true;
@@ -186,6 +190,7 @@ export class ScriptedScene {
     this._stopSound();
     this._dialogExitBox = null;
     this.modal = {
+      id: dialogId,
       type: 'dialog',
       speaker: dialog.speaker,
       speakerSprite: dialog.speakerSprite,
@@ -204,6 +209,7 @@ export class ScriptedScene {
       replyTick: 0,
       replyDurationTicks: 0,
     };
+    this._afterModalChanged?.();
     this._refreshCursor?.();
     if (dialog.promptSound) {
       if (options.deferPromptSound) this._gestureLockedDialog = dialog;
@@ -231,6 +237,7 @@ export class ScriptedScene {
       errorY: form.errorY || 172,
       reminder: form.reminder || '',
     };
+    this._afterModalChanged?.();
     this._refreshCursor?.();
   }
 
@@ -296,6 +303,7 @@ export class ScriptedScene {
       if (this.modal.locked) return;
       this._stopSound();
       this.modal = null;
+      this._afterModalChanged?.();
       this._refreshCursor?.();
       this._processActionQueue();
       return;
@@ -307,6 +315,7 @@ export class ScriptedScene {
       this._choiceBoxes = [];
       this._dialogExitBox = null;
       this.actionQueue = [];
+      this._afterModalChanged?.();
       this._refreshCursor?.();
       return;
     }

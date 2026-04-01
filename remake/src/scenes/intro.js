@@ -66,9 +66,11 @@ const DIALOG = [
 ];
 
 export class IntroScene {
-  constructor() {
+  constructor(options = {}) {
     this.engine = null;
+    this.options = options;
     this.onDone = null;
+    this.onRouteChange = null;
     this.sceneIdx = 0;
     this.sceneName = '';
     this.phase = 0;
@@ -121,8 +123,7 @@ export class IntroScene {
   }
 
   init() {
-    const hash = location.hash.replace('#', '');
-    const sub = hash.startsWith('intro-') ? hash.slice(6) : null;
+    const sub = this.options.startPart || null;
     const startName = (sub && SCENE_ORDER.includes(sub)) ? sub : SCENE_ORDER[0];
     this.sceneIdx = SCENE_ORDER.indexOf(startName);
     this._startScene(startName);
@@ -245,7 +246,7 @@ export class IntroScene {
     this.hoveredBtn = null;
     this.pressedBtn = null;
     this._stopSound();
-    location.hash = `intro-${name}`;
+    this.onRouteChange?.({ scene: 'intro', part: name });
     this.engine.cursor = name === 'spymastr' ? 'MMARROWCURSOR' : null;
 
     if (name === 'opening') this._initPhoneSteps();

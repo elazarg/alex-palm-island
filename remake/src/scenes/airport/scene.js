@@ -27,6 +27,7 @@ export class AirportScene extends ScriptedScene {
       dialogResponseDelayTicks: DIALOG_RESPONSE_DELAY_TICKS,
     });
     this.options = options;
+    this.onRouteChange = null;
     this.panelLayout = STANDARD_PANEL_LAYOUT;
     this.uiButtons = ACTION_BUTTONS;
     this.walkZones = WALK_ZONES;
@@ -99,11 +100,14 @@ export class AirportScene extends ScriptedScene {
     this.scrollX = Math.max(0, this.alexX - 160);
     this._setInputMode('walk');
 
-    if (this.options.previewDialogId) {
-      this._openDialog(this.options.previewDialogId, { deferPromptSound: true });
-    } else if (this.options.screen === 'form') {
-      this._openForm('lostAndFoundForm');
+    if (this.options.dialogId) {
+      this._openDialog(this.options.dialogId, { deferPromptSound: true });
+    } else if (this.options.view === 'form') {
+      this._openForm(this.options.formId || 'lostAndFoundForm');
+    } else if (this.options.view === 'resource' && Number.isFinite(this.options.resourceSectionId)) {
+      this._openTextRefSection(this.options.resourceSectionId);
     }
+    this._publishRoute();
   }
 
   onMouseDown({ x, y }) {
@@ -258,6 +262,14 @@ export class AirportScene extends ScriptedScene {
 
   destroy() {
     this._stopSound();
+  }
+
+  _afterModalChanged() {
+    this._publishRoute();
+  }
+
+  _afterStateChanged() {
+    this._publishRoute();
   }
 
   _renderObject(ctx, obj) {
@@ -449,21 +461,27 @@ export class AirportScene extends ScriptedScene {
     this._stopSound();
     if (textRef.resource?.asset) {
       this.modal = {
+        id: `resource:${sectionId}`,
         type: 'message',
         presentation: 'resource',
         asset: textRef.resource.asset,
+        sourceSectionId: sectionId,
         locked: false,
       };
+      this._afterModalChanged();
       this._refreshCursor();
       return;
     }
     this.modal = {
+      id: `textRef:${sectionId}`,
       type: 'message',
       presentation: 'note',
       speaker: 'Narrator',
       text: textRef.text,
+      sourceSectionId: sectionId,
       locked: false,
     };
+    this._afterModalChanged();
     this._refreshCursor();
   }
 
@@ -568,6 +586,7 @@ export class AirportScene extends ScriptedScene {
     const modal = this.modal;
     if (!modal || modal.type !== 'form') return;
     this.modal = null;
+    this._afterModalChanged();
     this._refreshCursor();
     this._enqueueSteps(this.state.correctBag ? this.sceneScript.events.receiveBag : this.sceneScript.events.wrongBag);
     this._processActionQueue();
@@ -592,6 +611,28 @@ export class AirportScene extends ScriptedScene {
       this.state[key] = value;
     }
     this._applyBindings();
+  }
+
+  _publishRoute() {
+    if (typeof this.onRouteChange !== 'function') return;
+    this.onRouteChange(this._buildRoute());
+  }
+
+  _buildRoute() {
+    const state = {};
+    for (const key of ['bagSize', 'bagColor', 'correctBag', 'bagReceived', 'passportChecked', 'palmettoes', 'doorWarnings', 'clerkRepeatCount']) {
+      if (this.state[key] != null) state[key] = this.state[key];
+    }
+    if (this.modal?.type === 'dialog' && this.modal.id) {
+      return { scene: 'airport', view: 'dialog', dialogId: this.modal.id, state };
+    }
+    if (this.modal?.type === 'form' && this.modal.id) {
+      return { scene: 'airport', view: 'form', formId: this.modal.id, state };
+    }
+    if (this.modal?.presentation === 'resource' && Number.isFinite(this.modal.sourceSectionId)) {
+      return { scene: 'airport', view: 'resource', resourceSectionId: this.modal.sourceSectionId, state };
+    }
+    return { scene: 'airport', view: 'scene', state };
   }
 
   _getInteractionRect(interaction) {
