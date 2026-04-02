@@ -1,5 +1,5 @@
 import { BitmapFont } from '../../ui/bitmap-font.js';
-import { ACTION_BUTTONS, CURSOR_HOTSPOTS, WHEEL_INPUT_MODES } from '../../ui/action-modes.js';
+import { ACTION_BUTTONS, CURSOR_HOTSPOTS, WHEEL_INPUT_MODES, resolveInteractionMode } from '../../ui/action-modes.js';
 import { STANDARD_DIALOG_LAYOUT } from '../../ui/dialog-layout.js';
 import { STANDARD_NOTE_LAYOUT } from '../../ui/note-layout.js';
 import { STANDARD_PANEL_LAYOUT } from '../../ui/panel-layout.js';
@@ -7,12 +7,21 @@ import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimatio
 import { renderPanel } from '../../ui/panel-renderer.js';
 import { ScriptedScene } from '../../runtime/script-runtime.js';
 import { AIRPORT_SCRIPT } from './script.js';
-import { normalizeAirportRoute } from './route.js';
+import {
+  buildAirportRouteFromRuntime,
+  normalizeAirportRoute,
+  resolveAirportInitialScreen,
+  shouldRunAirportEntrySequence,
+} from './route.js';
 import { AIRPORT_RESOURCES } from './resources.js';
-import { pickAirportRouteState } from './state.js';
+import { airportHasBag, getAirportLostAndFoundExpectedValues } from './state.js';
 import {
   ANIM_TICK_SCALE,
   DIALOG_RESPONSE_DELAY_TICKS,
+  ENTRY_ALEX_START,
+  ENTRY_DESCENT_FRAME_TICKS,
+  ENTRY_DESCENT_START_FRAME,
+  ENTRY_WALK_TARGET,
   INVENTORY_ITEM_DEFS,
   SOUND_MANIFEST,
   WALK_ZONES,
@@ -22,10 +31,6 @@ import {
 import { AIRPORT_STATIC_REGIONS, resolveAirportRegionRect, resolveAirportSelectorRect } from './topology.js';
 
 const FADE_TICKS = 18;
-const ENTRY_DESCENT_FRAME_TICKS = 3;
-const ENTRY_DESCENT_START_FRAME = 1;
-const ENTRY_WALK_TARGET = Object.freeze({ x: 836, y: 140 });
-const ENTRY_ALEX_START = Object.freeze({ x: 868, y: 140 });
 
 export class AirportScene extends ScriptedScene {
   constructor(options = {}) {
@@ -123,20 +128,7 @@ export class AirportScene extends ScriptedScene {
     this.scrollX = Math.max(0, this.alexX - 160);
     this._setInputMode('walk');
     this._startEntrySequenceIfNeeded();
-
-    if (this.route.dialogId) {
-      this._openDialog(this.route.dialogId, { deferPromptSound: true });
-    } else if (this.route.view === 'message' && this.route.messageId) {
-      this._openMessage(this.route.messageId);
-    } else if (this.route.view === 'form') {
-      this._openForm(this.route.formId || 'lostAndFoundForm');
-    } else if (this.route.view === 'inventory') {
-      this._openInventory(this.route.inventoryId || 'bag');
-    } else if (this.route.view === 'resource' && Number.isFinite(this.route.resourceSectionId)) {
-      this._openTextRefSection(this.route.resourceSectionId);
-    } else if (this.route.debug?.noteSectionId) {
-      this._openTextRefSection(this.route.debug.noteSectionId);
-    }
+    this._openInitialRouteScreen();
     this._publishRoute();
   }
 
@@ -182,18 +174,14 @@ export class AirportScene extends ScriptedScene {
       }
       return;
     }
-    const interactionMode = this.inputMode === 'item' ? 'bag' : this.inputMode;
+    const interactionMode = resolveInteractionMode(this.inputMode);
     const interaction = this._findInteraction(worldX, worldY, interactionMode);
     if (interaction) {
       this._handleInteractionAction(interaction.action);
       return;
     }
-    if (this.inputMode === 'item') {
-      this._queueEvent('bagDefault');
-      return;
-    }
     if (this.inputMode !== 'walk') {
-      this._queueFallbackEvent(this.inputMode);
+      this._queueFallbackEvent(interactionMode);
       return;
     }
     if (!this._inWalkZone(worldX, worldY)) return;
@@ -224,11 +212,11 @@ export class AirportScene extends ScriptedScene {
     const button = this._getUiButton(x, y);
     if (!button || button.mode !== pendingMode) return;
     if (button.mode === 'exit') return;
-    if (button.mode === 'bag' && !this.state?.bag?.length) {
+    if (button.mode === 'bag' && !airportHasBag(this.state)) {
       this._queueEvent('bagMissing');
       return;
     }
-    if (button.mode === 'bag' && this.state?.bag?.length) {
+    if (button.mode === 'bag' && airportHasBag(this.state)) {
       this._openInventory('bag');
       return;
     }
@@ -341,7 +329,7 @@ export class AirportScene extends ScriptedScene {
         buttons: this.uiButtons,
         pressedMode: this._pressedButtonMode,
         amount: this.state?.palmettoes ?? 100,
-        bagReceived: Boolean(this.state?.bag?.length),
+        bagReceived: airportHasBag(this.state),
         inputMode: this.inputMode,
         layout: this.panelLayout,
         moneyAnimation: this.meterAnimation,
@@ -787,7 +775,7 @@ export class AirportScene extends ScriptedScene {
     const modal = this.modal;
     if (!modal || modal.type !== 'form') return;
     const fieldIdx = modal.activeField;
-    const expected = this._getLostAndFoundExpectedValues();
+    const expected = getAirportLostAndFoundExpectedValues(this.state);
     const rawActual = this._normalizeFormValue(modal.values[fieldIdx]);
     const actual = rawActual.toLowerCase();
     const expectedValue = expected[fieldIdx];
@@ -874,15 +862,6 @@ export class AirportScene extends ScriptedScene {
     };
   }
 
-  _getLostAndFoundExpectedValues() {
-    return [
-      'Alex',
-      'bag',
-      ({ big: 'big', medium: 'medium-size', small: 'small' })[this.state.claimSize] || '',
-      ({ grey: 'grey', purple: 'purple', pink: 'pink' })[this.state.claimColor] || '',
-    ];
-  }
-
   _normalizeFormValue(value) {
     return (value || '').trim().replace(/\s+/g, ' ');
   }
@@ -938,27 +917,7 @@ export class AirportScene extends ScriptedScene {
 
   _publishRoute() {
     if (typeof this.onRouteChange !== 'function') return;
-    this.onRouteChange(this._buildRoute());
-  }
-
-  _buildRoute() {
-    const state = pickAirportRouteState(this.state);
-    if (this.modal?.type === 'dialog' && this.modal.id) {
-      return { scene: 'airport', view: 'dialog', dialogId: this.modal.id, state, initial: false };
-    }
-    if (this.modal?.type === 'message' && this.modal.id) {
-      return { scene: 'airport', view: 'message', messageId: this.modal.id, state, initial: false };
-    }
-    if (this.modal?.type === 'form' && this.modal.id) {
-      return { scene: 'airport', view: 'form', formId: this.modal.id, state, initial: false };
-    }
-    if (this.modal?.type === 'inventory') {
-      return { scene: 'airport', view: 'inventory', inventoryId: 'bag', state, initial: false };
-    }
-    if (this.modal?.presentation === 'resource' && Number.isFinite(this.modal.sourceSectionId)) {
-      return { scene: 'airport', view: 'resource', resourceSectionId: this.modal.sourceSectionId, state, initial: false };
-    }
-    return { scene: 'airport', view: 'scene', state, initial: false };
+    this.onRouteChange(buildAirportRouteFromRuntime({ modal: this.modal, state: this.state, initial: false }));
   }
 
   _getInteractionRect(interaction) {
@@ -1043,8 +1002,7 @@ export class AirportScene extends ScriptedScene {
   }
 
   _startEntrySequenceIfNeeded() {
-    const hasDebugPlacement = Number.isFinite(this.route.debug?.alexX) || Number.isFinite(this.route.debug?.alexY);
-    const shouldRun = this.route.initial === true && this.route.view === 'scene' && !this.route.dialogId && !hasDebugPlacement;
+    const shouldRun = shouldRunAirportEntrySequence(this.route);
     if (!shouldRun) return;
     const descending = this.objectByName?.ALEXDN;
     if (!descending) return;
@@ -1058,6 +1016,29 @@ export class AirportScene extends ScriptedScene {
       renderDescendingOnly: true,
       focusX: 838,
     };
+  }
+
+  _openInitialRouteScreen() {
+    const screen = resolveAirportInitialScreen(this.route);
+    if (screen.kind === 'dialog') {
+      this._openDialog(screen.id, { deferPromptSound: true });
+      return;
+    }
+    if (screen.kind === 'message') {
+      this._openMessage(screen.id);
+      return;
+    }
+    if (screen.kind === 'form') {
+      this._openForm(screen.id);
+      return;
+    }
+    if (screen.kind === 'inventory') {
+      this._openInventory(screen.id);
+      return;
+    }
+    if (screen.kind === 'resource') {
+      this._openTextRefSection(screen.id);
+    }
   }
 
   _tickEntrySequence() {

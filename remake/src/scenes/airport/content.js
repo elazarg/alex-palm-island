@@ -2,6 +2,10 @@ import { ALEX_DIALOG_ASSET_NAMES, CURSOR_ASSET_NAMES, UI_ASSET_NAMES, UI_VERSION
 
 export const ANIM_TICK_SCALE = 2;
 export const DIALOG_RESPONSE_DELAY_TICKS = 3;
+export const ENTRY_DESCENT_FRAME_TICKS = 3;
+export const ENTRY_DESCENT_START_FRAME = 1;
+export const ENTRY_WALK_TARGET = Object.freeze({ x: 836, y: 140 });
+export const ENTRY_ALEX_START = Object.freeze({ x: 868, y: 140 });
 
 export const INVENTORY_ITEM_DEFS = Object.freeze({
   passport: {

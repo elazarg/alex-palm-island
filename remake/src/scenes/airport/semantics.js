@@ -119,7 +119,7 @@ export const AIRPORT_SEMANTIC_HOTSPOTS = Object.freeze([
       look: Object.freeze({ kind: 'textRef', sectionId: 510 }),
       touch: Object.freeze({ kind: 'textRef', sectionId: 635 }),
       talk: Object.freeze({ kind: 'flow', id: 'guard.directions' }),
-      bag: Object.freeze({ kind: 'flow', id: 'guard.directions' }),
+      item: Object.freeze({ kind: 'flow', id: 'guard.directions' }),
     }),
   }),
   Object.freeze({
@@ -165,7 +165,7 @@ export const AIRPORT_SEMANTIC_HOTSPOTS = Object.freeze([
       look: Object.freeze({ kind: 'textRef', sectionId: 560 }),
       touch: Object.freeze({ kind: 'textRef', sectionId: 635 }),
       talk: Object.freeze({ kind: 'flow', id: 'passport.control' }),
-      bag: Object.freeze({ kind: 'flow', id: 'passport.control.usePassport' }),
+      item: Object.freeze({ kind: 'flow', id: 'passport.control.usePassport' }),
     }),
   }),
   Object.freeze({
@@ -194,7 +194,7 @@ export const AIRPORT_SEMANTIC_HOTSPOTS = Object.freeze([
       look: Object.freeze({ kind: 'textRef', sectionId: 620 }),
       touch: Object.freeze({ kind: 'textRef', sectionId: 635 }),
       talk: Object.freeze({ kind: 'flow', id: 'clerk.help' }),
-      bag: Object.freeze({ kind: 'flow', id: 'clerk.help' }),
+      item: Object.freeze({ kind: 'flow', id: 'clerk.help' }),
     }),
   }),
   Object.freeze({
@@ -268,7 +268,7 @@ export const AIRPORT_SEMANTIC_HOTSPOTS = Object.freeze([
     entity: 'namedBag',
     scope: 'system',
     affordances: Object.freeze({
-      bag: Object.freeze({ kind: 'textRef', sectionId: 998 }),
+      item: Object.freeze({ kind: 'textRef', sectionId: 998 }),
     }),
   }),
 ]);

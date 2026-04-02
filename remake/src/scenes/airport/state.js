@@ -103,3 +103,17 @@ export function pickAirportRouteState(state = {}) {
     )
   );
 }
+
+export function airportHasBag(state = {}) {
+  return Array.isArray(state.bag) && state.bag.length > 0;
+}
+
+export function getAirportLostAndFoundExpectedValues(state = {}) {
+  const normalized = normalizeAirportState(state);
+  return [
+    'Alex',
+    'bag',
+    ({ big: 'big', medium: 'medium-size', small: 'small' })[normalized.claimSize] || '',
+    ({ grey: 'grey', purple: 'purple', pink: 'pink' })[normalized.claimColor] || '',
+  ];
+}

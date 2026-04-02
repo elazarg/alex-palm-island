@@ -110,6 +110,7 @@ export const AIRPORT_SCRIPT = {
     look: 'lookDefault',
     talk: 'talkDefault',
     touch: 'touchDefault',
+    item: 'bagDefault',
     bag: 'bagDefault',
   },
 

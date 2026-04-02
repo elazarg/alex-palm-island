@@ -91,3 +91,58 @@ export function formatAirportRoute(route = {}) {
   if (normalized.initial) params.set('initial', '1');
   return { segments, params };
 }
+
+export function resolveAirportInitialScreen(route = {}) {
+  const normalized = normalizeAirportRoute(route);
+  if (normalized.view === 'dialog' && normalized.dialogId) {
+    return { kind: 'dialog', id: normalized.dialogId };
+  }
+  if (normalized.view === 'message' && normalized.messageId) {
+    return { kind: 'message', id: normalized.messageId };
+  }
+  if (normalized.view === 'form') {
+    return { kind: 'form', id: normalized.formId || 'lostAndFoundForm' };
+  }
+  if (normalized.view === 'inventory') {
+    return { kind: 'inventory', id: normalized.inventoryId || 'bag' };
+  }
+  if (normalized.view === 'resource' && Number.isFinite(normalized.resourceSectionId)) {
+    return { kind: 'resource', id: normalized.resourceSectionId };
+  }
+  if (normalized.debug?.noteSectionId) {
+    return { kind: 'resource', id: normalized.debug.noteSectionId };
+  }
+  return { kind: 'scene', id: null };
+}
+
+export function buildAirportRouteFromRuntime({ modal = null, state = {}, initial = false } = {}) {
+  const route = {
+    scene: 'airport',
+    view: 'scene',
+    state: pickAirportRouteState(state),
+    initial: initial === true,
+  };
+  if (modal?.type === 'dialog' && modal.id) {
+    route.view = 'dialog';
+    route.dialogId = modal.id;
+  } else if (modal?.type === 'message' && modal.id) {
+    route.view = 'message';
+    route.messageId = modal.id;
+  } else if (modal?.type === 'form' && modal.id) {
+    route.view = 'form';
+    route.formId = modal.id;
+  } else if (modal?.type === 'inventory') {
+    route.view = 'inventory';
+    route.inventoryId = modal.id || 'bag';
+  } else if (modal?.presentation === 'resource' && Number.isFinite(modal.sourceSectionId)) {
+    route.view = 'resource';
+    route.resourceSectionId = modal.sourceSectionId;
+  }
+  return normalizeAirportRoute(route);
+}
+
+export function shouldRunAirportEntrySequence(route = {}) {
+  const normalized = normalizeAirportRoute(route);
+  const hasDebugPlacement = Number.isFinite(normalized.debug?.alexX) || Number.isFinite(normalized.debug?.alexY);
+  return normalized.initial === true && normalized.view === 'scene' && !normalized.dialogId && !hasDebugPlacement;
+}
