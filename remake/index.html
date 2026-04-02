@@ -17,19 +17,33 @@
       height: 100vh;
       overflow: hidden;
     }
-    canvas {
+    #viewport {
+      position: relative;
+      width: min(100vw, calc(100vh * 1.6));
+      aspect-ratio: 320 / 200;
+      transform: translateX(var(--canvas-offset-x));
+    }
+    #screen {
       image-rendering: pixelated;
       image-rendering: crisp-edges;
-      width: 100vw;
-      height: 100vh;
-      object-fit: contain;
+      width: 100%;
+      height: 100%;
       cursor: none;
-      transform: translateX(var(--canvas-offset-x));
+    }
+    #overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
-  <canvas id="screen"></canvas>
+  <div id="viewport">
+    <canvas id="screen"></canvas>
+    <canvas id="overlay"></canvas>
+  </div>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>

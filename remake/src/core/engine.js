@@ -5,7 +5,7 @@ export const HEIGHT = 200;
 export const TICK_MS = 55;
 
 export class Engine {
-  constructor(canvas) {
+  constructor(canvas, overlayCanvas = null) {
     canvas.width = WIDTH;
     canvas.height = HEIGHT;
     this.width = WIDTH;
@@ -14,6 +14,8 @@ export class Engine {
     this.ctx = canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
     this.ctx.direction = 'ltr';
+    this.overlayCanvas = overlayCanvas;
+    this.overlayCtx = overlayCanvas ? overlayCanvas.getContext('2d') : null;
 
     this.assets = new Map();
     this.cursor = null;
@@ -162,6 +164,13 @@ export class Engine {
     ctx.clearRect(0, 0, this.width, this.height);
     this.scene?.render(ctx);
 
+    const overlayCtx = this.overlayCtx;
+    if (overlayCtx && this.overlayCanvas) {
+      const overlayMetrics = this._prepareOverlayCanvas();
+      overlayCtx.clearRect(0, 0, overlayMetrics.cssWidth, overlayMetrics.cssHeight);
+      this.scene?.renderOverlay?.(overlayCtx, overlayMetrics);
+    }
+
     if (this.cursor && this.mouseX >= 0) {
       this.drawSprite(ctx, this.cursor, this.mouseX, this.mouseY);
     }
@@ -174,5 +183,25 @@ export class Engine {
     if (!this._audioUnlockQueue.length) return;
     const queue = this._audioUnlockQueue.splice(0, this._audioUnlockQueue.length);
     for (const cb of queue) cb();
+  }
+
+  _prepareOverlayCanvas() {
+    if (!this.overlayCanvas || !this.overlayCtx) return;
+    const cssWidth = Math.max(1, this.overlayCanvas.clientWidth || this.canvas.clientWidth || this.width);
+    const cssHeight = Math.max(1, this.overlayCanvas.clientHeight || this.canvas.clientHeight || this.height);
+    const dpr = window.devicePixelRatio || 1;
+    const width = Math.max(1, Math.round(cssWidth * dpr));
+    const height = Math.max(1, Math.round(cssHeight * dpr));
+    if (this.overlayCanvas.width !== width || this.overlayCanvas.height !== height) {
+      this.overlayCanvas.width = width;
+      this.overlayCanvas.height = height;
+    }
+    this.overlayCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return {
+      cssWidth,
+      cssHeight,
+      scaleX: cssWidth / this.width,
+      scaleY: cssHeight / this.height,
+    };
   }
 }

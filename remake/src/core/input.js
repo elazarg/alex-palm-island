@@ -31,7 +31,10 @@ export class InputController {
     };
     this._onKeyDown = async (e) => {
       await this.engine.resumeAudio();
-      this._dispatch('onKeyDown', { key: e.key, originalEvent: e });
+      this._dispatch('onKeyDown', { key: e.key, code: e.code, originalEvent: e });
+    };
+    this._onKeyUp = (e) => {
+      this._dispatch('onKeyUp', { key: e.key, code: e.code, originalEvent: e });
     };
   }
 
@@ -42,6 +45,7 @@ export class InputController {
     this.canvas.addEventListener('mouseup', this._onMouseUp);
     this.canvas.addEventListener('wheel', this._onWheel, { passive: false });
     window.addEventListener('keydown', this._onKeyDown);
+    window.addEventListener('keyup', this._onKeyUp);
   }
 
   destroy() {
@@ -51,6 +55,7 @@ export class InputController {
     this.canvas.removeEventListener('mouseup', this._onMouseUp);
     this.canvas.removeEventListener('wheel', this._onWheel);
     window.removeEventListener('keydown', this._onKeyDown);
+    window.removeEventListener('keyup', this._onKeyUp);
   }
 
   _toGameCoords(e) {

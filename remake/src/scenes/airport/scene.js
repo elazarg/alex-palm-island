@@ -5,6 +5,7 @@ import { STANDARD_NOTE_LAYOUT } from '../../ui/note-layout.js';
 import { STANDARD_PANEL_LAYOUT } from '../../ui/panel-layout.js';
 import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimation } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
+import { renderSceneDebugOverlay } from '../../ui/scene-debug-overlay.js';
 import { ScriptedScene } from '../../runtime/script-runtime.js';
 import { AIRPORT_SCRIPT } from './script.js';
 import {
@@ -28,9 +29,30 @@ import {
   buildAssetManifest,
   createAirportObjects,
 } from './content.js';
+import { AIRPORT_ENTITIES } from './semantics.js';
+import { AIRPORT_ACTIVE_INTERACTIONS } from './theme-2d.js';
 import { AIRPORT_STATIC_REGIONS, resolveAirportRegionRect, resolveAirportSelectorRect } from './topology.js';
 
 const FADE_TICKS = 18;
+const DEBUG_ENTITY_COLORS = Object.freeze({
+  npc: '#ff4d4d',
+  npcGroup: '#ff7f50',
+  prop: '#4db8ff',
+  traversal: '#ffd24d',
+  sign: '#66e08a',
+  uiForm: '#d78bff',
+});
+const DEBUG_REGION_COLORS = Object.freeze({
+  walkMask: '#ff2d55',
+  interactiveZone: '#2ec4ff',
+  exitTrigger: '#ffcc00',
+  walkTarget: '#00d084',
+  waitZone: '#a970ff',
+  occlusion: '#8c8c8c',
+  uiMask: '#c77dff',
+  marker: '#ffffff',
+  unclassified: '#999999',
+});
 
 export class AirportScene extends ScriptedScene {
   constructor(options = {}) {
@@ -44,11 +66,19 @@ export class AirportScene extends ScriptedScene {
     this.onRouteChange = null;
     this.panelLayout = STANDARD_PANEL_LAYOUT;
     this.uiButtons = ACTION_BUTTONS;
+    this.debugOverlayHeld = false;
     this.walkZones = WALK_ZONES;
     this.walkMasks = AIRPORT_STATIC_REGIONS
-      .filter((region) => region.kind === 'walkMask')
+      .filter((region) => region.kind === 'walkMask' && !region.activeWhen)
       .map((region) => resolveAirportRegionRect(region.id) || resolveAirportSelectorRect(region.selector))
       .filter(Boolean);
+    this.conditionalWalkMasks = AIRPORT_STATIC_REGIONS
+      .filter((region) => region.kind === 'walkMask' && region.activeWhen)
+      .map((region) => ({
+        rect: resolveAirportRegionRect(region.id) || resolveAirportSelectorRect(region.selector),
+        when: region.activeWhen,
+      }))
+      .filter((entry) => entry.rect);
     this.familyQueueWaitZone = resolveAirportRegionRect('queue.waitZone');
     this.walkDeltas = {
       1: [{dx:0,dy:0},{dx:-4,dy:2},{dx:-4,dy:3},{dx:0,dy:0},{dx:0,dy:0},{dx:-4,dy:2},{dx:-4,dy:3},{dx:0,dy:0},{dx:0,dy:0}],
@@ -64,6 +94,10 @@ export class AirportScene extends ScriptedScene {
       1: [1, 2, 5, 6], 2: [1, 2, 3, 4, 5, 6], 3: [1, 2, 5, 6], 4: [3, 4, 5, 6],
       6: [3, 4, 5, 6], 7: [1, 2, 5, 6], 8: [1, 2, 3, 4, 5, 6], 9: [1, 2, 5, 6],
     };
+    this._debugObjectKinds = Object.fromEntries(
+      Object.values(AIRPORT_ENTITIES)
+        .flatMap((entity) => (entity.sceneObjects || []).map((name) => [name, entity.kind]))
+    );
   }
 
   async load(engine) {
@@ -242,7 +276,12 @@ export class AirportScene extends ScriptedScene {
     originalEvent.preventDefault();
   }
 
-  onKeyDown({ key, originalEvent }) {
+  onKeyDown({ key, code, originalEvent }) {
+    if (code === 'Backquote' || key === '`') {
+      this.debugOverlayHeld = true;
+      originalEvent.preventDefault();
+      return;
+    }
     if (this._entrySequence) return;
     if (!this.modal) return;
     if (this.modal.type === 'form') {
@@ -291,6 +330,13 @@ export class AirportScene extends ScriptedScene {
       this.modal = null;
       this._refreshCursor();
       this._processActionQueue();
+    }
+  }
+
+  onKeyUp({ key, code, originalEvent }) {
+    if (code === 'Backquote' || key === '`') {
+      this.debugOverlayHeld = false;
+      originalEvent.preventDefault();
     }
   }
 
@@ -403,6 +449,75 @@ export class AirportScene extends ScriptedScene {
     const frame = this._sceneAnimation.sequence[this._sceneAnimation.index];
     const img = this.engine.getAsset(`${this._sceneAnimation.prefix}${frame}`);
     if (img) ctx.drawImage(img, this._sceneAnimation.x - this.scrollX, this._sceneAnimation.y);
+  }
+
+  _renderDebugOverlay(ctx, overlayMetrics) {
+    const entries = [];
+    const toScreen = (rect) => this._projectOverlayRect(rect, overlayMetrics);
+    for (const region of AIRPORT_STATIC_REGIONS) {
+      const rect = resolveAirportRegionRect(region.id) || resolveAirportSelectorRect(region.selector);
+      if (!rect || region.kind === 'uiMask') continue;
+      entries.push({
+        rect: toScreen(rect),
+        color: DEBUG_REGION_COLORS[region.kind] || '#ffffff',
+        label: region.id,
+        fillAlpha: 0.22,
+      });
+    }
+    for (const interaction of AIRPORT_ACTIVE_INTERACTIONS) {
+      const rect = this._getInteractionRect(interaction);
+      if (!rect) continue;
+      const kind = AIRPORT_ENTITIES[interaction.id]?.kind || AIRPORT_ENTITIES[interaction.entity]?.kind || this._debugObjectKinds[interaction.object] || 'prop';
+      entries.push({
+        rect: toScreen(rect),
+        color: DEBUG_ENTITY_COLORS[kind] || '#ffffff',
+        label: interaction.id,
+        fillAlpha: 0.35,
+      });
+    }
+    for (const obj of this.sceneObjects) {
+      const rect = this._getSceneObjectRect(obj);
+      if (!rect) continue;
+      const kind = this._debugObjectKinds[obj.name];
+      if (!kind) continue;
+      entries.push({
+        rect: toScreen(this._screenRectToWorldRect(rect)),
+        color: DEBUG_ENTITY_COLORS[kind] || '#ffffff',
+        label: obj.name,
+        fillAlpha: 0.15,
+      });
+    }
+    renderSceneDebugOverlay(ctx, entries);
+  }
+
+  renderOverlay(ctx, overlayMetrics) {
+    if (!this.debugOverlayHeld) return;
+    this._renderDebugOverlay(ctx, overlayMetrics);
+  }
+
+  _getSceneObjectRect(obj) {
+    if (!obj?.visible) return null;
+    const img = this.engine.getAsset(obj.sprite);
+    if (!img) return null;
+    const drawY = (obj.anim && obj.anim.bottomAlign) ? obj.anim.bottomAlign - img.height : obj.y;
+    return [obj.x - this.scrollX, drawY, obj.x - this.scrollX + img.width, drawY + img.height];
+  }
+
+  _screenRectToWorldRect(rect) {
+    const [x1, y1, x2, y2] = rect;
+    return [x1 + this.scrollX, y1, x2 + this.scrollX, y2];
+  }
+
+  _projectOverlayRect(rect, overlayMetrics) {
+    const [x1, y1, x2, y2] = rect;
+    const scaleX = overlayMetrics?.scaleX ?? 1;
+    const scaleY = overlayMetrics?.scaleY ?? 1;
+    return [
+      (x1 - this.scrollX) * scaleX,
+      y1 * scaleY,
+      (x2 - this.scrollX) * scaleX,
+      y2 * scaleY,
+    ];
   }
 
   _tickWalk() {
@@ -987,17 +1102,19 @@ export class AirportScene extends ScriptedScene {
     return x >= x1 && x <= x2 && y >= y1 && y <= y2;
   }
 
+  _matchesStateCondition(condition) {
+    if (!condition?.state) return false;
+    const value = this.state?.[condition.state];
+    if (Object.prototype.hasOwnProperty.call(condition, 'equals')) return value === condition.equals;
+    if (Object.prototype.hasOwnProperty.call(condition, 'notEquals')) return value !== condition.notEquals;
+    return false;
+  }
+
   _inWalkZone(x, y) {
     const inBaseZone = this.walkZones.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2);
     if (!inBaseZone) return false;
     if (this.walkMasks.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2)) return false;
-    if (this.state?.familyQueue === 'queued') {
-      const familyBlock = this._getInteractionRect({ object: 'Family', sprite: 'FAMILY1', pad: [0, 0, -76, 0] });
-      if (familyBlock) {
-        const [x1, y1, x2, y2] = familyBlock;
-        if (x >= x1 && x <= x2 && y >= y1 && y <= y2) return false;
-      }
-    }
+    if (this.conditionalWalkMasks.some(({ rect, when }) => this._matchesStateCondition(when) && this._isInsideRect(x, y, rect))) return false;
     return true;
   }
 

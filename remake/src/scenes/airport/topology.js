@@ -24,6 +24,13 @@ export const AIRPORT_STATIC_REGIONS = Object.freeze([
     notes: 'Initial guard inquiry zone. Same physical lane later acts as family blocker.',
   }),
   Object.freeze({
+    id: 'mask.familyQueue',
+    kind: 'walkMask',
+    selector: clickRectSelector(12),
+    activeWhen: Object.freeze({ state: 'familyQueue', equals: 'queued' }),
+    notes: 'Queue lane is blocked only while the family is physically waiting there.',
+  }),
+  Object.freeze({
     id: 'poster.hotel.left',
     kind: 'interactiveZone',
     selector: clickRectSelector(13),

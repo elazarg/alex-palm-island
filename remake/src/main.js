@@ -3,7 +3,8 @@ import { SceneManager } from './core/scene-manager.js';
 
 async function main() {
   const canvas = document.getElementById('screen');
-  const engine = new Engine(canvas);
+  const overlayCanvas = document.getElementById('overlay');
+  const engine = new Engine(canvas, overlayCanvas);
   const sceneManager = new SceneManager(engine);
   await sceneManager.start();
   engine.start();
