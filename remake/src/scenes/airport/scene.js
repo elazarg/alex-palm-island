@@ -21,6 +21,10 @@ import {
 } from './content.js';
 
 const FADE_TICKS = 18;
+const ENTRY_DESCENT_FRAME_TICKS = 3;
+const ENTRY_DESCENT_START_FRAME = 1;
+const ENTRY_WALK_TARGET = Object.freeze({ x: 836, y: 140 });
+const ENTRY_ALEX_START = Object.freeze({ x: 868, y: 140 });
 
 export class AirportScene extends ScriptedScene {
   constructor(options = {}) {
@@ -103,6 +107,7 @@ export class AirportScene extends ScriptedScene {
     this._pendingButtonMode = null;
     this._pressedInventoryControlMode = null;
     this._sceneAnimation = null;
+    this._entrySequence = null;
 
     this.initScriptRuntime();
     this._applyRouteStateOverrides();
@@ -110,6 +115,7 @@ export class AirportScene extends ScriptedScene {
     this.meterAnimation = createMeterAnimationState(this.state?.palmettoes ?? 100);
     this.scrollX = Math.max(0, this.alexX - 160);
     this._setInputMode('walk');
+    this._startEntrySequenceIfNeeded();
 
     if (this.route.dialogId) {
       this._openDialog(this.route.dialogId, { deferPromptSound: true });
@@ -126,6 +132,7 @@ export class AirportScene extends ScriptedScene {
   }
 
   onMouseDown({ x, y }) {
+    if (this._entrySequence) return;
     if (this._gestureLockedDialog) {
       const dialog = this._gestureLockedDialog;
       this._gestureLockedDialog = null;
@@ -179,6 +186,7 @@ export class AirportScene extends ScriptedScene {
   }
 
   onMouseUp({ x, y }) {
+    if (this._entrySequence) return;
     if (this.modal?.type === 'inventory' && this._pressedInventoryControlMode) {
       const mode = this._pressedInventoryControlMode;
       this._pressedInventoryControlMode = null;
@@ -214,6 +222,7 @@ export class AirportScene extends ScriptedScene {
   }
 
   onMouseLeave() {
+    if (this._entrySequence) return;
     this._pressedButtonMode = null;
     this._pendingButtonMode = null;
     this._pressedInventoryControlMode = null;
@@ -221,6 +230,7 @@ export class AirportScene extends ScriptedScene {
   }
 
   onWheel({ deltaY, originalEvent }) {
+    if (this._entrySequence) return;
     if (this.modal) return;
     this.selectedItem = null;
     const currentIdx = WHEEL_INPUT_MODES.indexOf(this.inputMode);
@@ -230,6 +240,7 @@ export class AirportScene extends ScriptedScene {
   }
 
   onKeyDown({ key, originalEvent }) {
+    if (this._entrySequence) return;
     if (!this.modal) return;
     if (this.modal.type === 'form') {
       this._handleFormKeyDown(key, originalEvent);
@@ -288,6 +299,7 @@ export class AirportScene extends ScriptedScene {
       if (this.fadeAlpha >= 1) this.fade = 'none';
     }
 
+    this._tickEntrySequence();
     this._tickWalk();
     this._tickObjects();
     this._scrollToAlex();
@@ -372,6 +384,7 @@ export class AirportScene extends ScriptedScene {
   }
 
   _renderAlex(ctx) {
+    if (this._entrySequence?.renderDescendingOnly) return;
     const spriteDir = this.alexWalking ? this.alexDir : 1;
     const spriteName = `ALEX${spriteDir}-${this.alexFrame}`;
     const img = this.engine.getAsset(spriteName);
@@ -473,7 +486,8 @@ export class AirportScene extends ScriptedScene {
   }
 
   _scrollToAlex() {
-    const targetScroll = Math.max(0, Math.min(this.bgWidth - 320, this.alexX - 160));
+    const focusX = this._entrySequence?.focusX ?? this.alexX;
+    const targetScroll = Math.max(0, Math.min(this.bgWidth - 320, focusX - 160));
     if (Math.abs(this.scrollX - targetScroll) > 1) {
       this.scrollX += Math.sign(targetScroll - this.scrollX) * Math.min(4, Math.abs(targetScroll - this.scrollX));
     } else {
@@ -910,10 +924,61 @@ export class AirportScene extends ScriptedScene {
   }
 
   _isScriptBusy() {
-    return this.alexWalking || Boolean(this._sceneAnimation);
+    return this.alexWalking || Boolean(this._sceneAnimation) || Boolean(this._entrySequence);
   }
 
   _inWalkZone(x, y) {
     return this.walkZones.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2);
+  }
+
+  _startEntrySequenceIfNeeded() {
+    const hasDebugPlacement = Number.isFinite(this.route.debug?.alexX) || Number.isFinite(this.route.debug?.alexY);
+    const shouldRun = this.route.view === 'scene' && !this.route.dialogId && !hasDebugPlacement;
+    if (!shouldRun) return;
+    const descending = this.objectByName?.ALEXDN;
+    if (!descending) return;
+    descending.visible = true;
+    descending.sprite = `ALEXDN${ENTRY_DESCENT_START_FRAME}`;
+    this.alexX = ENTRY_WALK_TARGET.x;
+    this.alexY = ENTRY_WALK_TARGET.y;
+    this._entrySequence = {
+      frame: ENTRY_DESCENT_START_FRAME,
+      tick: 0,
+      renderDescendingOnly: true,
+      focusX: 838,
+    };
+  }
+
+  _tickEntrySequence() {
+    if (!this._entrySequence) return;
+    const descending = this.objectByName?.ALEXDN;
+    if (!descending) {
+      this._entrySequence = null;
+      return;
+    }
+    if (this._entrySequence.renderDescendingOnly) {
+      this._entrySequence.tick++;
+      if (this._entrySequence.tick >= ENTRY_DESCENT_FRAME_TICKS) {
+        this._entrySequence.tick = 0;
+        this._entrySequence.frame++;
+        if (this._entrySequence.frame > 18) {
+          descending.visible = false;
+          this._entrySequence.renderDescendingOnly = false;
+          this.alexX = ENTRY_ALEX_START.x;
+          this.alexY = ENTRY_ALEX_START.y;
+          this.alexDir = 4;
+          this.alexFrame = 1;
+          this._startWalk(ENTRY_WALK_TARGET.x, ENTRY_WALK_TARGET.y);
+          this._entrySequence.focusX = this.alexX;
+          return;
+        }
+        descending.sprite = `ALEXDN${this._entrySequence.frame}`;
+      }
+      return;
+    }
+    this._entrySequence.focusX = this.alexX;
+    if (!this.alexWalking) {
+      this._entrySequence = null;
+    }
   }
 }

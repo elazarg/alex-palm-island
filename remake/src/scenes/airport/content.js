@@ -91,9 +91,10 @@ export function buildAssetManifest() {
   for (let i = 0; i <= 19; i++) images[`P-LOST${i}`] = `${base}/P-LOST${i}.png`;
   for (let i = 1; i <= 19; i++) images[`L-LOST${i}`] = `${base}/L-LOST${i}.png`;
   for (let i = 1; i <= 6; i++) images[`BORDER${i}`] = `${base}/BORDER${i}.png`;
-  for (const name of ['TRUP1','STAFFB1','DOOR1','DOOR2','FEMGRD1','ALEXDN1','WALL_B','WALL_K','MAAKE','ARRIVE','DEPART','LINESIGN','DALPAK','HOTELAD','ORANGEAD','FORM']) {
+  for (const name of ['TRUP1','STAFFB1','DOOR1','DOOR2','FEMGRD1','WALL_B','WALL_K','MAAKE','ARRIVE','DEPART','LINESIGN','DALPAK','HOTELAD','ORANGEAD','FORM']) {
     images[name] = `${base}/${name}.png`;
   }
+  for (let i = 1; i <= 18; i++) images[`ALEXDN${i}`] = `${base}/ALEXDN${i}.png`;
   images.SUITCASE = `../assets/ui/SUITCASE.png?v=${UI_VERSION}`;
   images.ICONWINDOW = `../assets/ui/ICONWINDOW.png?v=${UI_VERSION}`;
   images.PASSPORTICON = `../assets/icons/PASSPORTICON.png?v=${UI_VERSION}`;
