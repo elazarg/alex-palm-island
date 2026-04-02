@@ -78,6 +78,7 @@ export function buildAssetManifest() {
   for (let i = 1; i <= 6; i++) images[`STAIRS${i}`] = `${base}/STAIRS${i}.png`;
   for (let i = 1; i <= 12; i++) images[`GUARD${i}`] = `${base}/GUARD${i}.png`;
   for (let i = 1; i <= 6; i++) images[`FAMILY${i}`] = `${base}/FAMILY${i}.png`;
+  for (let i = 1; i <= 8; i++) images[`FAMGO${i}`] = `${base}/FAMGO${i}.png`;
   for (let i = 1; i <= 10; i++) images[`FEMGRD${i}`] = `${base}/FEMGRD${i}.png`;
   for (let i = 0; i <= 11; i++) images[`BRDTLK${i}`] = `${base}/BRDTLK${i}.png`;
   for (let i = 1; i <= 10; i++) images[`GRDTLK${i}`] = `${base}/GRDTLK${i}.png`;

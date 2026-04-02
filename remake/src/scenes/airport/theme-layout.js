@@ -1,5 +1,5 @@
 import { AIRPORT_SEMANTIC_HOTSPOTS } from './semantics.js';
-import { resolveAirportSemanticRect } from './topology.js';
+import { resolveAirportSemanticRect, resolveAirportWalkTarget } from './topology.js';
 
 const RECT_BOUND_ENTITIES = Object.freeze(new Set([
   'guard',
@@ -25,7 +25,7 @@ export const AIRPORT_2D_OBJECT_LAYOUT = Object.freeze({
 });
 
 function buildRuntimeInteraction(hotspot) {
-  const actions = hotspot.affordances;
+  const actions = normalizeActions(hotspot);
   if (!actions) return null;
 
   if (RECT_BOUND_ENTITIES.has(hotspot.id) || RECT_BOUND_ENTITIES.has(hotspot.entity)) {
@@ -49,6 +49,28 @@ function buildRuntimeInteraction(hotspot) {
     enabled: (layout.runtimeId || hotspot.id) === 'familyQueue' ? false : undefined,
     actions,
   });
+}
+
+function normalizeActions(hotspot) {
+  const actions = hotspot.affordances;
+  if (!actions) return null;
+  const normalized = {};
+  for (const [mode, action] of Object.entries(actions)) {
+    if (
+      mode === 'walk' &&
+      action?.kind === 'flow' &&
+      (hotspot.id === 'automaticDoors' || hotspot.id === 'escalator' || hotspot.id === 'upstairsExit')
+    ) {
+      const regionId = hotspot.id === 'automaticDoors' ? 'doors.walkTarget' : 'stairs.walkTarget';
+      const approach = resolveAirportWalkTarget(regionId);
+      normalized[mode] = approach
+        ? Object.freeze({ kind: 'approachFlow', id: action.id, approach })
+        : action;
+    } else {
+      normalized[mode] = action;
+    }
+  }
+  return Object.freeze(normalized);
 }
 
 export const AIRPORT_ACTIVE_INTERACTIONS = Object.freeze(

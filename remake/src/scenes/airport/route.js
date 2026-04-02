@@ -9,6 +9,7 @@ export function defaultAirportRoute() {
   return {
     scene: 'airport',
     view: 'scene',
+    initial: true,
     dialogId: null,
     formId: null,
     inventoryId: null,
@@ -23,6 +24,7 @@ export function normalizeAirportRoute(route = {}) {
   const normalized = {
     ...base,
     ...route,
+    initial: route.initial === true,
     state: route.state ? pickAirportRouteState(route.state) : base.state,
     debug: route.debug ? { ...route.debug } : null,
   };
@@ -37,6 +39,7 @@ export function normalizeAirportRoute(route = {}) {
 
 export function parseAirportRoute(segments = [], params = new URLSearchParams()) {
   const route = defaultAirportRoute();
+  route.initial = params.get('initial') === '1';
   route.state = parseAirportStateParams(params);
   if (segments[0] === 'debug') {
     const debug = {};
@@ -78,8 +81,7 @@ export function formatAirportRoute(route = {}) {
   else if (normalized.view === 'form') segments.push('form', normalized.formId || 'lostAndFoundForm');
   else if (normalized.view === 'inventory') segments.push('inventory', normalized.inventoryId || 'bag');
   else if (normalized.view === 'resource' && Number.isFinite(normalized.resourceSectionId)) segments.push('resource', String(normalized.resourceSectionId));
-  return {
-    segments,
-    params: serializeAirportStateParams(normalized.state),
-  };
+  const params = serializeAirportStateParams(normalized.state);
+  if (normalized.initial) params.set('initial', '1');
+  return { segments, params };
 }

@@ -11,6 +11,7 @@ const CLERK_SEQUENCE = Object.freeze([1, 2, 3, 4, 5, 6, 7, 8]);
 const BRDTLK_SEQUENCE = Object.freeze([1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,3,4,3,4,3,1,1,1,5,6,5,6,7,8,7,8,5,6,1,1,9,10,9,10,11,10,9,1,1,1,1,1]);
 const FEMTLK_SEQUENCE = Object.freeze([1, 2, 3, 4, 5, 6, 7]);
 const FAMTLK_SEQUENCE = Object.freeze([1, 2, 3, 4, 5, 6]);
+const FAMILY_QUEUE_LEAVE_DELAY_TICKS = 90;
 
 function speakerVisualFromSpritePart(spritePart) {
   const family = spritePart.split(/\s+/)[0];
@@ -203,12 +204,12 @@ export const AIRPORT_SCRIPT = {
     bagMissing: [{ type: 'message', id: 'bagMissing' }],
 
     'upstairs.block': [
-      { type: 'walkTo', x: 820, y: 135 },
       {
         if: { state: 'mayExit', equals: true },
         then: [{ type: 'message', id: 'upstairsLater' }],
         else: [{ type: 'message', id: 'guardTooSoon' }],
       },
+      { type: 'walkTo', x: 820, y: 135 },
     ],
 
     'exit.doors': [
@@ -216,7 +217,6 @@ export const AIRPORT_SCRIPT = {
         if: { state: 'mayExit', equals: true },
         then: [{ type: 'message', id: 'doorReady' }],
         else: [
-          { type: 'walkTo', x: 323, y: 130 },
           {
             if: { state: 'exitWarningLevel', gte: 2 },
             then: [
@@ -238,6 +238,7 @@ export const AIRPORT_SCRIPT = {
               },
             ],
           },
+          { type: 'walkTo', x: 323, y: 130 },
         ],
       },
     ],
@@ -250,12 +251,23 @@ export const AIRPORT_SCRIPT = {
         else: [
           {
             if: { state: 'familyQueue', equals: 'queued' },
-            then: [
+            then: messageStep('passportBlocked'),
+            else: [
               { type: 'message', id: 'passportThanks' },
               { type: 'dialog', id: 'passportQuestion' },
             ],
-            else: messageStep('passportBlocked'),
           },
+        ],
+      },
+    ],
+
+    'familyQueue.clear': [
+      {
+        if: { state: 'familyQueue', equals: 'queued' },
+        then: [
+          { type: 'setState', key: 'familyQueuePendingClear', value: false },
+          { type: 'setState', key: 'familyQueue', value: 'cleared' },
+          { type: 'sceneAnimation', id: 'familyQueueLeave' },
         ],
       },
     ],
@@ -335,13 +347,16 @@ export const AIRPORT_SCRIPT = {
       { type: 'message', id: 'clerkThanks' },
       { type: 'sceneAnimation', id: 'clerkHandOff' },
       { type: 'message', id: 'clerkBag' },
-      { type: 'setState', key: 'palmettoes', value: 90 },
+      { type: 'incState', key: 'palmettoes', amount: -10 },
       { type: 'setState', key: 'bag', value: ['passport', 'letter'] },
       { type: 'setState', key: 'familyQueue', value: 'queued' },
+      { type: 'setState', key: 'familyQueuePendingClear', value: true },
       { type: 'setState', key: 'clerkAnnoyanceLevel', value: 0 },
       { type: 'setState', key: 'claimSize', value: null },
       { type: 'setState', key: 'claimColor', value: null },
       { type: 'setState', key: 'claimMatchesBag', value: false },
+      { type: 'delay', ticks: FAMILY_QUEUE_LEAVE_DELAY_TICKS },
+      { type: 'event', id: 'familyQueue.clear' },
     ],
     wrongBag: [
       { type: 'message', id: 'clerkThanks' },
@@ -353,15 +368,17 @@ export const AIRPORT_SCRIPT = {
 
     passportHoliday: [
       { type: 'message', id: 'passportHolidayFee' },
-      { type: 'setState', key: 'palmettoes', value: 85 },
+      { type: 'incState', key: 'palmettoes', amount: -15 },
       { type: 'setState', key: 'mayExit', value: true },
+      { type: 'setState', key: 'familyQueuePendingClear', value: false },
       { type: 'setState', key: 'familyQueue', value: 'cleared' },
       { type: 'message', id: 'passportClear' },
     ],
     passportBusiness: [
       { type: 'message', id: 'passportBusinessFee' },
-      { type: 'setState', key: 'palmettoes', value: 85 },
+      { type: 'incState', key: 'palmettoes', amount: -15 },
       { type: 'setState', key: 'mayExit', value: true },
+      { type: 'setState', key: 'familyQueuePendingClear', value: false },
       { type: 'setState', key: 'familyQueue', value: 'cleared' },
       { type: 'message', id: 'passportClear' },
     ],

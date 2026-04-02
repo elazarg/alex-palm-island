@@ -23,6 +23,7 @@ export class ScriptedScene {
     this._gestureLockedDialog = null;
     this._pendingDialogChoiceEvent = null;
     this._pendingDialogDelayTicks = 0;
+    this._pendingDelayTicks = 0;
     this.onTransition = null;
   }
 
@@ -41,6 +42,7 @@ export class ScriptedScene {
     this._gestureLockedDialog = null;
     this._pendingDialogChoiceEvent = null;
     this._pendingDialogDelayTicks = 0;
+    this._pendingDelayTicks = 0;
     this.state = { ...(this.sceneScript.initialState || {}) };
     this._interactionEnabled = {};
 
@@ -51,6 +53,11 @@ export class ScriptedScene {
   }
 
   tickScriptRuntime() {
+    if (this._pendingDelayTicks > 0) {
+      this._pendingDelayTicks--;
+      if (this._pendingDelayTicks === 0) this._processActionQueue();
+      return;
+    }
     if (this.modal?.type === 'dialog' && this.modal.phase === 'alexReply' && this.modal.alexTalking) {
       this.modal.replyTick = Math.min(this.modal.replyDurationTicks || 0, (this.modal.replyTick || 0) + 1);
     }
@@ -141,20 +148,34 @@ export class ScriptedScene {
     this.actionQueue.push(...list.map((step) => ({ ...step })));
   }
 
+  _prependSteps(steps) {
+    const list = Array.isArray(steps) ? steps : [steps];
+    this.actionQueue.unshift(...list.map((step) => ({ ...step })));
+  }
+
   _processActionQueue() {
-    if (this.modal || this._isScriptBusy?.()) return;
+    if (this.modal || this._pendingDelayTicks > 0 || this._isScriptBusy?.()) return;
     while (this.actionQueue.length) {
       const step = this.actionQueue.shift();
       if (step.if) {
-        this._enqueueSteps(this._evaluateCondition(step.if) ? step.then : step.else);
+        this._prependSteps(this._evaluateCondition(step.if) ? step.then : step.else);
         continue;
       }
       if (step.type === 'event') {
-        this._enqueueSteps(this.sceneScript.events?.[step.id]);
+        this._prependSteps(this.sceneScript.events?.[step.id]);
         continue;
       }
       if (step.type === 'walkTo') {
         this._walkTo?.(step.x, step.y);
+        return;
+      }
+      if (step.type === 'walkThenEvent') {
+        this._walkThenEvent?.(step.x, step.y, step.then);
+        return;
+      }
+      if (step.type === 'delay') {
+        this._pendingDelayTicks = Math.max(0, step.ticks || 0);
+        if (this._pendingDelayTicks === 0) continue;
         return;
       }
       if (step.type === 'face') {

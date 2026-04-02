@@ -19,6 +19,7 @@ import {
   buildAssetManifest,
   createAirportObjects,
 } from './content.js';
+import { AIRPORT_STATIC_REGIONS, resolveAirportSelectorRect } from './topology.js';
 
 const FADE_TICKS = 18;
 const ENTRY_DESCENT_FRAME_TICKS = 3;
@@ -39,6 +40,10 @@ export class AirportScene extends ScriptedScene {
     this.panelLayout = STANDARD_PANEL_LAYOUT;
     this.uiButtons = ACTION_BUTTONS;
     this.walkZones = WALK_ZONES;
+    this.walkMasks = AIRPORT_STATIC_REGIONS
+      .filter((region) => region.kind === 'walkMask')
+      .map((region) => resolveAirportSelectorRect(region.selector))
+      .filter(Boolean);
     this.walkDeltas = {
       1: [{dx:0,dy:0},{dx:-4,dy:2},{dx:-4,dy:3},{dx:0,dy:0},{dx:0,dy:0},{dx:-4,dy:2},{dx:-4,dy:3},{dx:0,dy:0},{dx:0,dy:0}],
       2: [{dx:0,dy:0},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:0},{dx:0,dy:0}],
@@ -108,10 +113,13 @@ export class AirportScene extends ScriptedScene {
     this._pressedInventoryControlMode = null;
     this._sceneAnimation = null;
     this._entrySequence = null;
+    this._pendingWalkSteps = null;
 
     this.initScriptRuntime();
     this._applyRouteStateOverrides();
     this._applyDebugRouteOverrides();
+    this._armRouteDrivenQueueClearIfNeeded();
+    this._processActionQueue();
     this.meterAnimation = createMeterAnimationState(this.state?.palmettoes ?? 100);
     this.scrollX = Math.max(0, this.alexX - 160);
     this._setInputMode('walk');
@@ -165,10 +173,16 @@ export class AirportScene extends ScriptedScene {
       this._pendingButtonMode = button.mode;
       return;
     }
-    if (this.actionQueue.length) return;
     const worldX = x + this.scrollX;
     const worldY = y;
-    const interaction = this._findInteraction(worldX, worldY, this.inputMode);
+    if (this.actionQueue.length) {
+      if (this._pendingDelayTicks > 0 && this.inputMode === 'walk' && this._inWalkZone(worldX, worldY)) {
+        this._startWalk(worldX, worldY);
+      }
+      return;
+    }
+    const interactionMode = this.inputMode === 'item' ? 'bag' : this.inputMode;
+    const interaction = this._findInteraction(worldX, worldY, interactionMode);
     if (interaction) {
       this._handleInteractionAction(interaction.action);
       return;
@@ -423,6 +437,12 @@ export class AirportScene extends ScriptedScene {
       this.alexWalking = false;
       this.alexFrame = 1;
       this.alexIdleTick = 0;
+      if (this._pendingWalkSteps?.length) {
+        const steps = this._pendingWalkSteps;
+        this._pendingWalkSteps = null;
+        this._prependSteps(steps);
+      }
+      this._processActionQueue();
       return;
     }
     const newX = this.alexX + delta.dx;
@@ -434,6 +454,12 @@ export class AirportScene extends ScriptedScene {
       this.alexWalking = false;
       this.alexFrame = 1;
       this.alexIdleTick = 0;
+      if (this._pendingWalkSteps?.length) {
+        const steps = this._pendingWalkSteps;
+        this._pendingWalkSteps = null;
+        this._prependSteps(steps);
+      }
+      this._processActionQueue();
     }
   }
 
@@ -573,6 +599,17 @@ export class AirportScene extends ScriptedScene {
       } else {
         this._queueEvent('bagDefault');
       }
+      return;
+    }
+    if (action.kind === 'approachFlow') {
+      this.actionQueue = [];
+      this._enqueueSteps({
+        type: 'walkThenEvent',
+        x: action.approach.x,
+        y: action.approach.y,
+        then: [{ type: 'event', id: action.id }],
+      });
+      this._processActionQueue();
       return;
     }
     if (action.kind === 'flow') {
@@ -794,6 +831,18 @@ export class AirportScene extends ScriptedScene {
   }
 
   _playSceneAnimation(step) {
+    if (step.id === 'familyQueueLeave') {
+      this._sceneAnimation = {
+        prefix: 'FAMGO',
+        sequence: [1, 2, 3, 4, 5, 6, 7, 8],
+        x: 500,
+        y: 40,
+        rate: 3,
+        tick: 0,
+        index: 0,
+      };
+      return;
+    }
     if (step.id !== 'clerkHandOff') {
       this._processActionQueue();
       return;
@@ -867,6 +916,15 @@ export class AirportScene extends ScriptedScene {
     if (Number.isFinite(debug.alexDir)) this.alexDir = debug.alexDir;
   }
 
+  _armRouteDrivenQueueClearIfNeeded() {
+    if (this.state?.familyQueue === 'queued' && this.state?.familyQueuePendingClear === true && this._pendingDelayTicks <= 0) {
+      this._enqueueSteps([
+        { type: 'delay', ticks: 90 },
+        { type: 'event', id: 'familyQueue.clear' },
+      ]);
+    }
+  }
+
   _publishRoute() {
     if (typeof this.onRouteChange !== 'function') return;
     this.onRouteChange(this._buildRoute());
@@ -875,18 +933,18 @@ export class AirportScene extends ScriptedScene {
   _buildRoute() {
     const state = pickAirportRouteState(this.state);
     if (this.modal?.type === 'dialog' && this.modal.id) {
-      return { scene: 'airport', view: 'dialog', dialogId: this.modal.id, state };
+      return { scene: 'airport', view: 'dialog', dialogId: this.modal.id, state, initial: false };
     }
     if (this.modal?.type === 'form' && this.modal.id) {
-      return { scene: 'airport', view: 'form', formId: this.modal.id, state };
+      return { scene: 'airport', view: 'form', formId: this.modal.id, state, initial: false };
     }
     if (this.modal?.type === 'inventory') {
-      return { scene: 'airport', view: 'inventory', inventoryId: 'bag', state };
+      return { scene: 'airport', view: 'inventory', inventoryId: 'bag', state, initial: false };
     }
     if (this.modal?.presentation === 'resource' && Number.isFinite(this.modal.sourceSectionId)) {
-      return { scene: 'airport', view: 'resource', resourceSectionId: this.modal.sourceSectionId, state };
+      return { scene: 'airport', view: 'resource', resourceSectionId: this.modal.sourceSectionId, state, initial: false };
     }
-    return { scene: 'airport', view: 'scene', state };
+    return { scene: 'airport', view: 'scene', state, initial: false };
   }
 
   _getInteractionRect(interaction) {
@@ -917,6 +975,11 @@ export class AirportScene extends ScriptedScene {
     this._startWalk(x, y);
   }
 
+  _walkThenEvent(x, y, steps) {
+    this._pendingWalkSteps = Array.isArray(steps) ? steps.map((step) => ({ ...step })) : [{ ...steps }];
+    this._startWalk(x, y);
+  }
+
   _face(dir) {
     this.alexDir = dir;
     this.alexFrame = 1;
@@ -928,12 +991,22 @@ export class AirportScene extends ScriptedScene {
   }
 
   _inWalkZone(x, y) {
-    return this.walkZones.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2);
+    const inBaseZone = this.walkZones.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2);
+    if (!inBaseZone) return false;
+    if (this.walkMasks.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2)) return false;
+    if (this.state?.familyQueue === 'queued') {
+      const familyBlock = this._getInteractionRect({ object: 'Family', sprite: 'FAMILY1', pad: [0, 0, -76, 0] });
+      if (familyBlock) {
+        const [x1, y1, x2, y2] = familyBlock;
+        if (x >= x1 && x <= x2 && y >= y1 && y <= y2) return false;
+      }
+    }
+    return true;
   }
 
   _startEntrySequenceIfNeeded() {
     const hasDebugPlacement = Number.isFinite(this.route.debug?.alexX) || Number.isFinite(this.route.debug?.alexY);
-    const shouldRun = this.route.view === 'scene' && !this.route.dialogId && !hasDebugPlacement;
+    const shouldRun = this.route.initial === true && this.route.view === 'scene' && !this.route.dialogId && !hasDebugPlacement;
     if (!shouldRun) return;
     const descending = this.objectByName?.ALEXDN;
     if (!descending) return;

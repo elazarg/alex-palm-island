@@ -174,3 +174,9 @@ export function resolveAirportSemanticRect(id) {
   if (!binding) return null;
   return unionRects(binding.selectors.map(resolveAirportSelectorRect).filter(Boolean));
 }
+
+export function resolveAirportWalkTarget(regionId) {
+  const region = AIRPORT_STATIC_REGIONS.find((entry) => entry.id === regionId);
+  const walkTo = region?.semantics?.walkTo;
+  return walkTo ? Object.freeze({ x: walkTo.x, y: walkTo.y }) : null;
+}

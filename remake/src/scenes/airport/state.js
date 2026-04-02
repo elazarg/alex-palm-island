@@ -2,6 +2,7 @@ export const AIRPORT_DEFAULT_STATE = Object.freeze({
   palmettoes: 100,
   bag: null,
   familyQueue: 'not-arrived',
+  familyQueuePendingClear: false,
   mayExit: false,
   exitWarningLevel: 0,
   clerkAnnoyanceLevel: 0,
@@ -14,6 +15,7 @@ export const AIRPORT_STATE_KEYS = Object.freeze([
   'palmettoes',
   'bag',
   'familyQueue',
+  'familyQueuePendingClear',
   'mayExit',
   'exitWarningLevel',
   'clerkAnnoyanceLevel',
@@ -43,7 +45,7 @@ export function normalizeAirportState(state = {}) {
   if (state.claimSize && ['big', 'medium', 'small'].includes(state.claimSize)) normalized.claimSize = state.claimSize;
   if (state.claimColor && ['grey', 'purple', 'pink'].includes(state.claimColor)) normalized.claimColor = state.claimColor;
   if (state.familyQueue && FAMILY_QUEUE_VALUES.includes(state.familyQueue)) normalized.familyQueue = state.familyQueue;
-  for (const key of ['mayExit', 'claimMatchesBag']) {
+  for (const key of ['familyQueuePendingClear', 'mayExit', 'claimMatchesBag']) {
     if (typeof state[key] === 'boolean') normalized[key] = state[key];
   }
   for (const key of ['palmettoes', 'exitWarningLevel', 'clerkAnnoyanceLevel']) {
@@ -63,7 +65,7 @@ export function parseAirportStateParams(params) {
   if (claimSize && ['big', 'medium', 'small'].includes(claimSize)) state.claimSize = claimSize;
   const claimColor = params.get('claimColor');
   if (claimColor && ['grey', 'purple', 'pink'].includes(claimColor)) state.claimColor = claimColor;
-  for (const key of ['mayExit', 'claimMatchesBag']) {
+  for (const key of ['familyQueuePendingClear', 'mayExit', 'claimMatchesBag']) {
     const parsed = parseBooleanFlag(params.get(key));
     if (parsed != null) state[key] = parsed;
   }
@@ -82,6 +84,7 @@ export function serializeAirportStateParams(state = {}) {
   if (Number.isFinite(normalized.palmettoes) && normalized.palmettoes !== AIRPORT_DEFAULT_STATE.palmettoes) params.set('palmettoes', String(normalized.palmettoes));
   if (normalized.bag?.length) params.set('bag', normalized.bag.join(','));
   if (normalized.familyQueue !== AIRPORT_DEFAULT_STATE.familyQueue) params.set('familyQueue', normalized.familyQueue);
+  if (normalized.familyQueuePendingClear) params.set('familyQueuePendingClear', '1');
   if (normalized.mayExit) params.set('mayExit', '1');
   if (Number.isFinite(normalized.exitWarningLevel) && normalized.exitWarningLevel > 0) params.set('exitWarningLevel', String(normalized.exitWarningLevel));
   if (Number.isFinite(normalized.clerkAnnoyanceLevel) && normalized.clerkAnnoyanceLevel > 0) params.set('clerkAnnoyanceLevel', String(normalized.clerkAnnoyanceLevel));
