@@ -1010,6 +1010,7 @@ export class AirportScene extends ScriptedScene {
   }
 
   _isObjectVisibleOnScreen(obj, spriteName = obj?.sprite) {
+    if (this.modal) return false;
     if (!obj?.visible || !spriteName) return false;
     const img = this.engine.getAsset(spriteName);
     if (!img) return false;
