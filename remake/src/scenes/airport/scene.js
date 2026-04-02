@@ -126,6 +126,8 @@ export class AirportScene extends ScriptedScene {
 
     if (this.route.dialogId) {
       this._openDialog(this.route.dialogId, { deferPromptSound: true });
+    } else if (this.route.view === 'message' && this.route.messageId) {
+      this._openMessage(this.route.messageId);
     } else if (this.route.view === 'form') {
       this._openForm(this.route.formId || 'lostAndFoundForm');
     } else if (this.route.view === 'inventory') {
@@ -943,6 +945,9 @@ export class AirportScene extends ScriptedScene {
     const state = pickAirportRouteState(this.state);
     if (this.modal?.type === 'dialog' && this.modal.id) {
       return { scene: 'airport', view: 'dialog', dialogId: this.modal.id, state, initial: false };
+    }
+    if (this.modal?.type === 'message' && this.modal.id) {
+      return { scene: 'airport', view: 'message', messageId: this.modal.id, state, initial: false };
     }
     if (this.modal?.type === 'form' && this.modal.id) {
       return { scene: 'airport', view: 'form', formId: this.modal.id, state, initial: false };

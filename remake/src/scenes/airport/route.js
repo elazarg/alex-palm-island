@@ -11,6 +11,7 @@ export function defaultAirportRoute() {
     view: 'scene',
     initial: true,
     dialogId: null,
+    messageId: null,
     formId: null,
     inventoryId: null,
     resourceSectionId: null,
@@ -29,6 +30,7 @@ export function normalizeAirportRoute(route = {}) {
     debug: route.debug ? { ...route.debug } : null,
   };
   if (normalized.view !== 'dialog') normalized.dialogId = null;
+  if (normalized.view !== 'message') normalized.messageId = null;
   if (normalized.view !== 'form') normalized.formId = null;
   if (normalized.view !== 'inventory') normalized.inventoryId = null;
   if (normalized.view !== 'resource') normalized.resourceSectionId = null;
@@ -56,6 +58,9 @@ export function parseAirportRoute(segments = [], params = new URLSearchParams())
   if (segments[0] === 'dialog' && segments[1]) {
     route.view = 'dialog';
     route.dialogId = segments[1];
+  } else if (segments[0] === 'message' && segments[1]) {
+    route.view = 'message';
+    route.messageId = segments[1];
   } else if (segments[0] === 'form') {
     route.view = 'form';
     route.formId = segments[1] || 'lostAndFoundForm';
@@ -78,6 +83,7 @@ export function formatAirportRoute(route = {}) {
   const normalized = normalizeAirportRoute(route);
   const segments = ['airport'];
   if (normalized.view === 'dialog' && normalized.dialogId) segments.push('dialog', normalized.dialogId);
+  else if (normalized.view === 'message' && normalized.messageId) segments.push('message', normalized.messageId);
   else if (normalized.view === 'form') segments.push('form', normalized.formId || 'lostAndFoundForm');
   else if (normalized.view === 'inventory') segments.push('inventory', normalized.inventoryId || 'bag');
   else if (normalized.view === 'resource' && Number.isFinite(normalized.resourceSectionId)) segments.push('resource', String(normalized.resourceSectionId));
