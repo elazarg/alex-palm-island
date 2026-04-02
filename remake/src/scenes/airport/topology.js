@@ -121,6 +121,18 @@ export const AIRPORT_STATIC_REGIONS = Object.freeze([
     selector: clickRectSelector(29),
     semantics: Object.freeze({ walkTo: Object.freeze({ x: 845, y: 120 }) }),
   }),
+  Object.freeze({
+    id: 'queue.waitZone',
+    kind: 'waitZone',
+    selector: clickRectSelector(11),
+    semantics: Object.freeze({ y2: 165 }),
+  }),
+  Object.freeze({
+    id: 'mask.passportCounterFront',
+    kind: 'walkMask',
+    selector: clickRectSelector(21),
+    semantics: Object.freeze({ y2: 134 }),
+  }),
   Object.freeze({ id: 'doors.upperPanel', kind: 'unclassified', selector: clickRectSelector(30) }),
   Object.freeze({ id: 'marker.offscreen', kind: 'marker', selector: clickRectSelector(31) }),
   Object.freeze({ id: 'marker.lostCounterPivot', kind: 'marker', selector: clickRectSelector(32) }),
@@ -179,4 +191,14 @@ export function resolveAirportWalkTarget(regionId) {
   const region = AIRPORT_STATIC_REGIONS.find((entry) => entry.id === regionId);
   const walkTo = region?.semantics?.walkTo;
   return walkTo ? Object.freeze({ x: walkTo.x, y: walkTo.y }) : null;
+}
+
+export function resolveAirportRegionRect(regionId) {
+  const region = AIRPORT_STATIC_REGIONS.find((entry) => entry.id === regionId);
+  const rect = resolveAirportSelectorRect(region?.selector);
+  if (!rect) return null;
+  const [x1, y1, x2, y2] = rect;
+  if (Number.isFinite(region?.semantics?.y1)) return [x1, region.semantics.y1, x2, y2];
+  if (Number.isFinite(region?.semantics?.y2)) return [x1, y1, x2, region.semantics.y2];
+  return rect;
 }

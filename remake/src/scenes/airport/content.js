@@ -25,6 +25,13 @@ export const ACHU_SEQUENCE = [
   7, 8, 9, 10, 11,
 ];
 
+export const ACHU_FRAME_DURATIONS = [
+  8, 8, 8, 8, 8, 8, 8, 8,
+  8, 8, 8, 8, 8, 8, 8, 8,
+  8, 8, 8, 8, 3, 3, 3, 3,
+  3, 3, 2, 2, 1,
+];
+
 export const WALK_ZONES = [
   [0, 95, 300, 160],
   [250, 55, 400, 160],
@@ -34,7 +41,14 @@ export const WALK_ZONES = [
 
 export function createAirportObjects() {
   const behind = [
-    { name: 'Achu', sprite: 'ACHU1', x: 111, y: 31, visible: true, anim: { prefix: 'ACHU', rate: 8, sequence: ACHU_SEQUENCE } },
+    {
+      name: 'Achu',
+      sprite: 'ACHU1',
+      x: 111,
+      y: 31,
+      visible: true,
+      anim: { prefix: 'ACHU', rate: 8, sequence: ACHU_SEQUENCE, frameDurations: ACHU_FRAME_DURATIONS },
+    },
     { name: 'Door', sprite: 'DOOR1', x: 273, y: 0, visible: true },
     { name: 'FemGrd', sprite: 'FEMGRD1', x: 246, y: 20, visible: true,
       anim: { prefix: 'FEMGRD', rate: 4, bottomAlign: 121,

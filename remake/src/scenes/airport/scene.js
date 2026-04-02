@@ -19,7 +19,7 @@ import {
   buildAssetManifest,
   createAirportObjects,
 } from './content.js';
-import { AIRPORT_STATIC_REGIONS, resolveAirportSelectorRect } from './topology.js';
+import { AIRPORT_STATIC_REGIONS, resolveAirportRegionRect, resolveAirportSelectorRect } from './topology.js';
 
 const FADE_TICKS = 18;
 const ENTRY_DESCENT_FRAME_TICKS = 3;
@@ -42,8 +42,9 @@ export class AirportScene extends ScriptedScene {
     this.walkZones = WALK_ZONES;
     this.walkMasks = AIRPORT_STATIC_REGIONS
       .filter((region) => region.kind === 'walkMask')
-      .map((region) => resolveAirportSelectorRect(region.selector))
+      .map((region) => resolveAirportRegionRect(region.id) || resolveAirportSelectorRect(region.selector))
       .filter(Boolean);
+    this.familyQueueWaitZone = resolveAirportRegionRect('queue.waitZone');
     this.walkDeltas = {
       1: [{dx:0,dy:0},{dx:-4,dy:2},{dx:-4,dy:3},{dx:0,dy:0},{dx:0,dy:0},{dx:-4,dy:2},{dx:-4,dy:3},{dx:0,dy:0},{dx:0,dy:0}],
       2: [{dx:0,dy:0},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:0},{dx:0,dy:0}],
@@ -118,8 +119,6 @@ export class AirportScene extends ScriptedScene {
     this.initScriptRuntime();
     this._applyRouteStateOverrides();
     this._applyDebugRouteOverrides();
-    this._armRouteDrivenQueueClearIfNeeded();
-    this._processActionQueue();
     this.meterAnimation = createMeterAnimationState(this.state?.palmettoes ?? 100);
     this.scrollX = Math.max(0, this.alexX - 160);
     this._setInputMode('walk');
@@ -316,6 +315,7 @@ export class AirportScene extends ScriptedScene {
     this._tickEntrySequence();
     this._tickWalk();
     this._tickObjects();
+    this._maybeArmFamilyQueueClear();
     this._scrollToAlex();
     this.tickScriptRuntime();
   }
@@ -485,11 +485,15 @@ export class AirportScene extends ScriptedScene {
         if (obj._animTick == null) obj._animTick = 0;
         if (obj._animIdx == null) obj._animIdx = 0;
         obj._animTick++;
-        if (obj._animTick >= obj.anim.rate) {
+        const frameRate = obj.anim.frameDurations?.[obj._animIdx] ?? obj.anim.rate;
+        if (obj._animTick >= frameRate) {
           obj._animTick = 0;
           obj._animIdx = (obj._animIdx + 1) % obj.anim.sequence.length;
           const frameNum = obj.anim.sequence[obj._animIdx];
           obj.sprite = `${obj.anim.prefix}${frameNum}`;
+          if (obj.name === 'Achu' && frameNum === 3 && this._isObjectVisibleOnScreen(obj, obj.sprite)) {
+            this._playOneShotSound('SDACHU1');
+          }
           if (obj.anim.framePos?.[frameNum]) {
             obj.x = obj.anim.framePos[frameNum][0];
             obj.y = obj.anim.framePos[frameNum][1];
@@ -916,13 +920,18 @@ export class AirportScene extends ScriptedScene {
     if (Number.isFinite(debug.alexDir)) this.alexDir = debug.alexDir;
   }
 
-  _armRouteDrivenQueueClearIfNeeded() {
-    if (this.state?.familyQueue === 'queued' && this.state?.familyQueuePendingClear === true && this._pendingDelayTicks <= 0) {
-      this._enqueueSteps([
-        { type: 'delay', ticks: 90 },
-        { type: 'event', id: 'familyQueue.clear' },
-      ]);
-    }
+  _maybeArmFamilyQueueClear() {
+    if (this.state?.familyQueue !== 'queued') return;
+    if (this.state?.familyQueuePendingClear !== true) return;
+    if (this._pendingDelayTicks > 0) return;
+    if (!this._isInsideRect(this.alexX, this.alexY, this.familyQueueWaitZone)) return;
+    if (this.actionQueue.some((step) => step.type === 'event' && step.id === 'familyQueue.clear')) return;
+    if (this._sceneAnimation?.prefix === 'FAMGO') return;
+    this._enqueueSteps([
+      { type: 'delay', ticks: 90 },
+      { type: 'event', id: 'familyQueue.clear' },
+    ]);
+    this._processActionQueue();
   }
 
   _publishRoute() {
@@ -988,6 +997,29 @@ export class AirportScene extends ScriptedScene {
 
   _isScriptBusy() {
     return this.alexWalking || Boolean(this._sceneAnimation) || Boolean(this._entrySequence);
+  }
+
+  _playOneShotSound(name) {
+    if (!name || this.engine.isAudioLocked?.()) return;
+    this.engine.playSound?.(name);
+  }
+
+  _isObjectVisibleOnScreen(obj, spriteName = obj?.sprite) {
+    if (!obj?.visible || !spriteName) return false;
+    const img = this.engine.getAsset(spriteName);
+    if (!img) return false;
+    const drawY = (obj.anim && obj.anim.bottomAlign) ? obj.anim.bottomAlign - img.height : obj.y;
+    const x1 = obj.x - this.scrollX;
+    const x2 = x1 + img.width;
+    const y1 = drawY;
+    const y2 = y1 + img.height;
+    return x2 > 0 && x1 < 320 && y2 > 0 && y1 < 200;
+  }
+
+  _isInsideRect(x, y, rect) {
+    if (!rect) return false;
+    const [x1, y1, x2, y2] = rect;
+    return x >= x1 && x <= x2 && y >= y1 && y <= y2;
   }
 
   _inWalkZone(x, y) {

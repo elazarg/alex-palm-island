@@ -11,8 +11,6 @@ const CLERK_SEQUENCE = Object.freeze([1, 2, 3, 4, 5, 6, 7, 8]);
 const BRDTLK_SEQUENCE = Object.freeze([1,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,2,1,1,1,1,1,3,4,3,4,3,1,1,1,5,6,5,6,7,8,7,8,5,6,1,1,9,10,9,10,11,10,9,1,1,1,1,1]);
 const FEMTLK_SEQUENCE = Object.freeze([1, 2, 3, 4, 5, 6, 7]);
 const FAMTLK_SEQUENCE = Object.freeze([1, 2, 3, 4, 5, 6]);
-const FAMILY_QUEUE_LEAVE_DELAY_TICKS = 90;
-
 function speakerVisualFromSpritePart(spritePart) {
   const family = spritePart.split(/\s+/)[0];
   switch (family) {
@@ -355,8 +353,6 @@ export const AIRPORT_SCRIPT = {
       { type: 'setState', key: 'claimSize', value: null },
       { type: 'setState', key: 'claimColor', value: null },
       { type: 'setState', key: 'claimMatchesBag', value: false },
-      { type: 'delay', ticks: FAMILY_QUEUE_LEAVE_DELAY_TICKS },
-      { type: 'event', id: 'familyQueue.clear' },
     ],
     wrongBag: [
       { type: 'message', id: 'clerkThanks' },
