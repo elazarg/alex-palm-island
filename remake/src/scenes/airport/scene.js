@@ -5,7 +5,7 @@ import { STANDARD_NOTE_LAYOUT } from '../../ui/note-layout.js';
 import { STANDARD_PANEL_LAYOUT } from '../../ui/panel-layout.js';
 import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimation } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
-import { ScriptedScene } from '../../runtime/scripted-scene.js';
+import { ScriptedScene } from '../../runtime/script-runtime.js';
 import { AIRPORT_SCRIPT } from './script.js';
 import { normalizeAirportRoute } from './route.js';
 import { AIRPORT_RESOURCES } from './resources.js';

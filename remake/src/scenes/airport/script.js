@@ -1,6 +1,6 @@
 import { AIRPORT_RESOURCES } from './resources.js';
 import { AIRPORT_DEFAULT_STATE } from './state.js';
-import { AIRPORT_ACTIVE_INTERACTIONS } from './theme-layout.js';
+import { AIRPORT_ACTIVE_INTERACTIONS } from './theme-2d.js';
 
 const DIALOGS = AIRPORT_RESOURCES.dialogBySection;
 const MESSAGES = AIRPORT_RESOURCES.messageBySection;

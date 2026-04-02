@@ -17,19 +17,35 @@ function simpleFormat(scene) {
   };
 }
 
-function simpleDescriptor(scene, create) {
+function simpleDescriptor(scene, create, wire) {
   return {
     defaultRoute: () => defaultSimpleRoute(scene),
     parse: () => defaultSimpleRoute(scene),
     normalize: (route = {}) => ({ scene, ...route }),
     format: () => simpleFormat(scene),
     create,
+    wire,
   };
 }
 
 export const SCENE_REGISTRY = Object.freeze({
-  logo: simpleDescriptor('logo', () => new LogoScene()),
-  menu: simpleDescriptor('menu', () => new MainMenuScene()),
+  logo: simpleDescriptor(
+    'logo',
+    () => new LogoScene(),
+    (manager, scene) => {
+      scene.onDone = async () => { await manager.openRoute(defaultSimpleRoute('menu'), { replace: true }); };
+    },
+  ),
+  menu: simpleDescriptor(
+    'menu',
+    () => new MainMenuScene(),
+    (manager, scene) => {
+      scene.onButton = async (name) => {
+        if (name === 'intro') await manager.openRoute({ scene: 'intro', part: null });
+        else if (name === 'play') await manager.openRoute(defaultAirportRoute());
+      };
+    },
+  ),
   intro: {
     defaultRoute: () => ({ scene: 'intro', part: null }),
     parse: (segments) => ({ scene: 'intro', part: INTRO_PARTS.includes(segments[0]) ? segments[0] : null }),
@@ -42,6 +58,10 @@ export const SCENE_REGISTRY = Object.freeze({
       };
     },
     create: (route = {}) => new IntroScene({ startPart: route.part || null }),
+    wire: (manager, scene) => {
+      scene.onDone = async () => { await manager.openRoute(defaultAirportRoute()); };
+      scene.onRouteChange = (nextRoute) => manager.publishRoute(nextRoute);
+    },
   },
   airport: {
     defaultRoute: defaultAirportRoute,
@@ -49,6 +69,13 @@ export const SCENE_REGISTRY = Object.freeze({
     normalize: normalizeAirportRoute,
     format: formatAirportRoute,
     create: (route = {}) => new AirportScene({ route: normalizeAirportRoute(route) }),
+    wire: (manager, scene) => {
+      scene.onTransition = async (target) => {
+        if (!target?.scene) return;
+        await manager.openRoute(target);
+      };
+      scene.onRouteChange = (nextRoute) => manager.publishRoute(nextRoute);
+    },
   },
   arrest: {
     defaultRoute: () => ({ scene: 'arrest', reasonCode: 503 }),
@@ -65,6 +92,13 @@ export const SCENE_REGISTRY = Object.freeze({
       return { segments: ['arrest', String(normalized.reasonCode)], params: new URLSearchParams() };
     },
     create: (route = {}) => new ArrestScene({ reasonCode: route.reasonCode }),
+    wire: (manager, scene, route) => {
+      scene.reasonCode = route.reasonCode ?? scene.reasonCode;
+      scene.onDone = async (target) => {
+        if (!target?.scene) return;
+        await manager.openRoute(target);
+      };
+    },
   },
   prison: {
     defaultRoute: () => ({ scene: 'prison', reasonCode: 503 }),
@@ -81,5 +115,12 @@ export const SCENE_REGISTRY = Object.freeze({
       return { segments: ['prison', String(normalized.reasonCode)], params: new URLSearchParams() };
     },
     create: (route = {}) => new PrisonScene({ reasonCode: route.reasonCode }),
+    wire: (manager, scene, route) => {
+      scene.reasonCode = route.reasonCode ?? scene.reasonCode;
+      scene.onDone = async (target) => {
+        if (!target?.scene) return;
+        await manager.openRoute(target);
+      };
+    },
   },
 });
