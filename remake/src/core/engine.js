@@ -4,6 +4,12 @@ export const WIDTH = 320;
 export const HEIGHT = 200;
 export const TICK_MS = 55;
 
+export function computeLinearDepthScale(y, { yMin, yMax, scaleMin, scaleMax }) {
+  if (yMax <= yMin) return scaleMax;
+  const depth01 = Math.max(0, Math.min(1, (y - yMin) / (yMax - yMin)));
+  return scaleMin + depth01 * (scaleMax - scaleMin);
+}
+
 export class Engine {
   constructor(canvas, overlayCanvas = null) {
     canvas.width = WIDTH;
