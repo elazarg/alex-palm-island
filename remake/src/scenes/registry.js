@@ -19,6 +19,23 @@ function simpleFormat(scene) {
   };
 }
 
+function gameSceneDescriptor(scene, SceneClass, routeFns) {
+  return {
+    defaultRoute: routeFns.defaultRoute,
+    parse: routeFns.parse,
+    normalize: routeFns.normalize,
+    format: routeFns.format,
+    create: (route = {}) => new SceneClass({ route: routeFns.normalize(route) }),
+    wire: (manager, scene) => {
+      scene.onTransition = async (target) => {
+        if (!target?.scene) return;
+        await manager.openRoute(target);
+      };
+      scene.onRouteChange = (nextRoute) => manager.publishRoute(nextRoute);
+    },
+  };
+}
+
 function simpleDescriptor(scene, create, wire) {
   return {
     defaultRoute: () => defaultSimpleRoute(scene),
@@ -65,34 +82,18 @@ export const SCENE_REGISTRY = Object.freeze({
       scene.onRouteChange = (nextRoute) => manager.publishRoute(nextRoute);
     },
   },
-  airport: {
+  airport: gameSceneDescriptor('airport', AirportScene, {
     defaultRoute: defaultAirportRoute,
     parse: parseAirportRoute,
     normalize: normalizeAirportRoute,
     format: formatAirportRoute,
-    create: (route = {}) => new AirportScene({ route: normalizeAirportRoute(route) }),
-    wire: (manager, scene) => {
-      scene.onTransition = async (target) => {
-        if (!target?.scene) return;
-        await manager.openRoute(target);
-      };
-      scene.onRouteChange = (nextRoute) => manager.publishRoute(nextRoute);
-    },
-  },
-  stripair: {
+  }),
+  stripair: gameSceneDescriptor('stripair', StripAirScene, {
     defaultRoute: defaultStripAirRoute,
     parse: parseStripAirRoute,
     normalize: normalizeStripAirRoute,
     format: formatStripAirRoute,
-    create: (route = {}) => new StripAirScene({ route: normalizeStripAirRoute(route) }),
-    wire: (manager, scene) => {
-      scene.onTransition = async (target) => {
-        if (!target?.scene) return;
-        await manager.openRoute(target);
-      };
-      scene.onRouteChange = (nextRoute) => manager.publishRoute(nextRoute);
-    },
-  },
+  }),
   arrest: {
     defaultRoute: () => ({ scene: 'arrest', reasonCode: 503 }),
     parse: (segments) => {

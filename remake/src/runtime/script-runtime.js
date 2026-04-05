@@ -137,27 +137,10 @@ export class ScriptedScene {
 
   _handleStandardHotkeys({ key, originalEvent }) {
     if (this.modal || this._entrySequence) return false;
-    const hotkey = String(key || '').toLowerCase();
-    if (hotkey === 'w' || hotkey === 't' || hotkey === 'l' || hotkey === 'u') {
-      this.selectedItem = null;
-      const mode = { w: 'walk', t: 'talk', l: 'look', u: 'touch' }[hotkey];
-      this._setInputMode?.(mode);
-      originalEvent?.preventDefault?.();
-      return true;
-    }
-    if (hotkey === 'i') {
-      if (Array.isArray(this.state?.bag) && this.state.bag.length > 0) this._openInventory?.('bag');
-      else this._queueEvent('bagMissing');
-      originalEvent?.preventDefault?.();
-      return true;
-    }
-    if (hotkey === 'm') {
-      if (this.state?.map === true) this._openMap?.();
-      else this._queueEvent('mapMissing');
-      originalEvent?.preventDefault?.();
-      return true;
-    }
-    return false;
+    const intent = ScriptedScene.HOTKEY_TABLE[String(key || '').toLowerCase()];
+    if (!intent) return false;
+    originalEvent?.preventDefault?.();
+    return this._handleHotkeyIntent?.(intent) ?? false;
   }
 
   _queueEvent(eventId) {
@@ -511,3 +494,8 @@ export class ScriptedScene {
     this.onTransition(target);
   }
 }
+
+ScriptedScene.HOTKEY_TABLE = Object.freeze({
+  w: 'walk', t: 'talk', l: 'look', u: 'touch',
+  i: 'inventory', m: 'map',
+});

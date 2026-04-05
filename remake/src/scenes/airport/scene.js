@@ -1,15 +1,9 @@
 import { WIDTH, HEIGHT } from '../../core/engine.js';
-import { loadBitmapFont } from '../../ui/font-loader.js';
-import { ACTION_BUTTONS, CURSOR_HOTSPOTS, WHEEL_INPUT_MODES, resolveInteractionMode } from '../../ui/action-modes.js';
-import { STANDARD_DIALOG_LAYOUT } from '../../ui/dialog-layout.js';
-import { STANDARD_NOTE_LAYOUT } from '../../ui/note-layout.js';
-import { STANDARD_PANEL_LAYOUT } from '../../ui/panel-layout.js';
+import { WHEEL_INPUT_MODES, resolveInteractionMode } from '../../ui/action-modes.js';
 import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimation } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
 import { renderSceneDebugOverlay } from '../../ui/scene-debug-overlay.js';
-import { INVENTORY_ITEM_DEFS } from '../../ui/inventory-items.js';
-import { ScriptedScene } from '../../runtime/script-runtime.js';
-import { WALK_DELTAS, WALK_FRAME_CYCLES } from '../../runtime/walk-tables.js';
+import { GameScene } from '../../runtime/game-scene.js';
 import { GLOBAL_SOUND_MANIFEST } from '../../runtime/global-resources.js';
 import { buildNarrationSoundManifest } from '../../runtime/scx-sound-manifest.js';
 import { AIRPORT_SCRIPT } from './script.js';
@@ -60,19 +54,13 @@ const DEBUG_REGION_COLORS = Object.freeze({
 });
 const AIRPORT_NARRATION_SOUND_MANIFEST = buildNarrationSoundManifest(AIRPORT_RESOURCES);
 
-export class AirportScene extends ScriptedScene {
+export class AirportScene extends GameScene {
   constructor(options = {}) {
     super({
       sceneScript: AIRPORT_SCRIPT,
-      dialogLayout: STANDARD_DIALOG_LAYOUT,
-      noteLayout: STANDARD_NOTE_LAYOUT,
       dialogResponseDelayTicks: DIALOG_RESPONSE_DELAY_TICKS,
     });
     this.route = normalizeAirportRoute(options.route || {});
-    this.onRouteChange = null;
-    this.panelLayout = STANDARD_PANEL_LAYOUT;
-    this.uiButtons = ACTION_BUTTONS;
-    this.debugOverlayHeld = false;
     this.walkZones = WALK_ZONES;
     this.walkMasks = AIRPORT_STATIC_REGIONS
       .filter((region) => region.kind === 'walkMask' && !region.activeWhen)
@@ -86,27 +74,16 @@ export class AirportScene extends ScriptedScene {
       }))
       .filter((entry) => entry.rect);
     this.familyQueueWaitZone = resolveAirportRegionRect('queue.waitZone');
-    this.walkDeltas = WALK_DELTAS;
-    this.walkFrameCycles = WALK_FRAME_CYCLES;
     this._debugObjectKinds = Object.fromEntries(
       Object.values(AIRPORT_ENTITIES)
         .flatMap((entity) => (entity.sceneObjects || []).map((name) => [name, entity.kind]))
     );
   }
 
-  async load(engine) {
-    const { images, frameCounts } = buildAssetManifest();
-    this._frameCounts = frameCounts;
-    await engine.loadImages(images);
-    await engine.loadSounds({ ...SOUND_MANIFEST, ...AIRPORT_NARRATION_SOUND_MANIFEST, ...GLOBAL_SOUND_MANIFEST });
-    for (const [name, hotspot] of Object.entries(CURSOR_HOTSPOTS)) {
-      engine.registerCursorHotspot(name, hotspot);
-    }
-    engine.registerCursorHotspot('PASSPORTICON', { x: 0, y: 0 });
-    engine.registerCursorHotspot('LETTERICON', { x: 0, y: 0 });
-
-    this.font = await loadBitmapFont();
-  }
+  _buildAssetManifest() { return buildAssetManifest(); }
+  _buildSoundManifest() { return { ...SOUND_MANIFEST, ...AIRPORT_NARRATION_SOUND_MANIFEST, ...GLOBAL_SOUND_MANIFEST }; }
+  _getResources() { return AIRPORT_RESOURCES; }
+  _buildCurrentRoute() { return buildAirportRouteFromRuntime({ modal: this.modal, state: this.state, initial: false }); }
 
   init() {
     const { behind, front } = createAirportObjects();
@@ -390,19 +367,11 @@ export class AirportScene extends ScriptedScene {
     }
   }
 
-  destroy() {
-    this._stopSound();
-  }
-
   applyRoute(route) {
     this.route = normalizeAirportRoute(route);
     this._applyRouteStateOverrides();
     const screen = resolveAirportInitialScreen(this.route);
     if (screen) this._openInitialRouteScreen(screen);
-    this._publishRoute();
-  }
-
-  _afterModalChanged() {
     this._publishRoute();
   }
 
@@ -647,80 +616,6 @@ export class AirportScene extends ScriptedScene {
     }
   }
 
-  _calcDirection(fromX, fromY, toX, toY) {
-    const angle = Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI;
-    if (angle >= -22.5 && angle < 22.5) return 6;
-    if (angle >= 22.5 && angle < 67.5) return 3;
-    if (angle >= 67.5 && angle < 112.5) return 2;
-    if (angle >= 112.5 && angle < 157.5) return 1;
-    if (angle >= 157.5 || angle < -157.5) return 4;
-    if (angle >= -157.5 && angle < -112.5) return 7;
-    if (angle >= -112.5 && angle < -67.5) return 8;
-    if (angle >= -67.5 && angle < -22.5) return 9;
-    return 2;
-  }
-
-  _setInputMode(mode) {
-    this.inputMode = mode;
-    this._refreshCursor();
-  }
-
-  _refreshCursor() {
-    if (this.modal) {
-      if (this.modal.type === 'inventory') {
-        if (this.modal.inspectItem) {
-          this.engine.cursor = 'ARROWCURSOR';
-          return;
-        }
-        this.engine.cursor = this.modal.mode === 'look' ? 'LOOKCURSOR' : 'TOUCHCURSOR';
-        return;
-      }
-      this.engine.cursor = 'ARROWCURSOR';
-      return;
-    }
-    if (this.inputMode === 'item' && this.selectedItem) {
-      this.engine.cursor = `${this.selectedItem.toUpperCase()}ICON`;
-      return;
-    }
-    this.engine.cursor = ({
-      walk: 'WALKCURSOR',
-      look: 'LOOKCURSOR',
-      talk: 'TALKCURSOR',
-      touch: 'TOUCHCURSOR',
-      bag: 'ARROWCURSOR',
-    })[this.inputMode] || 'ARROWCURSOR';
-  }
-
-  _getUiButton(mx, my) {
-    if (this.modal || this.engine.mouseY < this.panelLayout.panel.revealY) return null;
-    return this.uiButtons.find((button) => {
-      if (!(mx >= button.x && mx <= button.x + button.w && my >= button.y && my <= button.y + button.h)) return false;
-      if (button.mode !== 'map') return true;
-      return this.state?.map !== null;
-    }) || null;
-  }
-
-  _findInteraction(worldX, worldY, mode) {
-    let best = null;
-    const interactions = this.sceneScript.interactions || [];
-    for (let index = 0; index < interactions.length; index++) {
-      const interaction = interactions[index];
-      if (!this._interactionEnabled[interaction.id]) continue;
-      const rect = this._getInteractionRect(interaction);
-      if (!rect) continue;
-      const [x1, y1, x2, y2] = rect;
-      if (worldX >= x1 && worldX <= x2 && worldY >= y1 && worldY <= y2) {
-        const action = interaction.actions?.[mode];
-        if (!action) continue;
-        const area = Math.max(1, (x2 - x1) * (y2 - y1));
-        if (!best || area < best.area || (area === best.area && index > best.index)) {
-          best = { interaction, action, area, index };
-        }
-      }
-    }
-    return best ? { interaction: best.interaction, action: best.action } : null;
-  }
-
   _handleInteractionAction(action) {
     if (!action) return;
     if (this.inputMode === 'item') {
@@ -749,77 +644,6 @@ export class AirportScene extends ScriptedScene {
     if (action.kind === 'textRef') {
       this._openTextRefSection(action.sectionId);
       return;
-    }
-  }
-
-  _openTextRefSection(sectionId) {
-    const textRef = AIRPORT_RESOURCES.textRefBySection[sectionId];
-    if (!textRef) return;
-    this._openTextRefRecord(textRef, { sectionId });
-  }
-
-  _openInventory(inventoryId = 'bag') {
-    this._stopSound();
-    this.modal = {
-      id: inventoryId,
-      type: 'inventory',
-      mode: 'take',
-      pressedControlMode: null,
-      inspectItem: null,
-      items: (this.state?.bag || [])
-        .map((itemId) => INVENTORY_ITEM_DEFS[itemId])
-        .filter(Boolean)
-        .map((item) => ({
-          id: item.id,
-          asset: item.iconAsset,
-          pictureAsset: item.pictureAsset,
-          description: item.description,
-        })),
-    };
-    this._afterModalChanged();
-    this._refreshCursor();
-  }
-
-  _closeInventory() {
-    if (this.modal?.type !== 'inventory') return;
-    this.modal = null;
-    this._afterModalChanged();
-    this._refreshCursor();
-  }
-
-  _openMap() {
-    this._stopSound();
-    this.modal = {
-      id: 'worldMap',
-      type: 'message',
-      presentation: 'resource',
-      asset: 'MAP',
-      locked: false,
-    };
-    this._afterModalChanged();
-    this._refreshCursor();
-  }
-
-  _selectInventoryItem(itemId) {
-    this.selectedItem = itemId;
-    this.inputMode = 'item';
-    this.modal = null;
-    this._afterModalChanged();
-    this._refreshCursor();
-  }
-
-  _handleInventoryItemClick(itemId) {
-    if (!this.modal || this.modal.type !== 'inventory') return;
-    const item = this.modal.items.find((entry) => entry.id === itemId);
-    if (!item) return;
-    if (this.modal.mode === 'take') {
-      this._selectInventoryItem(itemId);
-      return;
-    }
-    if (this.modal.mode === 'look') {
-      this.modal.inspectItem = item;
-      this._afterModalChanged();
-      this._refreshCursor();
     }
   }
 
@@ -1084,11 +908,6 @@ export class AirportScene extends ScriptedScene {
     this._processActionQueue();
   }
 
-  _publishRoute() {
-    if (typeof this.onRouteChange !== 'function') return;
-    this.onRouteChange(buildAirportRouteFromRuntime({ modal: this.modal, state: this.state, initial: false }));
-  }
-
   _getInteractionRect(interaction) {
     if (interaction.object) {
       const obj = this.objectByName?.[interaction.object];
@@ -1103,17 +922,6 @@ export class AirportScene extends ScriptedScene {
     return interaction.rect || null;
   }
 
-  _startWalk(x, y) {
-    this.alexTargetX = x;
-    this.alexTargetY = y;
-    this.alexWalking = true;
-    this.alexFrame = 1;
-    this.alexStepTick = 0;
-    this.alexDir = this._calcDirection(this.alexX, this.alexY, x, y);
-    this.alexWalkCycleIdx = 0;
-    this.alexIdleTick = 0;
-  }
-
   _walkTo(x, y) {
     this._startWalk(x, y);
   }
@@ -1121,16 +929,6 @@ export class AirportScene extends ScriptedScene {
   _walkThenEvent(x, y, steps) {
     this._pendingWalkSteps = Array.isArray(steps) ? steps.map((step) => ({ ...step })) : [{ ...steps }];
     this._startWalk(x, y);
-  }
-
-  _face(dir) {
-    this.alexDir = dir;
-    this.alexFrame = 1;
-    this.alexIdleTick = 0;
-  }
-
-  _isScriptBusy() {
-    return this.alexWalking || Boolean(this._sceneAnimation) || Boolean(this._entrySequence);
   }
 
   _playOneShotSound(name) {
