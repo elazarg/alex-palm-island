@@ -5,6 +5,8 @@ import { STANDARD_PANEL_LAYOUT } from '../ui/panel-layout.js';
 import { INVENTORY_ITEM_DEFS } from '../ui/inventory-items.js';
 import { renderSceneDebugOverlay, renderSceneDebugText } from '../ui/scene-debug-overlay.js';
 import { loadBitmapFont } from '../ui/font-loader.js';
+import { WIDTH, HEIGHT } from '../core/engine.js';
+import { findNearestWalkablePoint, findPathOnGrid, pointInPolygon } from './navigation-graph.js';
 import { ScriptedScene } from './script-runtime.js';
 import { WALK_DELTAS, WALK_FRAME_CYCLES } from './walk-tables.js';
 
@@ -45,8 +47,13 @@ export class GameScene extends ScriptedScene {
     this.alexStepTick = 0;
     this.alexWalkCycleIdx = 0;
     this.alexIdleTick = 0;
+    this.alexPath = [];
 
     this.scrollX = 0;
+    this.walkZones = [];
+    this.walkMasks = [];
+    this.walkMaskPolygons = [];
+    this.conditionalWalkMasks = [];
 
     this.font = null;
     this.objectByName = {};
@@ -447,7 +454,23 @@ export class GameScene extends ScriptedScene {
     this.onRouteChange(this._buildCurrentRoute());
   }
 
-  // --- Walk helpers ---
+  // --- Geometry helpers ---
+
+  _isInsideRect(x, y, rect) {
+    if (!rect) return false;
+    const [x1, y1, x2, y2] = rect;
+    return x >= x1 && x <= x2 && y >= y1 && y <= y2;
+  }
+
+  _matchesStateCondition(condition) {
+    if (!condition?.state) return false;
+    const value = this.state?.[condition.state];
+    if (Object.prototype.hasOwnProperty.call(condition, 'equals')) return value === condition.equals;
+    if (Object.prototype.hasOwnProperty.call(condition, 'notEquals')) return value !== condition.notEquals;
+    return false;
+  }
+
+  // --- Walk system ---
 
   _face(dir) {
     this.alexDir = dir;
@@ -455,7 +478,7 @@ export class GameScene extends ScriptedScene {
     this.alexIdleTick = 0;
   }
 
-  _startWalk(x, y) {
+  _startWalk(x, y, options = {}) {
     this.alexTargetX = x;
     this.alexTargetY = y;
     this.alexWalking = true;
@@ -464,48 +487,121 @@ export class GameScene extends ScriptedScene {
     this.alexDir = this._calcDirection(this.alexX, this.alexY, x, y);
     this.alexWalkCycleIdx = 0;
     this.alexIdleTick = 0;
+    if (!options.preservePath) this.alexPath = [];
+  }
+
+  _walkTo(x, y) {
+    const goal = { x, y };
+    const path = findPathOnGrid(
+      { x: this.alexX, y: this.alexY },
+      goal,
+      (px, py) => this._inWalkZone(px, py),
+      {
+        width: WIDTH,
+        height: HEIGHT,
+        cellSize: 8,
+        canTraverseSegment: (from, to) => this._canWalkSegment(from, to),
+      },
+    );
+    const [first, ...rest] = path.length ? path : [goal];
+    this.alexPath = rest;
+    this._startWalk(first.x, first.y, { preservePath: true });
+  }
+
+  _walkThenEvent(x, y, steps) {
+    this._startWalk(x, y);
+    this.actionQueue.unshift(...(Array.isArray(steps) ? steps : [steps]).map((step) => ({ ...step })));
   }
 
   _isScriptBusy() {
     return this.alexWalking || Boolean(this._sceneAnimation) || Boolean(this._entrySequence);
   }
 
-  /**
-   * One frame of walk movement. Applies delta from walk tables, advances frame,
-   * checks arrival. Returns true if still walking, false if arrived.
-   * Called by each scene's _tickWalk.
-   */
-  _tickWalkStep() {
-    if (!this.alexWalking) return false;
-    const deltas = this.walkDeltas[this.alexDir];
-    const cycles = this.walkFrameCycles[this.alexDir];
-    if (!deltas || !cycles) {
-      this.alexWalking = false;
-      return false;
+  _tickWalk() {
+    if (!this.alexWalking) {
+      this.alexIdleTick = (this.alexIdleTick + 1) % 72;
+      this.alexFrame = (this.alexIdleTick === 24 || this.alexIdleTick === 25) ? 0 : 1;
+      return;
     }
-
     this.alexStepTick++;
-    if (this.alexStepTick >= deltas.length) {
-      this.alexStepTick = 0;
-      this.alexWalkCycleIdx = (this.alexWalkCycleIdx + 1) % cycles.length;
-      this.alexFrame = cycles[this.alexWalkCycleIdx];
-    }
-    const delta = deltas[this.alexStepTick];
-    this.alexX += delta.dx;
-    this.alexY += delta.dy;
-
-    const dx = this.alexTargetX - this.alexX;
-    const dy = this.alexTargetY - this.alexY;
-    if (Math.abs(dx) <= 6 && Math.abs(dy) <= 6) {
+    if (this.alexStepTick < 2) return;
+    this.alexStepTick = 0;
+    this.alexDir = this._calcDirection(this.alexX, this.alexY, this.alexTargetX, this.alexTargetY);
+    const cycle = this.walkFrameCycles[this.alexDir] || [1];
+    this.alexWalkCycleIdx %= cycle.length;
+    this.alexFrame = cycle[this.alexWalkCycleIdx];
+    this.alexWalkCycleIdx = (this.alexWalkCycleIdx + 1) % cycle.length;
+    const delta = this.walkDeltas[this.alexDir]?.[this.alexFrame] || { dx: 0, dy: 0 };
+    const dist = Math.hypot(this.alexTargetX - this.alexX, this.alexTargetY - this.alexY);
+    if (dist <= Math.max(Math.abs(delta.dx), Math.abs(delta.dy), 1)) {
       this.alexX = this.alexTargetX;
       this.alexY = this.alexTargetY;
+      if (this.alexPath.length) {
+        const next = this.alexPath.shift();
+        this._startWalk(next.x, next.y, { preservePath: true });
+      } else {
+        this.alexWalking = false;
+        this.alexFrame = 1;
+        this.alexIdleTick = 0;
+        this._onWalkArrived();
+      }
+      return;
+    }
+    const newX = this.alexX + delta.dx;
+    const newY = this.alexY + delta.dy;
+    if (this._inWalkZone(newX, newY)) {
+      this.alexX = newX;
+      this.alexY = newY;
+    } else {
+      this.alexPath = [];
       this.alexWalking = false;
       this.alexFrame = 1;
       this.alexIdleTick = 0;
-      return false;
+      this._processActionQueue();
     }
+  }
 
+  _onWalkArrived() {
+    this._processActionQueue();
+  }
+
+  _inWalkZone(x, y) {
+    const inBaseZone = this.walkZones.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2);
+    if (!inBaseZone) return false;
+    if (this.walkMasks.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2)) return false;
+    if (this.walkMaskPolygons.some((polygon) => pointInPolygon({ x, y }, polygon))) return false;
+    if (this.conditionalWalkMasks.some(({ rect, when }) => this._matchesStateCondition(when) && this._isInsideRect(x, y, rect))) return false;
     return true;
+  }
+
+  _closestWalkablePoint(x, y) {
+    const point = findNearestWalkablePoint(
+      { x, y },
+      (px, py) => this._inWalkZone(px, py),
+      { width: WIDTH, height: HEIGHT, step: 2, maxRadius: 220 },
+    );
+    return this._inWalkZone(point.x, point.y) ? point : null;
+  }
+
+  _canWalkSegment(from, to) {
+    let x = from.x;
+    let y = from.y;
+    let walkCycleIdx = 0;
+    for (let safety = 0; safety < 512; safety++) {
+      const dir = this._calcDirection(x, y, to.x, to.y);
+      const cycle = this.walkFrameCycles[dir] || [1];
+      const frame = cycle[walkCycleIdx % cycle.length];
+      walkCycleIdx += 1;
+      const delta = this.walkDeltas[dir]?.[frame] || { dx: 0, dy: 0 };
+      const dist = Math.hypot(to.x - x, to.y - y);
+      if (dist <= Math.max(Math.abs(delta.dx), Math.abs(delta.dy), 1)) return true;
+      const nextX = x + delta.dx;
+      const nextY = y + delta.dy;
+      if (!this._inWalkZone(nextX, nextY)) return false;
+      x = nextX;
+      y = nextY;
+    }
+    return false;
   }
 
   // --- Hotkey intent handling ---

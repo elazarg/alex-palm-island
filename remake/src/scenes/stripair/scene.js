@@ -1,8 +1,7 @@
-import { WIDTH, HEIGHT, computeLinearDepthScale } from '../../core/engine.js';
+import { computeLinearDepthScale } from '../../core/engine.js';
 import { resolveInteractionMode } from '../../ui/action-modes.js';
 import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimation } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
-import { findNearestWalkablePoint, findPathOnGrid, pointInPolygon } from '../../runtime/navigation-graph.js';
 import { GLOBAL_SOUND_MANIFEST } from '../../runtime/global-resources.js';
 import { GameScene } from '../../runtime/game-scene.js';
 import { buildNarrationSoundManifest } from '../../runtime/scx-sound-manifest.js';
@@ -10,7 +9,6 @@ import {
   buildStripAirRouteFromRuntime,
   normalizeStripAirRoute,
   resolveStripAirInitialScreen,
-  shouldRunStripAirEntrySequence,
 } from './route.js';
 import { STRIPAIR_RESOURCES } from './resources.js';
 import { STRIPAIR_SCRIPT } from './script.js';
@@ -18,8 +16,6 @@ import { buildStripAirCarryState, stripAirHasBag } from './state.js';
 import {
   STRIPAIR_ALEX_DEPTH_SCALE,
   STRIPAIR_DIALOG_RESPONSE_DELAY_TICKS,
-  STRIPAIR_DOOR_ENTRY_ANIMATION,
-  STRIPAIR_ENTRY_START,
   STRIPAIR_ENTRY_TARGET,
   STRIPAIR_NAVIGATION_GRAPH,
   STRIPAIR_SOUND_MANIFEST,
@@ -98,20 +94,17 @@ export class StripAirScene extends GameScene {
     this._pressedButtonMode = null;
     this._pendingButtonMode = null;
     this._pressedInventoryControlMode = null;
-    this._entrySequence = null;
     this._sceneAnimation = null;
 
     this.initScriptRuntime();
     this._applyRouteStateOverrides();
     this.meterAnimation = createMeterAnimationState(this.state?.palmettoes ?? 100);
     this._setInputMode('walk');
-    this._startEntrySequenceIfNeeded();
     this._openInitialRouteScreen();
     this._publishRoute();
   }
 
   onMouseDown({ x, y }) {
-    if (this._entrySequence) return;
     if (this._gestureLockedDialog) {
       const dialog = this._gestureLockedDialog;
       this._gestureLockedDialog = null;
@@ -245,7 +238,6 @@ export class StripAirScene extends GameScene {
   }
 
   _renderAlex(ctx) {
-    if (this._entrySequence?.phase === 'opening') return;
     const spriteDir = this.alexDir;
     const spriteName = `ALEX${spriteDir}-${this.alexFrame}`;
     const img = this.engine.getAsset(spriteName);
@@ -266,56 +258,6 @@ export class StripAirScene extends GameScene {
     const frame = this._sceneAnimation.sequence[this._sceneAnimation.index];
     const img = this.engine.getAsset(`${this._sceneAnimation.prefix}${frame}`);
     if (img) ctx.drawImage(img, this._sceneAnimation.x, this._sceneAnimation.y);
-  }
-
-  _tickWalk() {
-    if (!this.alexWalking) {
-      this.alexIdleTick = (this.alexIdleTick + 1) % 72;
-      this.alexFrame = (this.alexIdleTick === 24 || this.alexIdleTick === 25) ? 0 : 1;
-      if (this._entrySequence?.phase === 'walk') this._entrySequence = null;
-      return;
-    }
-    this.alexStepTick++;
-    if (this.alexStepTick < 2) return;
-    this.alexStepTick = 0;
-    this.alexDir = this._calcDirection(this.alexX, this.alexY, this.alexTargetX, this.alexTargetY);
-    const cycle = this.walkFrameCycles[this.alexDir] || [1];
-    this.alexWalkCycleIdx %= cycle.length;
-    this.alexFrame = cycle[this.alexWalkCycleIdx];
-    this.alexWalkCycleIdx = (this.alexWalkCycleIdx + 1) % cycle.length;
-    const delta = this.walkDeltas[this.alexDir]?.[this.alexFrame] || { dx: 0, dy: 0 };
-    const dist = Math.hypot(this.alexTargetX - this.alexX, this.alexTargetY - this.alexY);
-    if (dist <= Math.max(Math.abs(delta.dx), Math.abs(delta.dy), 1)) {
-      this.alexX = this.alexTargetX;
-      this.alexY = this.alexTargetY;
-      if (this.alexPath.length) {
-        const next = this.alexPath.shift();
-        this._startWalk(next.x, next.y, { preservePath: true });
-      } else {
-        this.alexWalking = false;
-        this.alexFrame = 1;
-        this.alexIdleTick = 0;
-        if (this._entrySequence?.phase === 'walk') {
-          this._entrySequence.phase = 'closing';
-          this._startDoorEntryAnimation('closing');
-          return;
-        }
-        this._processActionQueue();
-      }
-      return;
-    }
-    const newX = this.alexX + delta.dx;
-    const newY = this.alexY + delta.dy;
-    if (this._inWalkZone(newX, newY)) {
-      this.alexX = newX;
-      this.alexY = newY;
-    } else {
-      this.alexPath = [];
-      this.alexWalking = false;
-      this.alexFrame = 1;
-      this.alexIdleTick = 0;
-      this._processActionQueue();
-    }
   }
 
   _tickObjects() {
@@ -343,24 +285,9 @@ export class StripAirScene extends GameScene {
         anim.tick = 0;
         anim.index++;
         if (anim.index >= anim.sequence.length) {
-          if (anim.holdLastFrame) {
-            anim.index = anim.sequence.length - 1;
-            anim.holdLastFrame = false;
-            if (this._entrySequence?.phase === 'opening') {
-              this._entrySequence.phase = 'walk';
-              this._startWalk(STRIPAIR_ENTRY_TARGET.x, STRIPAIR_ENTRY_TARGET.y);
-            }
-          } else {
-            this._sceneAnimation = null;
-            if (this._entrySequence?.phase === 'closing') {
-              this._entrySequence = null;
-            }
-          }
+          this._sceneAnimation = null;
         }
       }
-    }
-    if (this._entrySequence?.phase === 'opening' && !this._sceneAnimation) {
-      this._startDoorEntryAnimation('opening');
     }
   }
 
@@ -390,76 +317,6 @@ export class StripAirScene extends GameScene {
     return interaction.rect || resolveStripAirSemanticRect(interaction.id);
   }
 
-  _startWalk(x, y, options = {}) {
-    super._startWalk(x, y);
-    if (!options.preservePath) this.alexPath = [];
-  }
-
-  _walkTo(x, y, options = {}) {
-    const goal = { x, y };
-    const path = findPathOnGrid(
-      { x: this.alexX, y: this.alexY },
-      goal,
-      (px, py) => this._inWalkZone(px, py),
-      {
-        width: WIDTH,
-        height: HEIGHT,
-        cellSize: 8,
-        canTraverseSegment: (from, to) => this._canWalkSegment(from, to),
-      },
-    );
-    const [first, ...rest] = path.length ? path : [goal];
-    this.alexPath = rest;
-    this._startWalk(first.x, first.y, { preservePath: true });
-  }
-
-  _walkThenEvent(x, y, steps) {
-    this._startWalk(x, y);
-    this.actionQueue.unshift(...(Array.isArray(steps) ? steps : [steps]).map((step) => ({ ...step })));
-  }
-
-  _isScriptBusy() {
-    return this.alexWalking || Boolean(this._entrySequence);
-  }
-
-  _inWalkZone(x, y) {
-    const inBaseZone = this.walkZones.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2);
-    if (!inBaseZone) return false;
-    if (this.walkMasks.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2)) return false;
-    if (this.walkMaskPolygons.some((polygon) => pointInPolygon({ x, y }, polygon))) return false;
-    return true;
-  }
-
-  _closestWalkablePoint(x, y) {
-    const point = findNearestWalkablePoint(
-      { x, y },
-      (px, py) => this._inWalkZone(px, py),
-      { width: WIDTH, height: HEIGHT, step: 2, maxRadius: 220 },
-    );
-    return this._inWalkZone(point.x, point.y) ? point : null;
-  }
-
-  _canWalkSegment(from, to) {
-    let x = from.x;
-    let y = from.y;
-    let walkCycleIdx = 0;
-    for (let safety = 0; safety < 512; safety++) {
-      const dir = this._calcDirection(x, y, to.x, to.y);
-      const cycle = this.walkFrameCycles[dir] || [1];
-      const frame = cycle[walkCycleIdx % cycle.length];
-      walkCycleIdx += 1;
-      const delta = this.walkDeltas[dir]?.[frame] || { dx: 0, dy: 0 };
-      const dist = Math.hypot(to.x - x, to.y - y);
-      if (dist <= Math.max(Math.abs(delta.dx), Math.abs(delta.dy), 1)) return true;
-      const nextX = x + delta.dx;
-      const nextY = y + delta.dy;
-      if (!this._inWalkZone(nextX, nextY)) return false;
-      x = nextX;
-      y = nextY;
-    }
-    return false;
-  }
-
   _openInitialRouteScreen() {
     const screen = resolveStripAirInitialScreen(this.route);
     if (screen.kind === 'dialog') {
@@ -477,32 +334,6 @@ export class StripAirScene extends GameScene {
     if (screen.kind === 'resource') {
       this._openTextRefSection(screen.id);
     }
-  }
-
-  _startEntrySequenceIfNeeded() {
-    if (!shouldRunStripAirEntrySequence(this.route)) return;
-    this.alexX = STRIPAIR_ENTRY_TARGET.x;
-    this.alexY = STRIPAIR_ENTRY_TARGET.y;
-    this.alexDir = STRIPAIR_ENTRY_TARGET.dir;
-    this._entrySequence = { kind: this.route.entry, phase: 'closing' };
-    this._startDoorEntryAnimation('closing');
-  }
-
-  _startDoorEntryAnimation(kind = 'opening') {
-    const sequence = kind === 'closing'
-      ? [2, 3]
-      : [2, 1];
-    this._sceneAnimation = {
-      prefix: STRIPAIR_DOOR_ENTRY_ANIMATION.prefix,
-      sequence,
-      x: STRIPAIR_DOOR_ENTRY_ANIMATION.x,
-      y: STRIPAIR_DOOR_ENTRY_ANIMATION.y,
-      rate: STRIPAIR_DOOR_ENTRY_ANIMATION.rate,
-      tick: 0,
-      index: 0,
-      holdLastFrame: kind === 'opening',
-      kind,
-    };
   }
 
   _requestTransition(target) {

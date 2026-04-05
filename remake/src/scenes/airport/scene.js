@@ -16,7 +16,6 @@ import { AIRPORT_RESOURCES } from './resources.js';
 import { airportHasBag, getAirportLostAndFoundExpectedValues } from './state.js';
 import { buildStripAirCarryState } from '../stripair/state.js';
 import {
-  ANIM_TICK_SCALE,
   DIALOG_RESPONSE_DELAY_TICKS,
   ENTRY_ALEX_START,
   ENTRY_DESCENT_FRAME_TICKS,
@@ -336,53 +335,6 @@ export class AirportScene extends GameScene {
     });
   }
 
-  _tickWalk() {
-    if (!this.alexWalking) {
-      this.alexIdleTick = (this.alexIdleTick + 1) % 72;
-      this.alexFrame = (this.alexIdleTick === 24 || this.alexIdleTick === 25) ? 0 : 1;
-      return;
-    }
-    this.alexStepTick++;
-    if (this.alexStepTick < ANIM_TICK_SCALE) return;
-    this.alexStepTick = 0;
-    this.alexDir = this._calcDirection(this.alexX, this.alexY, this.alexTargetX, this.alexTargetY);
-    const cycle = this.walkFrameCycles[this.alexDir] || [1];
-    this.alexWalkCycleIdx %= cycle.length;
-    this.alexFrame = cycle[this.alexWalkCycleIdx];
-    this.alexWalkCycleIdx = (this.alexWalkCycleIdx + 1) % cycle.length;
-    const delta = this.walkDeltas[this.alexDir]?.[this.alexFrame] || { dx: 0, dy: 0 };
-    const dist = Math.hypot(this.alexTargetX - this.alexX, this.alexTargetY - this.alexY);
-    if (dist <= Math.max(Math.abs(delta.dx), Math.abs(delta.dy), 1)) {
-      this.alexX = this.alexTargetX;
-      this.alexY = this.alexTargetY;
-      this.alexWalking = false;
-      this.alexFrame = 1;
-      this.alexIdleTick = 0;
-      if (this._pendingWalkSteps?.length) {
-        const steps = this._pendingWalkSteps;
-        this._pendingWalkSteps = null;
-        this._prependSteps(steps);
-      }
-      this._processActionQueue();
-      return;
-    }
-    const newX = this.alexX + delta.dx;
-    const newY = this.alexY + delta.dy;
-    if (this._inWalkZone(newX, newY)) {
-      this.alexX = newX;
-      this.alexY = newY;
-    } else {
-      this.alexWalking = false;
-      this.alexFrame = 1;
-      this.alexIdleTick = 0;
-      if (this._pendingWalkSteps?.length) {
-        const steps = this._pendingWalkSteps;
-        this._pendingWalkSteps = null;
-        this._prependSteps(steps);
-      }
-      this._processActionQueue();
-    }
-  }
 
   _tickObjects() {
     tickMeterAnimation(this.meterAnimation);
@@ -759,14 +711,6 @@ export class AirportScene extends GameScene {
     return interaction.rect || null;
   }
 
-  _walkTo(x, y) {
-    this._startWalk(x, y);
-  }
-
-  _walkThenEvent(x, y, steps) {
-    this._pendingWalkSteps = Array.isArray(steps) ? steps.map((step) => ({ ...step })) : [{ ...steps }];
-    this._startWalk(x, y);
-  }
 
   _playOneShotSound(name) {
     if (!name || this.engine.isAudioLocked?.()) return;
@@ -786,27 +730,6 @@ export class AirportScene extends GameScene {
     return x2 > 0 && x1 < WIDTH && y2 > 0 && y1 < HEIGHT;
   }
 
-  _isInsideRect(x, y, rect) {
-    if (!rect) return false;
-    const [x1, y1, x2, y2] = rect;
-    return x >= x1 && x <= x2 && y >= y1 && y <= y2;
-  }
-
-  _matchesStateCondition(condition) {
-    if (!condition?.state) return false;
-    const value = this.state?.[condition.state];
-    if (Object.prototype.hasOwnProperty.call(condition, 'equals')) return value === condition.equals;
-    if (Object.prototype.hasOwnProperty.call(condition, 'notEquals')) return value !== condition.notEquals;
-    return false;
-  }
-
-  _inWalkZone(x, y) {
-    const inBaseZone = this.walkZones.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2);
-    if (!inBaseZone) return false;
-    if (this.walkMasks.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2)) return false;
-    if (this.conditionalWalkMasks.some(({ rect, when }) => this._matchesStateCondition(when) && this._isInsideRect(x, y, rect))) return false;
-    return true;
-  }
 
   _startEntrySequenceIfNeeded() {
     const shouldRun = shouldRunAirportEntrySequence(this.route);
