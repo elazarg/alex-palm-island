@@ -1,5 +1,5 @@
 import { WIDTH, HEIGHT } from '../../core/engine.js';
-import { WHEEL_INPUT_MODES, resolveInteractionMode } from '../../ui/action-modes.js';
+import { resolveInteractionMode } from '../../ui/action-modes.js';
 import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimation } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
 import { GameScene } from '../../runtime/game-scene.js';
@@ -185,131 +185,12 @@ export class AirportScene extends GameScene {
     this._startWalk(worldX, worldY);
   }
 
-  onMouseUp({ x, y }) {
-    if (this._entrySequence) return;
-    if (this.modal?.type === 'inventory' && this._pressedInventoryControlMode) {
-      const mode = this._pressedInventoryControlMode;
-      this._pressedInventoryControlMode = null;
-      this.modal.pressedControlMode = null;
-      const control = this._inventoryControlBoxes.find((box) => box.mode === mode && x >= box.x1 && x <= box.x2 && y >= box.y1 && y <= box.y2);
-      if (control) {
-        if (control.mode === 'exit') this._closeInventory();
-        else {
-          this.modal.mode = control.mode;
-          this._refreshCursor();
-        }
-      }
-      return;
-    }
-    const pressedMode = this._pressedButtonMode;
-    const pendingMode = this._pendingButtonMode;
-    this._pressedButtonMode = null;
-    this._pendingButtonMode = null;
-    if (!pendingMode || pressedMode !== pendingMode) return;
-    const button = this._getUiButton(x, y);
-    if (!button || button.mode !== pendingMode) return;
-    if (button.mode === 'exit') return;
-    if (button.mode === 'bag' && !airportHasBag(this.state)) {
-      this._queueEvent('bagMissing');
-      return;
-    }
-    if (button.mode === 'map' && this.state?.map !== true) {
-      this._queueEvent('mapMissing');
-      return;
-    }
-    if (button.mode === 'bag' && airportHasBag(this.state)) {
-      this._openInventory('bag');
-      return;
-    }
-    if (button.mode === 'map' && this.state?.map === true) {
-      this._openMap();
-      return;
-    }
-    this.selectedItem = null;
-    this._setInputMode(button.mode);
-  }
-
-  onMouseLeave() {
-    if (this._entrySequence) return;
-    this._pressedButtonMode = null;
-    this._pendingButtonMode = null;
-    this._pressedInventoryControlMode = null;
-    if (this.modal?.type === 'inventory') this.modal.pressedControlMode = null;
-  }
-
-  onWheel({ deltaY, originalEvent }) {
-    if (this._entrySequence) return;
-    if (this.modal) return;
-    this.selectedItem = null;
-    const currentIdx = WHEEL_INPUT_MODES.indexOf(this.inputMode);
-    const nextIdx = ((currentIdx >= 0 ? currentIdx : 0) + (deltaY > 0 ? 1 : -1) + WHEEL_INPUT_MODES.length) % WHEEL_INPUT_MODES.length;
-    this._setInputMode(WHEEL_INPUT_MODES[nextIdx]);
-    originalEvent.preventDefault();
-  }
-
-  onKeyDown({ key, code, originalEvent }) {
-    if (code === 'Backquote' || key === '`') {
-      this.debugOverlayHeld = true;
-      originalEvent.preventDefault();
-      return;
-    }
-    if (this._handleStandardHotkeys({ key, originalEvent })) return;
-    if (this._entrySequence) return;
-    if (!this.modal) return;
+  _handleModalKeyDown(key, originalEvent) {
     if (this.modal.type === 'form') {
       this._handleFormKeyDown(key, originalEvent);
       return;
     }
-    if (this.modal.type === 'inventory') {
-      if (key === 'Escape') {
-        if (this.modal.inspectItem) {
-          this.modal.inspectItem = null;
-          this._afterModalChanged();
-          this._refreshCursor();
-        } else {
-          this._closeInventory();
-        }
-        originalEvent.preventDefault();
-        return;
-      }
-      if (this.modal.inspectItem) return;
-      if (key === 'ArrowLeft' || key === 'ArrowUp') {
-        this.modal.mode = this.modal.mode === 'take' ? 'look' : 'take';
-        originalEvent.preventDefault();
-        return;
-      }
-      if (key === 'ArrowRight' || key === 'ArrowDown') {
-        this.modal.mode = this.modal.mode === 'look' ? 'take' : 'look';
-        originalEvent.preventDefault();
-        return;
-      }
-      return;
-    }
-    if (this.modal.type === 'dialog' && (key === 'ArrowDown' || key === 'ArrowUp')) {
-      if (this.modal.phase !== 'choice') return;
-      const dir = key === 'ArrowDown' ? 1 : -1;
-      const count = this.modal.choices.length;
-      const current = this.modal.selectedChoice == null ? -1 : this.modal.selectedChoice;
-      this.modal.selectedChoice = (current + dir + count) % count;
-      originalEvent.preventDefault();
-      return;
-    }
-    if (key !== 'Enter') return;
-    if (this.modal.type === 'dialog' && this.modal.phase === 'choice' && this.modal.selectedChoice != null) {
-      this._confirmDialogChoice(this.modal.selectedChoice);
-    } else if (this.modal.type === 'message') {
-      this._stopSound();
-      this.modal = null;
-      this._refreshCursor();
-      this._processActionQueue();
-    }
-  }
-
-  onKeyUp({ key, code, originalEvent }) {
-    if (code === 'Backquote' || key === '`') {
-      this.debugOverlayHeld = false;
-      originalEvent.preventDefault();
-    }
+    super._handleModalKeyDown(key, originalEvent);
   }
 
   tick() {
