@@ -3,6 +3,7 @@ import { STANDARD_DIALOG_LAYOUT } from '../ui/dialog-layout.js';
 import { STANDARD_NOTE_LAYOUT } from '../ui/note-layout.js';
 import { STANDARD_PANEL_LAYOUT } from '../ui/panel-layout.js';
 import { INVENTORY_ITEM_DEFS } from '../ui/inventory-items.js';
+import { renderSceneDebugOverlay, renderSceneDebugText } from '../ui/scene-debug-overlay.js';
 import { loadBitmapFont } from '../ui/font-loader.js';
 import { ScriptedScene } from './script-runtime.js';
 import { WALK_DELTAS, WALK_FRAME_CYCLES } from './walk-tables.js';
@@ -45,8 +46,11 @@ export class GameScene extends ScriptedScene {
     this.alexWalkCycleIdx = 0;
     this.alexIdleTick = 0;
 
+    this.scrollX = 0;
+
     this.font = null;
     this.objectByName = {};
+    this.sceneObjects = [];
     this._frameCounts = {};
     this.debugOverlayHeld = false;
     this.meterAnimation = null;
@@ -75,10 +79,84 @@ export class GameScene extends ScriptedScene {
   _getInteractionRect(/* interaction */) { throw new Error('_getInteractionRect not implemented'); }
   _buildCurrentRoute() { throw new Error('_buildCurrentRoute not implemented'); }
 
+  // --- Abstract: debug overlay data (scenes override to provide entries) ---
+
+  _getDebugStaticRegions() { return []; }
+  _getDebugActiveInteractions() { return []; }
+  _getDebugEntityKind(/* interaction */) { return 'prop'; }
+
   // --- Lifecycle ---
 
   destroy() {
     this._stopSound();
+  }
+
+  // --- Debug overlay (generic) ---
+
+  renderOverlay(ctx, overlayMetrics) {
+    if (!this.debugOverlayHeld) return;
+    const entries = [];
+    const toScreenRect = (rect) => this._projectOverlayRect(rect, overlayMetrics);
+    const toScreenPolygon = (polygon) => this._projectOverlayPolygon(polygon, overlayMetrics);
+
+    for (const region of this._getDebugStaticRegions()) {
+      if (region.rect) {
+        entries.push({
+          rect: toScreenRect(region.rect),
+          color: region.color || '#ffffff',
+          label: region.id,
+          fillAlpha: 0.22,
+        });
+      }
+      if (region.polygon) {
+        entries.push({
+          polygon: toScreenPolygon(region.polygon),
+          color: region.color || '#ffffff',
+          label: region.id,
+          fillAlpha: 0.22,
+        });
+      }
+    }
+    for (const interaction of this._getDebugActiveInteractions()) {
+      const rect = this._getInteractionRect(interaction);
+      if (!rect) continue;
+      entries.push({
+        rect: toScreenRect(rect),
+        color: interaction._debugColor || '#ffffff',
+        label: interaction.id,
+        fillAlpha: 0.35,
+      });
+    }
+    renderSceneDebugOverlay(ctx, entries);
+    renderSceneDebugText(
+      ctx,
+      [
+        `mouse: (${Math.round(this.engine.mouseX + this.scrollX)}, ${Math.round(this.engine.mouseY)})`,
+        `alex: (${Math.round(this.alexX)}, ${Math.round(this.alexY)})`,
+      ],
+      { x: 8, y: 8 },
+    );
+  }
+
+  _projectOverlayRect(rect, overlayMetrics) {
+    const [x1, y1, x2, y2] = rect;
+    const scaleX = overlayMetrics?.scaleX ?? 1;
+    const scaleY = overlayMetrics?.scaleY ?? 1;
+    return [
+      (x1 - this.scrollX) * scaleX,
+      y1 * scaleY,
+      (x2 - this.scrollX) * scaleX,
+      y2 * scaleY,
+    ];
+  }
+
+  _projectOverlayPolygon(polygon, overlayMetrics) {
+    const scaleX = overlayMetrics?.scaleX ?? 1;
+    const scaleY = overlayMetrics?.scaleY ?? 1;
+    return polygon.map((point) => ({
+      x: (point.x - this.scrollX) * scaleX,
+      y: point.y * scaleY,
+    }));
   }
 
   // --- Cursor and input mode ---

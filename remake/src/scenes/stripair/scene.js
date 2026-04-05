@@ -2,7 +2,6 @@ import { WIDTH, HEIGHT, computeLinearDepthScale } from '../../core/engine.js';
 import { WHEEL_INPUT_MODES, resolveInteractionMode } from '../../ui/action-modes.js';
 import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimation } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
-import { renderSceneDebugOverlay, renderSceneDebugText } from '../../ui/scene-debug-overlay.js';
 import { findNearestWalkablePoint, findPathOnGrid, pointInPolygon } from '../../runtime/navigation-graph.js';
 import { GLOBAL_SOUND_MANIFEST } from '../../runtime/global-resources.js';
 import { GameScene } from '../../runtime/game-scene.js';
@@ -323,48 +322,22 @@ export class StripAirScene extends GameScene {
     this._publishRoute();
   }
 
-  renderOverlay(ctx, overlayMetrics) {
-    if (!this.debugOverlayHeld) return;
-    const entries = [];
-    for (const region of STRIPAIR_STATIC_REGIONS) {
-      if (region.rect) {
-        entries.push({
-          rect: this._projectOverlayRect(region.rect, overlayMetrics),
-          color: DEBUG_REGION_COLORS[region.kind] || '#ffffff',
-          label: region.id,
-          fillAlpha: 0.22,
-        });
-        continue;
-      }
-      if (region.polygon) {
-        entries.push({
-          polygon: this._projectOverlayPolygon(region.polygon, overlayMetrics),
-          color: DEBUG_REGION_COLORS[region.kind] || '#ffffff',
-          label: region.id,
-          fillAlpha: 0.22,
-        });
-      }
-    }
-    for (const interaction of STRIPAIR_ACTIVE_INTERACTIONS) {
-      const rect = this._getInteractionRect(interaction);
-      if (!rect) continue;
+  _getDebugStaticRegions() {
+    return STRIPAIR_STATIC_REGIONS
+      .filter((region) => region.rect || region.polygon)
+      .map((region) => ({
+        id: region.id,
+        rect: region.rect || null,
+        polygon: region.polygon || null,
+        color: DEBUG_REGION_COLORS[region.kind] || '#ffffff',
+      }));
+  }
+
+  _getDebugActiveInteractions() {
+    return STRIPAIR_ACTIVE_INTERACTIONS.map((interaction) => {
       const kind = STRIPAIR_ENTITIES[interaction.id]?.kind || 'prop';
-      entries.push({
-        rect: this._projectOverlayRect(rect, overlayMetrics),
-        color: DEBUG_ENTITY_COLORS[kind] || '#ffffff',
-        label: interaction.id,
-        fillAlpha: 0.35,
-      });
-    }
-    renderSceneDebugOverlay(ctx, entries);
-    renderSceneDebugText(
-      ctx,
-      [
-        `mouse: (${Math.round(this.engine.mouseX + this.scrollX)}, ${Math.round(this.engine.mouseY)})`,
-        `alex: (${Math.round(this.alexX)}, ${Math.round(this.alexY)})`,
-      ],
-      { x: 8, y: 8 },
-    );
+      return { ...interaction, _debugColor: DEBUG_ENTITY_COLORS[kind] || '#ffffff' };
+    });
   }
 
   _afterStateChanged(key) {
@@ -650,22 +623,6 @@ export class StripAirScene extends GameScene {
       holdLastFrame: kind === 'opening',
       kind,
     };
-  }
-
-  _projectOverlayRect(rect, overlayMetrics) {
-    const [x1, y1, x2, y2] = rect;
-    const scaleX = overlayMetrics?.scaleX ?? 1;
-    const scaleY = overlayMetrics?.scaleY ?? 1;
-    return [x1 * scaleX, y1 * scaleY, x2 * scaleX, y2 * scaleY];
-  }
-
-  _projectOverlayPolygon(polygon, overlayMetrics) {
-    const scaleX = overlayMetrics?.scaleX ?? 1;
-    const scaleY = overlayMetrics?.scaleY ?? 1;
-    return polygon.map((point) => ({
-      x: point.x * scaleX,
-      y: point.y * scaleY,
-    }));
   }
 
   _requestTransition(target) {

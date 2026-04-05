@@ -2,7 +2,6 @@ import { WIDTH, HEIGHT } from '../../core/engine.js';
 import { WHEEL_INPUT_MODES, resolveInteractionMode } from '../../ui/action-modes.js';
 import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimation } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
-import { renderSceneDebugOverlay } from '../../ui/scene-debug-overlay.js';
 import { GameScene } from '../../runtime/game-scene.js';
 import { GLOBAL_SOUND_MANIFEST } from '../../runtime/global-resources.js';
 import { buildNarrationSoundManifest } from '../../runtime/scx-sound-manifest.js';
@@ -430,73 +429,30 @@ export class AirportScene extends GameScene {
     if (img) ctx.drawImage(img, this._sceneAnimation.x - this.scrollX, this._sceneAnimation.y);
   }
 
-  _renderDebugOverlay(ctx, overlayMetrics) {
-    const entries = [];
-    const toScreen = (rect) => this._projectOverlayRect(rect, overlayMetrics);
+  _getDebugStaticRegions() {
+    const regions = [];
     for (const region of AIRPORT_STATIC_REGIONS) {
       const rect = resolveAirportRegionRect(region.id) || resolveAirportSelectorRect(region.selector);
       if (!rect || region.kind === 'uiMask') continue;
-      entries.push({
-        rect: toScreen(rect),
-        color: DEBUG_REGION_COLORS[region.kind] || '#ffffff',
-        label: region.id,
-        fillAlpha: 0.22,
-      });
-    }
-    for (const interaction of AIRPORT_ACTIVE_INTERACTIONS) {
-      const rect = this._getInteractionRect(interaction);
-      if (!rect) continue;
-      const kind = AIRPORT_ENTITIES[interaction.id]?.kind || AIRPORT_ENTITIES[interaction.entity]?.kind || this._debugObjectKinds[interaction.object] || 'prop';
-      entries.push({
-        rect: toScreen(rect),
-        color: DEBUG_ENTITY_COLORS[kind] || '#ffffff',
-        label: interaction.id,
-        fillAlpha: 0.35,
-      });
+      regions.push({ id: region.id, rect, color: DEBUG_REGION_COLORS[region.kind] || '#ffffff' });
     }
     for (const obj of this.sceneObjects) {
-      const rect = this._getSceneObjectRect(obj);
-      if (!rect) continue;
+      if (!obj?.visible) continue;
       const kind = this._debugObjectKinds[obj.name];
       if (!kind) continue;
-      entries.push({
-        rect: toScreen(this._screenRectToWorldRect(rect)),
-        color: DEBUG_ENTITY_COLORS[kind] || '#ffffff',
-        label: obj.name,
-        fillAlpha: 0.15,
-      });
+      const img = this.engine.getAsset(obj.sprite);
+      if (!img) continue;
+      const drawY = (obj.anim && obj.anim.bottomAlign) ? obj.anim.bottomAlign - img.height : obj.y;
+      regions.push({ id: obj.name, rect: [obj.x, drawY, obj.x + img.width, drawY + img.height], color: DEBUG_ENTITY_COLORS[kind] || '#ffffff' });
     }
-    renderSceneDebugOverlay(ctx, entries);
+    return regions;
   }
 
-  renderOverlay(ctx, overlayMetrics) {
-    if (!this.debugOverlayHeld) return;
-    this._renderDebugOverlay(ctx, overlayMetrics);
-  }
-
-  _getSceneObjectRect(obj) {
-    if (!obj?.visible) return null;
-    const img = this.engine.getAsset(obj.sprite);
-    if (!img) return null;
-    const drawY = (obj.anim && obj.anim.bottomAlign) ? obj.anim.bottomAlign - img.height : obj.y;
-    return [obj.x - this.scrollX, drawY, obj.x - this.scrollX + img.width, drawY + img.height];
-  }
-
-  _screenRectToWorldRect(rect) {
-    const [x1, y1, x2, y2] = rect;
-    return [x1 + this.scrollX, y1, x2 + this.scrollX, y2];
-  }
-
-  _projectOverlayRect(rect, overlayMetrics) {
-    const [x1, y1, x2, y2] = rect;
-    const scaleX = overlayMetrics?.scaleX ?? 1;
-    const scaleY = overlayMetrics?.scaleY ?? 1;
-    return [
-      (x1 - this.scrollX) * scaleX,
-      y1 * scaleY,
-      (x2 - this.scrollX) * scaleX,
-      y2 * scaleY,
-    ];
+  _getDebugActiveInteractions() {
+    return AIRPORT_ACTIVE_INTERACTIONS.map((interaction) => {
+      const kind = AIRPORT_ENTITIES[interaction.id]?.kind || AIRPORT_ENTITIES[interaction.entity]?.kind || this._debugObjectKinds[interaction.object] || 'prop';
+      return { ...interaction, _debugColor: DEBUG_ENTITY_COLORS[kind] || '#ffffff' };
+    });
   }
 
   _tickWalk() {
