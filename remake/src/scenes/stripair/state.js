@@ -1,6 +1,7 @@
 export const STRIPAIR_DEFAULT_STATE = Object.freeze({
   palmettoes: 100,
   bag: null,
+  map: false,
   infoStandVisited: false,
   catConversationStage: 0,
 });
@@ -8,6 +9,7 @@ export const STRIPAIR_DEFAULT_STATE = Object.freeze({
 export const STRIPAIR_STATE_KEYS = Object.freeze([
   'palmettoes',
   'bag',
+  'map',
   'infoStandVisited',
   'catConversationStage',
 ]);
@@ -21,6 +23,14 @@ function parseBooleanFlag(value) {
   return null;
 }
 
+function parseTriStateFlag(value) {
+  if (value == null || value === '') return null;
+  if (value === '1' || value.toLowerCase() === 'true') return true;
+  if (value === '0' || value.toLowerCase() === 'false') return false;
+  if (value.toLowerCase() === 'null') return null;
+  return null;
+}
+
 function normalizeBagItems(items) {
   if (!Array.isArray(items)) return [];
   return items.filter((item, index) => BAG_ITEM_VALUES.includes(item) && items.indexOf(item) === index);
@@ -29,6 +39,7 @@ function normalizeBagItems(items) {
 export function normalizeStripAirState(state = {}) {
   const normalized = { ...STRIPAIR_DEFAULT_STATE };
   if (Array.isArray(state.bag)) normalized.bag = normalizeBagItems(state.bag);
+  if (state.map === null || typeof state.map === 'boolean') normalized.map = state.map ?? STRIPAIR_DEFAULT_STATE.map;
   if (typeof state.infoStandVisited === 'boolean') normalized.infoStandVisited = state.infoStandVisited;
   if (Number.isFinite(state.palmettoes)) normalized.palmettoes = state.palmettoes;
   if (Number.isFinite(state.catConversationStage)) {
@@ -42,6 +53,7 @@ export function parseStripAirStateParams(params) {
   const state = {};
   const bag = params.get('bag');
   if (bag) state.bag = bag.split(',').map((item) => item.trim()).filter(Boolean);
+  if (params.has('map')) state.map = parseTriStateFlag(params.get('map'));
   const infoStandVisited = parseBooleanFlag(params.get('infoStandVisited'));
   if (infoStandVisited != null) state.infoStandVisited = infoStandVisited;
   for (const key of ['palmettoes', 'catConversationStage']) {
@@ -60,6 +72,8 @@ export function serializeStripAirStateParams(state = {}) {
     params.set('palmettoes', String(normalized.palmettoes));
   }
   if (normalized.bag?.length) params.set('bag', normalized.bag.join(','));
+  if (normalized.map === true) params.set('map', 'true');
+  else if (normalized.map === false) params.set('map', 'false');
   if (normalized.infoStandVisited) params.set('infoStandVisited', '1');
   if (normalized.catConversationStage > 0) params.set('catConversationStage', String(normalized.catConversationStage));
   return params;
@@ -84,5 +98,6 @@ export function buildStripAirCarryState(sourceState = {}) {
   return normalizeStripAirState({
     palmettoes: normalized.palmettoes,
     bag: normalized.bag,
+    map: normalized.map === true,
   });
 }

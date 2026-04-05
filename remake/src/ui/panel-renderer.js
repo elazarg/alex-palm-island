@@ -31,7 +31,7 @@ function drawSevenSegmentDigit(ctx, x, y, ch, colors) {
   }
 }
 
-export function renderPanel(ctx, { assets, mouseY, modalOpen, buttons, pressedMode, amount, bagReceived, inputMode, layout, moneyAnimation }) {
+export function renderPanel(ctx, { assets, mouseY, modalOpen, buttons, pressedMode, amount, buttonStates, inputMode, layout, moneyAnimation }) {
   const meter = assets.get(layout.meter.asset);
   if (meter) ctx.drawImage(meter, layout.meter.x, layout.meter.y);
 
@@ -55,8 +55,9 @@ export function renderPanel(ctx, { assets, mouseY, modalOpen, buttons, pressedMo
   for (const button of buttons) {
     const sprite = resolveActionButtonSprite(button, {
       pressedMode,
-      bagReceived,
+      buttonStates,
     });
+    if (!sprite) continue;
     const img = assets.get(sprite);
     if (img) ctx.drawImage(img, button.x, button.y);
   }

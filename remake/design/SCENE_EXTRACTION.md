@@ -246,6 +246,33 @@ That is acceptable, but the desired contract is:
 
 without scene-specific repair code scattered through init.
 
+### 5. Note audio must come from SCX headers, not scene-local hardcoding
+
+Original note/narrator popups carry sound names in SCX section headers, for
+example:
+
+- scene-local text refs like `590,1,sdNar206`
+- global/system notes like `10999,1,sdNar176` in `GLOBAL.SCX`
+
+Extraction rules:
+
+- generated text modules must preserve the full section header, not just lines
+- text-ref parsing must keep `sound`
+- note popups should use one shared runtime path that plays `textRef.sound`
+- narrator note sounds should come from a shared `assets/narration/` soundbank,
+  generated from all `SD*.DAT/NDX` resources with names `sdNar*`
+
+Do not reintroduce scene-local hacks like:
+
+- manual `if sectionId === ... then play sound`
+- separate note-audio code paths per scene
+- generators that discard SCX headers
+
+Also distinguish clearly between:
+
+- source-backed notes: must use original text + original sound
+- remake placeholder notes: may remain silent until mapped to original content
+
 ## Lessons From `STRIPAIR`
 
 `STRIPAIR` added several extraction lessons that should be treated as part of

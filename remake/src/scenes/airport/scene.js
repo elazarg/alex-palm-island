@@ -8,6 +8,8 @@ import { renderPanel } from '../../ui/panel-renderer.js';
 import { renderSceneDebugOverlay } from '../../ui/scene-debug-overlay.js';
 import { INVENTORY_ITEM_DEFS } from '../../ui/inventory-items.js';
 import { ScriptedScene } from '../../runtime/script-runtime.js';
+import { GLOBAL_SOUND_MANIFEST } from '../../runtime/global-resources.js';
+import { buildNarrationSoundManifest } from '../../runtime/scx-sound-manifest.js';
 import { AIRPORT_SCRIPT } from './script.js';
 import {
   buildAirportRouteFromRuntime,
@@ -54,6 +56,7 @@ const DEBUG_REGION_COLORS = Object.freeze({
   marker: '#ffffff',
   unclassified: '#999999',
 });
+const AIRPORT_NARRATION_SOUND_MANIFEST = buildNarrationSoundManifest(AIRPORT_RESOURCES);
 
 export class AirportScene extends ScriptedScene {
   constructor(options = {}) {
@@ -105,7 +108,7 @@ export class AirportScene extends ScriptedScene {
     const { images, frameCounts } = buildAssetManifest();
     this._frameCounts = frameCounts;
     await engine.loadImages(images);
-    await engine.loadSounds(SOUND_MANIFEST);
+    await engine.loadSounds({ ...SOUND_MANIFEST, ...AIRPORT_NARRATION_SOUND_MANIFEST, ...GLOBAL_SOUND_MANIFEST });
     for (const [name, hotspot] of Object.entries(CURSOR_HOTSPOTS)) {
       engine.registerCursorHotspot(name, hotspot);
     }
@@ -251,8 +254,16 @@ export class AirportScene extends ScriptedScene {
       this._queueEvent('bagMissing');
       return;
     }
+    if (button.mode === 'map' && this.state?.map !== true) {
+      this._queueEvent('mapMissing');
+      return;
+    }
     if (button.mode === 'bag' && airportHasBag(this.state)) {
       this._openInventory('bag');
+      return;
+    }
+    if (button.mode === 'map' && this.state?.map === true) {
+      this._openMap();
       return;
     }
     this.selectedItem = null;
@@ -283,6 +294,7 @@ export class AirportScene extends ScriptedScene {
       originalEvent.preventDefault();
       return;
     }
+    if (this._handleStandardHotkeys({ key, originalEvent })) return;
     if (this._entrySequence) return;
     if (!this.modal) return;
     if (this.modal.type === 'form') {
@@ -376,7 +388,10 @@ export class AirportScene extends ScriptedScene {
         buttons: this.uiButtons,
         pressedMode: this._pressedButtonMode,
         amount: this.state?.palmettoes ?? 100,
-        bagReceived: airportHasBag(this.state),
+        buttonStates: {
+          bag: airportHasBag(this.state) ? 'active' : 'covered',
+          map: this.state?.map === null ? 'hidden' : (this.state?.map === true ? 'active' : 'covered'),
+        },
         inputMode: this.inputMode,
         layout: this.panelLayout,
         moneyAnimation: this.meterAnimation,
@@ -677,7 +692,11 @@ export class AirportScene extends ScriptedScene {
 
   _getUiButton(mx, my) {
     if (this.modal || this.engine.mouseY < this.panelLayout.panel.revealY) return null;
-    return this.uiButtons.find((button) => mx >= button.x && mx <= button.x + button.w && my >= button.y && my <= button.y + button.h) || null;
+    return this.uiButtons.find((button) => {
+      if (!(mx >= button.x && mx <= button.x + button.w && my >= button.y && my <= button.y + button.h)) return false;
+      if (button.mode !== 'map') return true;
+      return this.state?.map !== null;
+    }) || null;
   }
 
   _findInteraction(worldX, worldY, mode) {
@@ -735,31 +754,7 @@ export class AirportScene extends ScriptedScene {
   _openTextRefSection(sectionId) {
     const textRef = AIRPORT_RESOURCES.textRefBySection[sectionId];
     if (!textRef) return;
-    this._stopSound();
-    if (textRef.resource?.asset) {
-      this.modal = {
-        id: `resource:${sectionId}`,
-        type: 'message',
-        presentation: 'resource',
-        asset: textRef.resource.asset,
-        sourceSectionId: sectionId,
-        locked: false,
-      };
-      this._afterModalChanged();
-      this._refreshCursor();
-      return;
-    }
-    this.modal = {
-      id: `textRef:${sectionId}`,
-      type: 'message',
-      presentation: 'note',
-      speaker: 'Narrator',
-      text: textRef.text,
-      sourceSectionId: sectionId,
-      locked: false,
-    };
-    this._afterModalChanged();
-    this._refreshCursor();
+    this._openTextRefRecord(textRef, { sectionId });
   }
 
   _openInventory(inventoryId = 'bag') {
@@ -787,6 +782,19 @@ export class AirportScene extends ScriptedScene {
   _closeInventory() {
     if (this.modal?.type !== 'inventory') return;
     this.modal = null;
+    this._afterModalChanged();
+    this._refreshCursor();
+  }
+
+  _openMap() {
+    this._stopSound();
+    this.modal = {
+      id: 'worldMap',
+      type: 'message',
+      presentation: 'resource',
+      asset: 'MAP',
+      locked: false,
+    };
     this._afterModalChanged();
     this._refreshCursor();
   }
@@ -987,19 +995,7 @@ export class AirportScene extends ScriptedScene {
     const returnModal = this.modal;
     const textRef = AIRPORT_RESOURCES.textRefBySection[sectionId];
     if (!textRef) return;
-    this._stopSound();
-    this.modal = {
-      id: `textRef:${sectionId}`,
-      type: 'message',
-      presentation: 'note',
-      speaker: 'Narrator',
-      text: textRef.text,
-      sourceSectionId: sectionId,
-      locked: false,
-      returnModal,
-    };
-    this._afterModalChanged();
-    this._refreshCursor();
+    this._openTextRefRecord(textRef, { sectionId, returnModal });
   }
 
   _applyRouteStateOverrides() {

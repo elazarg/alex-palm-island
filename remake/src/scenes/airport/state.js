@@ -1,6 +1,7 @@
 export const AIRPORT_DEFAULT_STATE = Object.freeze({
   palmettoes: 100,
   bag: null,
+  map: null,
   familyQueue: 'not-arrived',
   familyQueuePendingClear: false,
   mayExit: false,
@@ -14,6 +15,7 @@ export const AIRPORT_DEFAULT_STATE = Object.freeze({
 export const AIRPORT_STATE_KEYS = Object.freeze([
   'palmettoes',
   'bag',
+  'map',
   'familyQueue',
   'familyQueuePendingClear',
   'mayExit',
@@ -34,6 +36,14 @@ function parseBooleanFlag(value) {
   return null;
 }
 
+function parseTriStateFlag(value) {
+  if (value == null || value === '') return null;
+  if (value === '1' || value.toLowerCase() === 'true') return true;
+  if (value === '0' || value.toLowerCase() === 'false') return false;
+  if (value.toLowerCase() === 'null') return null;
+  return null;
+}
+
 function normalizeBagItems(items) {
   if (!Array.isArray(items)) return [];
   return items.filter((item, index) => BAG_ITEM_VALUES.includes(item) && items.indexOf(item) === index);
@@ -42,6 +52,7 @@ function normalizeBagItems(items) {
 export function normalizeAirportState(state = {}) {
   const normalized = { ...AIRPORT_DEFAULT_STATE };
   if (Array.isArray(state.bag)) normalized.bag = normalizeBagItems(state.bag);
+  if (state.map === null || typeof state.map === 'boolean') normalized.map = state.map;
   if (state.claimSize && ['big', 'medium', 'small'].includes(state.claimSize)) normalized.claimSize = state.claimSize;
   if (state.claimColor && ['grey', 'purple', 'pink'].includes(state.claimColor)) normalized.claimColor = state.claimColor;
   if (state.familyQueue && FAMILY_QUEUE_VALUES.includes(state.familyQueue)) normalized.familyQueue = state.familyQueue;
@@ -59,6 +70,7 @@ export function parseAirportStateParams(params) {
   const state = {};
   const bag = params.get('bag');
   if (bag) state.bag = bag.split(',').map((item) => item.trim()).filter(Boolean);
+  if (params.has('map')) state.map = parseTriStateFlag(params.get('map'));
   const familyQueue = params.get('familyQueue');
   if (familyQueue && FAMILY_QUEUE_VALUES.includes(familyQueue)) state.familyQueue = familyQueue;
   const claimSize = params.get('claimSize');
@@ -83,6 +95,8 @@ export function serializeAirportStateParams(state = {}) {
   const normalized = normalizeAirportState(state);
   if (Number.isFinite(normalized.palmettoes) && normalized.palmettoes !== AIRPORT_DEFAULT_STATE.palmettoes) params.set('palmettoes', String(normalized.palmettoes));
   if (normalized.bag?.length) params.set('bag', normalized.bag.join(','));
+  if (normalized.map === true) params.set('map', 'true');
+  else if (normalized.map === false) params.set('map', 'false');
   if (normalized.familyQueue !== AIRPORT_DEFAULT_STATE.familyQueue) params.set('familyQueue', normalized.familyQueue);
   if (normalized.familyQueuePendingClear) params.set('familyQueuePendingClear', '1');
   if (normalized.mayExit) params.set('mayExit', '1');

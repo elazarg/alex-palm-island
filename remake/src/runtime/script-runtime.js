@@ -135,6 +135,31 @@ export class ScriptedScene {
     this._inventoryControlBoxes = [];
   }
 
+  _handleStandardHotkeys({ key, originalEvent }) {
+    if (this.modal || this._entrySequence) return false;
+    const hotkey = String(key || '').toLowerCase();
+    if (hotkey === 'w' || hotkey === 't' || hotkey === 'l' || hotkey === 'u') {
+      this.selectedItem = null;
+      const mode = { w: 'walk', t: 'talk', l: 'look', u: 'touch' }[hotkey];
+      this._setInputMode?.(mode);
+      originalEvent?.preventDefault?.();
+      return true;
+    }
+    if (hotkey === 'i') {
+      if (Array.isArray(this.state?.bag) && this.state.bag.length > 0) this._openInventory?.('bag');
+      else this._queueEvent('bagMissing');
+      originalEvent?.preventDefault?.();
+      return true;
+    }
+    if (hotkey === 'm') {
+      if (this.state?.map === true) this._openMap?.();
+      else this._queueEvent('mapMissing');
+      originalEvent?.preventDefault?.();
+      return true;
+    }
+    return false;
+  }
+
   _queueEvent(eventId) {
     const event = this.sceneScript.events?.[eventId];
     if (!event) return;
@@ -221,22 +246,57 @@ export class ScriptedScene {
   _openMessage(messageId) {
     const message = this.sceneScript.messages?.[messageId];
     if (!message) return;
+    this._presentMessageModal(messageId, message);
+  }
+
+  _presentMessageModal(messageId, message, extra = {}) {
     this._stopSound();
     this._dialogExitBox = null;
     this._inventoryItemBoxes = [];
     this._inventoryControlBoxes = [];
-    this.modal = { id: messageId, type: 'message', presentation: message.presentation || 'note', speakerTalking: false, locked: false, ...message };
+    this.modal = {
+      id: messageId,
+      type: 'message',
+      presentation: message.presentation || 'note',
+      speakerTalking: false,
+      locked: false,
+      ...message,
+      ...extra,
+    };
     this._afterModalChanged?.();
     this._refreshCursor?.();
-    if (this.modal.presentation === 'talk' && this.modal.sound) {
-      this.modal.speakerTalking = true;
-      this.modal.locked = true;
+    if (this.modal.sound) {
+      if (this.modal.presentation === 'talk') {
+        this.modal.speakerTalking = true;
+        this.modal.locked = true;
+      }
       this._playModalSound(this.modal.sound, () => {
         if (this.modal?.type !== 'message') return;
-        this.modal.speakerTalking = false;
-        this.modal.locked = false;
+        if (this.modal.presentation === 'talk') {
+          this.modal.speakerTalking = false;
+          this.modal.locked = false;
+        }
       });
     }
+  }
+
+  _openTextRefRecord(textRef, { sectionId, returnModal = null } = {}) {
+    if (!textRef) return;
+    if (textRef.resource?.asset) {
+      this._presentMessageModal(`resource:${sectionId}`, {
+        presentation: 'resource',
+        asset: textRef.resource.asset,
+        sourceSectionId: sectionId,
+      }, { returnModal });
+      return;
+    }
+    this._presentMessageModal(`textRef:${sectionId}`, {
+      presentation: 'note',
+      speaker: 'Narrator',
+      text: textRef.text,
+      sound: textRef.sound || null,
+      sourceSectionId: sectionId,
+    }, { returnModal });
   }
 
   _openDialog(dialogId, options = {}) {

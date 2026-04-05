@@ -1,10 +1,12 @@
 import { AIRPORT_RESOURCES } from './resources.js';
 import { AIRPORT_DEFAULT_STATE } from './state.js';
 import { AIRPORT_ACTIVE_INTERACTIONS } from './theme-2d.js';
+import { GLOBAL_RESOURCES } from '../../runtime/global-resources.js';
 
 const DIALOGS = AIRPORT_RESOURCES.dialogBySection;
 const MESSAGES = AIRPORT_RESOURCES.messageBySection;
 const TEXT_REFS = AIRPORT_RESOURCES.textRefBySection;
+const GLOBAL_TEXT_REFS = GLOBAL_RESOURCES.textRefBySection;
 
 const GUARD_SEQUENCE = Object.freeze([1, 1, 1, 2, 1, 3, 4, 3, 1, 5, 6, 7, 6, 1, 8, 9, 10, 1]);
 const CLERK_SEQUENCE = Object.freeze([1, 2, 3, 4, 5, 6, 7, 8]);
@@ -74,6 +76,16 @@ function talkMessageFromSection(sectionId, extra = {}) {
     sound: message.speaker.sound,
     text: message.text,
     ...speakerVisualFromSpritePart(message.speaker.spritePart),
+    ...extra,
+  };
+}
+
+function noteMessageFromTextRef(textRef, extra = {}) {
+  return {
+    speaker: 'Narrator',
+    presentation: 'note',
+    text: textRef.text,
+    sound: textRef.sound || null,
     ...extra,
   };
 }
@@ -201,6 +213,7 @@ export const AIRPORT_SCRIPT = {
     touchDefault: [{ type: 'message', id: 'touchDefault' }],
     bagDefault: [{ type: 'message', id: 'bagDefault' }],
     bagMissing: [{ type: 'message', id: 'bagMissing' }],
+    mapMissing: [{ type: 'message', id: 'mapMissing' }],
 
     'upstairs.block': [
       {
@@ -463,11 +476,8 @@ export const AIRPORT_SCRIPT = {
     womanGuardBag: talkMessageFromSection(1222),
     womanGuardFood: talkMessageFromSection(1223),
     womanGuardTaxi: talkMessageFromSection(1224),
-    bagMissing: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'You lost your bag!',
-    },
+    bagMissing: noteMessageFromTextRef(TEXT_REFS[998]),
+    mapMissing: noteMessageFromTextRef(GLOBAL_TEXT_REFS[10999]),
     upstairsLater: {
       speaker: 'Narrator',
       presentation: 'note',

@@ -25,7 +25,10 @@ def main() -> None:
     for section in parse_file(str(SRC)):
         head = section["id"].split(",")[0]
         if head.isdigit():
-            sections[int(head)] = section["lines"]
+            sections[int(head)] = {
+                "header": section["id"],
+                "lines": section["lines"],
+            }
 
     dialog_ids = [section_id for section_id in sections if 2000 <= section_id < 3000]
     text_ref_ids = [section_id for section_id in sections if 500 <= section_id < 1000]

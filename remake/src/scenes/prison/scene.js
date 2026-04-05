@@ -1,6 +1,7 @@
 import { BitmapFont } from '../../ui/bitmap-font.js';
 import { CURSOR_HOTSPOTS } from '../../ui/action-modes.js';
 import { STANDARD_NOTE_LAYOUT } from '../../ui/note-layout.js';
+import { buildNarrationSoundManifest } from '../../runtime/scx-sound-manifest.js';
 import { renderNotePopup } from '../../ui/note-renderer.js';
 import { PRISON_RESOURCES } from './resources.js';
 
@@ -12,6 +13,7 @@ const DIG_POSITIONS = Object.freeze([
 ]);
 const DIG_FRAME_TICKS = 6;
 const FADE_TICKS = 18;
+const PRISON_NARRATION_SOUND_MANIFEST = buildNarrationSoundManifest(PRISON_RESOURCES);
 
 export class PrisonScene {
   constructor(options = {}) {
@@ -49,14 +51,7 @@ export class PrisonScene {
     }
     await engine.loadImages(images);
 
-    const soundManifest = {};
-    for (const sectionId of PRISON_RESOURCES.sections.messages) {
-      const message = PRISON_RESOURCES.messageBySection[sectionId];
-      if (message.sound) {
-        soundManifest[message.sound] = `../assets/prison/${message.sound}.wav`;
-      }
-    }
-    await engine.loadSounds(soundManifest);
+    await engine.loadSounds(PRISON_NARRATION_SOUND_MANIFEST);
     engine.registerCursorHotspot('ARROWCURSOR', CURSOR_HOTSPOTS.ARROWCURSOR);
 
     const fontImg = new Image();

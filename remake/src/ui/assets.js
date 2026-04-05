@@ -1,4 +1,4 @@
-export const UI_VERSION = '20260330f';
+export const UI_VERSION = '20260405a';
 
 export const UI_ASSET_NAMES = Object.freeze([
   'PANEL',
@@ -13,6 +13,9 @@ export const UI_ASSET_NAMES = Object.freeze([
   'CASEBUTTON',
   'CASEPRESSED',
   'NOBAG',
+  'MAPBUTTON',
+  'MAPPRESSED',
+  'NOMAP',
   'EXITBUTTON',
   'EXITPRESSED',
   'METER',
@@ -34,6 +37,7 @@ export const UI_ASSET_NAMES = Object.freeze([
   'TALKMASK1',
   'TALKMASK2',
   'DIALOGBOX',
+  'MAP',
 ]);
 
 export const ALEX_DIALOG_ASSET_NAMES = Object.freeze(

@@ -8,8 +8,10 @@ import { INVENTORY_ITEM_DEFS } from '../../ui/inventory-items.js';
 import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimation } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
 import { renderSceneDebugOverlay, renderSceneDebugText } from '../../ui/scene-debug-overlay.js';
-import { findNearestWalkablePoint, findPathAroundObstacles, pointInPolygon } from '../../runtime/navigation-graph.js';
+import { findNearestWalkablePoint, findPathOnGrid, pointInPolygon } from '../../runtime/navigation-graph.js';
+import { GLOBAL_SOUND_MANIFEST } from '../../runtime/global-resources.js';
 import { ScriptedScene } from '../../runtime/script-runtime.js';
+import { buildNarrationSoundManifest } from '../../runtime/scx-sound-manifest.js';
 import {
   buildStripAirRouteFromRuntime,
   normalizeStripAirRoute,
@@ -48,6 +50,7 @@ const DEBUG_REGION_COLORS = Object.freeze({
   walkTarget: '#00d084',
   unclassified: '#999999',
 });
+const STRIPAIR_NARRATION_SOUND_MANIFEST = buildNarrationSoundManifest(STRIPAIR_RESOURCES);
 
 export class StripAirScene extends ScriptedScene {
   constructor(options = {}) {
@@ -94,7 +97,7 @@ export class StripAirScene extends ScriptedScene {
     const { images, frameCounts } = buildAssetManifest();
     this._frameCounts = frameCounts;
     await engine.loadImages(images);
-    await engine.loadSounds(STRIPAIR_SOUND_MANIFEST);
+    await engine.loadSounds({ ...STRIPAIR_SOUND_MANIFEST, ...STRIPAIR_NARRATION_SOUND_MANIFEST, ...GLOBAL_SOUND_MANIFEST });
     for (const [name, hotspot] of Object.entries(CURSOR_HOTSPOTS)) {
       engine.registerCursorHotspot(name, hotspot);
     }
@@ -225,8 +228,16 @@ export class StripAirScene extends ScriptedScene {
       this._queueEvent('bagMissing');
       return;
     }
+    if (button.mode === 'map' && this.state?.map !== true) {
+      this._queueEvent('mapMissing');
+      return;
+    }
     if (button.mode === 'bag' && stripAirHasBag(this.state)) {
       this._openInventory('bag');
+      return;
+    }
+    if (button.mode === 'map' && this.state?.map === true) {
+      this._openMap();
       return;
     }
     this.selectedItem = null;
@@ -256,6 +267,7 @@ export class StripAirScene extends ScriptedScene {
       originalEvent.preventDefault();
       return;
     }
+    if (this._handleStandardHotkeys({ key, originalEvent })) return;
     if (this._entrySequence || !this.modal) return;
     if (this.modal.type === 'inventory') {
       if (key === 'Escape') {
@@ -334,7 +346,10 @@ export class StripAirScene extends ScriptedScene {
         buttons: this.uiButtons,
         pressedMode: this._pressedButtonMode,
         amount: this.state?.palmettoes ?? 100,
-        bagReceived: stripAirHasBag(this.state),
+        buttonStates: {
+          bag: stripAirHasBag(this.state) ? 'active' : 'covered',
+          map: this.state?.map === true ? 'active' : 'covered',
+        },
         inputMode: this.inputMode,
         layout: this.panelLayout,
         moneyAnimation: this.meterAnimation,
@@ -626,34 +641,7 @@ export class StripAirScene extends ScriptedScene {
   _openTextRefSection(sectionId) {
     const textRef = STRIPAIR_RESOURCES.textRefBySection[sectionId];
     if (!textRef) return;
-    this._stopSound();
-    if (textRef.resource?.asset) {
-      this.modal = {
-        id: `resource:${sectionId}`,
-        type: 'message',
-        presentation: 'resource',
-        asset: textRef.resource.asset,
-        sourceSectionId: sectionId,
-        locked: false,
-      };
-      this._afterModalChanged();
-      this._refreshCursor();
-      return;
-    }
-    this.modal = {
-      id: `textRef:${sectionId}`,
-      type: 'message',
-      presentation: 'note',
-      speaker: 'Narrator',
-      text: textRef.text,
-      sourceSectionId: sectionId,
-      locked: false,
-    };
-    this._afterModalChanged();
-    this._refreshCursor();
-    if (textRef.sound) {
-      this._playModalSound(textRef.sound, null);
-    }
+    this._openTextRefRecord(textRef, { sectionId });
   }
 
   _openInventory(inventoryId = 'bag') {
@@ -681,6 +669,19 @@ export class StripAirScene extends ScriptedScene {
   _closeInventory() {
     if (this.modal?.type !== 'inventory') return;
     this.modal = null;
+    this._afterModalChanged();
+    this._refreshCursor();
+  }
+
+  _openMap() {
+    this._stopSound();
+    this.modal = {
+      id: 'worldMap',
+      type: 'message',
+      presentation: 'resource',
+      asset: 'MAP',
+      locked: false,
+    };
     this._afterModalChanged();
     this._refreshCursor();
   }
@@ -738,11 +739,16 @@ export class StripAirScene extends ScriptedScene {
 
   _walkTo(x, y, options = {}) {
     const goal = { x, y };
-    const path = findPathAroundObstacles(
+    const path = findPathOnGrid(
       { x: this.alexX, y: this.alexY },
       goal,
-      { rects: this.walkMasks, polygons: this.walkMaskPolygons },
-      { padding: 2 },
+      (px, py) => this._inWalkZone(px, py),
+      {
+        width: 320,
+        height: 200,
+        cellSize: 8,
+        canTraverseSegment: (from, to) => this._canWalkSegment(from, to),
+      },
     );
     const [first, ...rest] = path.length ? path : [goal];
     this.alexPath = rest;
@@ -779,6 +785,27 @@ export class StripAirScene extends ScriptedScene {
       { width: 320, height: 200, step: 2, maxRadius: 220 },
     );
     return this._inWalkZone(point.x, point.y) ? point : null;
+  }
+
+  _canWalkSegment(from, to) {
+    let x = from.x;
+    let y = from.y;
+    let walkCycleIdx = 0;
+    for (let safety = 0; safety < 512; safety++) {
+      const dir = this._calcDirection(x, y, to.x, to.y);
+      const cycle = this.walkFrameCycles[dir] || [1];
+      const frame = cycle[walkCycleIdx % cycle.length];
+      walkCycleIdx += 1;
+      const delta = this.walkDeltas[dir]?.[frame] || { dx: 0, dy: 0 };
+      const dist = Math.hypot(to.x - x, to.y - y);
+      if (dist <= Math.max(Math.abs(delta.dx), Math.abs(delta.dy), 1)) return true;
+      const nextX = x + delta.dx;
+      const nextY = y + delta.dy;
+      if (!this._inWalkZone(nextX, nextY)) return false;
+      x = nextX;
+      y = nextY;
+    }
+    return false;
   }
 
   _openInitialRouteScreen() {

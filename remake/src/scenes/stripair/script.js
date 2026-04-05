@@ -1,10 +1,12 @@
 import { STRIPAIR_RESOURCES } from './resources.js';
 import { STRIPAIR_DEFAULT_STATE } from './state.js';
 import { STRIPAIR_ACTIVE_INTERACTIONS } from './theme-2d.js';
+import { GLOBAL_RESOURCES } from '../../runtime/global-resources.js';
 
 const DIALOGS = STRIPAIR_RESOURCES.dialogBySection;
 const MESSAGES = STRIPAIR_RESOURCES.messageBySection;
 const TEXT_REFS = STRIPAIR_RESOURCES.textRefBySection;
+const GLOBAL_TEXT_REFS = GLOBAL_RESOURCES.textRefBySection;
 
 const INFO_SEQUENCE = Object.freeze([1, 1, 2, 1, 3, 4, 3, 1]);
 const CAT_SEQUENCE = Object.freeze([1, 2, 3, 4, 5, 6, 5, 4]);
@@ -44,6 +46,16 @@ function talkMessageFromSection(sectionId) {
     sound: message.speaker.sound,
     text: message.text,
     ...speakerVisualFromSpritePart(message.speaker.spritePart),
+  };
+}
+
+function noteMessageFromTextRef(textRef, extra = {}) {
+  return {
+    speaker: 'Narrator',
+    presentation: 'note',
+    text: textRef.text,
+    sound: textRef.sound || null,
+    ...extra,
   };
 }
 
@@ -219,6 +231,7 @@ export const STRIPAIR_SCRIPT = {
     ],
 
     bagMissing: [{ type: 'message', id: 'bagMissing' }],
+    mapMissing: [{ type: 'message', id: 'mapMissing' }],
     lookFloor: [{ type: 'message', id: 'lookFloor' }],
     touchFloor: [{ type: 'message', id: 'touchFloor' }],
     lookDefault: [{ type: 'message', id: 'lookDefault' }],
@@ -261,6 +274,7 @@ export const STRIPAIR_SCRIPT = {
       presentation: 'note',
       text: 'You have nothing in the bag yet.',
     },
+    mapMissing: noteMessageFromTextRef(GLOBAL_TEXT_REFS[10999]),
     lookFloor: {
       speaker: 'Narrator',
       presentation: 'note',
