@@ -1,3 +1,7 @@
+import { parseBooleanFlag, parseTriStateFlag, normalizeBagItems, buildCarryState } from '../../runtime/state-utils.js';
+
+export { buildCarryState };
+
 export const AIRPORT_DEFAULT_STATE = Object.freeze({
   palmettoes: 100,
   bag: null,
@@ -28,29 +32,8 @@ export const AIRPORT_STATE_KEYS = Object.freeze([
   'claimMatchesBag',
 ]);
 
-const BAG_ITEM_VALUES = Object.freeze(['passport', 'letter']);
 const AIRPORT_BOARD_MODE_VALUES = Object.freeze(['arrivals', 'departures']);
 const FAMILY_QUEUE_VALUES = Object.freeze(['not-arrived', 'queued', 'cleared']);
-
-function parseBooleanFlag(value) {
-  if (value == null) return null;
-  if (value === '1' || value.toLowerCase() === 'true') return true;
-  if (value === '0' || value.toLowerCase() === 'false') return false;
-  return null;
-}
-
-function parseTriStateFlag(value) {
-  if (value == null || value === '') return null;
-  if (value === '1' || value.toLowerCase() === 'true') return true;
-  if (value === '0' || value.toLowerCase() === 'false') return false;
-  if (value.toLowerCase() === 'null') return null;
-  return null;
-}
-
-function normalizeBagItems(items) {
-  if (!Array.isArray(items)) return [];
-  return items.filter((item, index) => BAG_ITEM_VALUES.includes(item) && items.indexOf(item) === index);
-}
 
 export function normalizeAirportState(state = {}) {
   const normalized = { ...AIRPORT_DEFAULT_STATE };

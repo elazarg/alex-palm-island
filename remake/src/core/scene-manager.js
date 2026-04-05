@@ -37,6 +37,7 @@ export class SceneManager {
       else if (location.hash !== hash) location.hash = hash;
     }
 
+    const prevScene = this.engine.scene;
     const scene = await this._getScene(route);
     if (!scene) return null;
 
@@ -45,7 +46,11 @@ export class SceneManager {
       descriptor.wire(this, scene, route);
     }
 
-    this.engine.setScene(scene);
+    if (scene === prevScene) {
+      if (typeof scene.applyRoute === 'function') scene.applyRoute(route);
+    } else {
+      this.engine.setScene(scene);
+    }
     return scene;
   }
 

@@ -1,4 +1,5 @@
-import { BitmapFont } from '../ui/bitmap-font.js';
+import { WIDTH, HEIGHT } from '../core/engine.js';
+import { loadBitmapFont } from '../ui/font-loader.js';
 
 function range(pfx, a, b) {
   const r = [];
@@ -113,14 +114,7 @@ export class IntroScene {
     }
     await engine.loadImages({ MMARROWCURSOR: '../assets/menu/MMARROWCURSOR.png' });
 
-    const fontImg = new Image();
-    const fontData = await (await fetch('../assets/mainfont.json')).json();
-    await new Promise((resolve, reject) => {
-      fontImg.onload = resolve;
-      fontImg.onerror = reject;
-      fontImg.src = '../assets/mainfont.png';
-    });
-    this.font = new BitmapFont(fontImg, fontData);
+    this.font = await loadBitmapFont();
   }
 
   init() {
@@ -211,7 +205,7 @@ export class IntroScene {
 
   render(ctx) {
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, 320, 200);
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
     switch (this.sceneName) {
       case 'opening': this._renderOpening(ctx); break;
@@ -224,7 +218,7 @@ export class IntroScene {
     if (this.fadeAlpha < 1) {
       ctx.globalAlpha = 1 - this.fadeAlpha;
       ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, 320, 200);
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
       ctx.globalAlpha = 1;
     }
   }
@@ -543,7 +537,7 @@ export class IntroScene {
     draw('LAMP', 32, 68);
 
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 172, 320, 28);
+    ctx.fillRect(0, 172, WIDTH, 28);
     if (this.awaitingClick) {
       draw(this.pressedBtn === 'rewind' ? 'SPYREWIND1' : 'SPYREWIND2', 10, 174);
       draw(this.pressedBtn === 'play' ? 'SPYPLAY1' : 'SPYPLAY2', 272, 174);

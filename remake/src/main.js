@@ -1,4 +1,4 @@
-import { Engine } from './core/engine.js';
+import { Engine, WIDTH, HEIGHT } from './core/engine.js';
 import { SceneManager } from './core/scene-manager.js';
 
 async function main() {
@@ -9,10 +9,10 @@ async function main() {
     if (!viewport) return;
     const styles = getComputedStyle(document.documentElement);
     const offsetX = parseFloat(styles.getPropertyValue('--canvas-offset-x')) || 0;
-    const maxWidth = Math.max(320, window.innerWidth - offsetX);
-    const maxHeight = Math.max(200, window.innerHeight);
-    const width = Math.floor(Math.min(maxWidth, maxHeight * (320 / 200)));
-    const height = Math.floor(width * (200 / 320));
+    const maxWidth = Math.max(WIDTH, window.innerWidth - offsetX);
+    const maxHeight = Math.max(HEIGHT, window.innerHeight);
+    const width = Math.floor(Math.min(maxWidth, maxHeight * (WIDTH / HEIGHT)));
+    const height = Math.floor(width * (HEIGHT / WIDTH));
     viewport.style.width = `${width}px`;
     viewport.style.height = `${height}px`;
   };

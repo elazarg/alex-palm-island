@@ -1,6 +1,6 @@
-import { BitmapFont } from '../../ui/bitmap-font.js';
+import { loadBitmapFont } from '../../ui/font-loader.js';
 import { ACTION_BUTTONS, CURSOR_HOTSPOTS, WHEEL_INPUT_MODES, resolveInteractionMode } from '../../ui/action-modes.js';
-import { computeLinearDepthScale } from '../../core/engine.js';
+import { WIDTH, HEIGHT, computeLinearDepthScale } from '../../core/engine.js';
 import { STANDARD_DIALOG_LAYOUT } from '../../ui/dialog-layout.js';
 import { STANDARD_NOTE_LAYOUT } from '../../ui/note-layout.js';
 import { STANDARD_PANEL_LAYOUT } from '../../ui/panel-layout.js';
@@ -11,6 +11,7 @@ import { renderSceneDebugOverlay, renderSceneDebugText } from '../../ui/scene-de
 import { findNearestWalkablePoint, findPathOnGrid, pointInPolygon } from '../../runtime/navigation-graph.js';
 import { GLOBAL_SOUND_MANIFEST } from '../../runtime/global-resources.js';
 import { ScriptedScene } from '../../runtime/script-runtime.js';
+import { WALK_DELTAS, WALK_FRAME_CYCLES } from '../../runtime/walk-tables.js';
 import { buildNarrationSoundManifest } from '../../runtime/scx-sound-manifest.js';
 import {
   buildStripAirRouteFromRuntime,
@@ -77,20 +78,8 @@ export class StripAirScene extends ScriptedScene {
       .map((region) => region.polygon)
       .filter(Boolean);
     this.roadPolygon = getStripAirRoadPolygon();
-    this.walkDeltas = {
-      1: [{ dx: 0, dy: 0 }, { dx: -4, dy: 2 }, { dx: -4, dy: 3 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }, { dx: -4, dy: 2 }, { dx: -4, dy: 3 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }],
-      2: [{ dx: 0, dy: 0 }, { dx: 0, dy: 3 }, { dx: 0, dy: 3 }, { dx: 0, dy: 3 }, { dx: 0, dy: 3 }, { dx: 0, dy: 3 }, { dx: 0, dy: 3 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }],
-      3: [{ dx: 0, dy: 0 }, { dx: 4, dy: 2 }, { dx: 4, dy: 3 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }, { dx: 4, dy: 2 }, { dx: 4, dy: 3 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }],
-      4: [{ dx: 0, dy: 0 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }, { dx: -12, dy: 0 }, { dx: -12, dy: 0 }, { dx: -12, dy: 0 }, { dx: -12, dy: 0 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }],
-      6: [{ dx: 0, dy: 0 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }, { dx: 12, dy: 0 }, { dx: 12, dy: 0 }, { dx: 12, dy: 0 }, { dx: 12, dy: 0 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }],
-      7: [{ dx: 0, dy: 0 }, { dx: -4, dy: -2 }, { dx: -4, dy: -3 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }, { dx: -4, dy: -2 }, { dx: -4, dy: -3 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }],
-      8: [{ dx: 0, dy: 0 }, { dx: 0, dy: -3 }, { dx: 0, dy: -3 }, { dx: 0, dy: -3 }, { dx: 0, dy: -3 }, { dx: 0, dy: -3 }, { dx: 0, dy: -3 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }],
-      9: [{ dx: 0, dy: 0 }, { dx: 4, dy: -2 }, { dx: 4, dy: -3 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }, { dx: 4, dy: -2 }, { dx: 4, dy: -3 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }],
-    };
-    this.walkFrameCycles = {
-      1: [1, 2, 5, 6], 2: [1, 2, 3, 4, 5, 6], 3: [1, 2, 5, 6], 4: [3, 4, 5, 6],
-      6: [3, 4, 5, 6], 7: [1, 2, 5, 6], 8: [1, 2, 3, 4, 5, 6], 9: [1, 2, 5, 6],
-    };
+    this.walkDeltas = WALK_DELTAS;
+    this.walkFrameCycles = WALK_FRAME_CYCLES;
   }
 
   async load(engine) {
@@ -104,14 +93,7 @@ export class StripAirScene extends ScriptedScene {
     engine.registerCursorHotspot('PASSPORTICON', { x: 0, y: 0 });
     engine.registerCursorHotspot('LETTERICON', { x: 0, y: 0 });
 
-    const fontImg = new Image();
-    const fontData = await (await fetch('../assets/mainfont.json')).json();
-    await new Promise((resolve, reject) => {
-      fontImg.onload = resolve;
-      fontImg.onerror = reject;
-      fontImg.src = '../assets/mainfont.png';
-    });
-    this.font = new BitmapFont(fontImg, fontData);
+    this.font = await loadBitmapFont();
   }
 
   init() {
@@ -121,7 +103,7 @@ export class StripAirScene extends ScriptedScene {
     this.sceneObjects = [...this.objectsBehind, ...this.objectsFront];
     this.objectByName = Object.fromEntries(this.sceneObjects.map((obj) => [obj.name, obj]));
 
-    this.bgWidth = this.engine.getAsset('SCENE_BG')?.width || 320;
+    this.bgWidth = this.engine.getAsset('SCENE_BG')?.width || WIDTH;
     this.scrollX = 0;
     this.alexX = STRIPAIR_ENTRY_TARGET.x;
     this.alexY = STRIPAIR_ENTRY_TARGET.y;
@@ -359,6 +341,13 @@ export class StripAirScene extends ScriptedScene {
 
   destroy() {
     this._stopSound();
+  }
+
+  applyRoute(route) {
+    this.route = normalizeStripAirRoute(route);
+    this._applyRouteStateOverrides();
+    this._openInitialRouteScreen();
+    this._publishRoute();
   }
 
   renderOverlay(ctx, overlayMetrics) {
@@ -744,8 +733,8 @@ export class StripAirScene extends ScriptedScene {
       goal,
       (px, py) => this._inWalkZone(px, py),
       {
-        width: 320,
-        height: 200,
+        width: WIDTH,
+        height: HEIGHT,
         cellSize: 8,
         canTraverseSegment: (from, to) => this._canWalkSegment(from, to),
       },
@@ -782,7 +771,7 @@ export class StripAirScene extends ScriptedScene {
     const point = findNearestWalkablePoint(
       { x, y },
       (px, py) => this._inWalkZone(px, py),
-      { width: 320, height: 200, step: 2, maxRadius: 220 },
+      { width: WIDTH, height: HEIGHT, step: 2, maxRadius: 220 },
     );
     return this._inWalkZone(point.x, point.y) ? point : null;
   }

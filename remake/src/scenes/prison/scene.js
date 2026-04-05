@@ -1,5 +1,7 @@
-import { BitmapFont } from '../../ui/bitmap-font.js';
+import { WIDTH, HEIGHT } from '../../core/engine.js';
+import { loadBitmapFont } from '../../ui/font-loader.js';
 import { CURSOR_HOTSPOTS } from '../../ui/action-modes.js';
+import { makeEdgeTransparent } from '../../ui/sprite-cutout.js';
 import { STANDARD_NOTE_LAYOUT } from '../../ui/note-layout.js';
 import { buildNarrationSoundManifest } from '../../runtime/scx-sound-manifest.js';
 import { renderNotePopup } from '../../ui/note-renderer.js';
@@ -54,14 +56,7 @@ export class PrisonScene {
     await engine.loadSounds(PRISON_NARRATION_SOUND_MANIFEST);
     engine.registerCursorHotspot('ARROWCURSOR', CURSOR_HOTSPOTS.ARROWCURSOR);
 
-    const fontImg = new Image();
-    const fontData = await (await fetch('../assets/mainfont.json')).json();
-    await new Promise((resolve, reject) => {
-      fontImg.onload = resolve;
-      fontImg.onerror = reject;
-      fontImg.src = '../assets/mainfont.png';
-    });
-    this.font = new BitmapFont(fontImg, fontData);
+    this.font = await loadBitmapFont();
   }
 
   init() {
@@ -131,7 +126,7 @@ export class PrisonScene {
     if (this.fadeAlpha < 1) {
       ctx.globalAlpha = 1 - this.fadeAlpha;
       ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, 320, 200);
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
       ctx.globalAlpha = 1;
     }
   }
@@ -187,39 +182,7 @@ export class PrisonScene {
     cctx.imageSmoothingEnabled = false;
     cctx.drawImage(img, 0, 0);
     const imageData = cctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    const width = canvas.width;
-    const height = canvas.height;
-    const seen = new Uint8Array(width * height);
-    const queue = [];
-    const push = (x0, y0) => {
-      if (x0 < 0 || y0 < 0 || x0 >= width || y0 >= height) return;
-      const idx = y0 * width + x0;
-      if (seen[idx]) return;
-      const off = idx * 4;
-      if (data[off] !== 0 || data[off + 1] !== 0 || data[off + 2] !== 0 || data[off + 3] !== 255) return;
-      seen[idx] = 1;
-      queue.push(idx);
-    };
-    for (let x0 = 0; x0 < width; x0++) {
-      push(x0, 0);
-      push(x0, height - 1);
-    }
-    for (let y0 = 1; y0 < height - 1; y0++) {
-      push(0, y0);
-      push(width - 1, y0);
-    }
-    while (queue.length) {
-      const idx = queue.pop();
-      const off = idx * 4;
-      data[off + 3] = 0;
-      const x0 = idx % width;
-      const y0 = (idx / width) | 0;
-      push(x0 - 1, y0);
-      push(x0 + 1, y0);
-      push(x0, y0 - 1);
-      push(x0, y0 + 1);
-    }
+    makeEdgeTransparent(imageData);
     cctx.putImageData(imageData, 0, 0);
     this.spriteCache.set(name, canvas);
     return canvas;

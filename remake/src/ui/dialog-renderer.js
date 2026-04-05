@@ -1,4 +1,5 @@
 import { tokenizePreservingSpaces, wrapText } from './text.js';
+import { makeEdgeTransparent } from './sprite-cutout.js';
 
 function makeTransparentSlice(source, slice) {
   const canvas = document.createElement('canvas');
@@ -7,44 +8,9 @@ function makeTransparentSlice(source, slice) {
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(source, slice.sx, slice.sy, slice.sw, slice.sh, 0, 0, slice.sw, slice.sh);
-  const img = ctx.getImageData(0, 0, slice.sw, slice.sh);
-  const data = img.data;
-  const stack = [];
-  const seen = new Uint8Array(slice.sw * slice.sh);
-
-  const push = (x, y) => {
-    if (x < 0 || y < 0 || x >= slice.sw || y >= slice.sh) return;
-    const idx = y * slice.sw + x;
-    if (seen[idx]) return;
-    seen[idx] = 1;
-    const offset = idx * 4;
-    if (data[offset + 3] && data[offset] === 0 && data[offset + 1] === 0 && data[offset + 2] === 0) {
-      stack.push(idx);
-    }
-  };
-
-  for (let x = 0; x < slice.sw; x++) {
-    push(x, 0);
-    push(x, slice.sh - 1);
-  }
-  for (let y = 1; y < slice.sh - 1; y++) {
-    push(0, y);
-    push(slice.sw - 1, y);
-  }
-
-  while (stack.length) {
-    const idx = stack.pop();
-    const offset = idx * 4;
-    data[offset + 3] = 0;
-    const x = idx % slice.sw;
-    const y = Math.floor(idx / slice.sw);
-    push(x + 1, y);
-    push(x - 1, y);
-    push(x, y + 1);
-    push(x, y - 1);
-  }
-
-  ctx.putImageData(img, 0, 0);
+  const imageData = ctx.getImageData(0, 0, slice.sw, slice.sh);
+  makeEdgeTransparent(imageData, { opaqueOnly: false });
+  ctx.putImageData(imageData, 0, 0);
   return canvas;
 }
 

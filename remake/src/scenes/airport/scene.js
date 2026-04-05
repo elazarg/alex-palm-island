@@ -1,4 +1,5 @@
-import { BitmapFont } from '../../ui/bitmap-font.js';
+import { WIDTH, HEIGHT } from '../../core/engine.js';
+import { loadBitmapFont } from '../../ui/font-loader.js';
 import { ACTION_BUTTONS, CURSOR_HOTSPOTS, WHEEL_INPUT_MODES, resolveInteractionMode } from '../../ui/action-modes.js';
 import { STANDARD_DIALOG_LAYOUT } from '../../ui/dialog-layout.js';
 import { STANDARD_NOTE_LAYOUT } from '../../ui/note-layout.js';
@@ -8,6 +9,7 @@ import { renderPanel } from '../../ui/panel-renderer.js';
 import { renderSceneDebugOverlay } from '../../ui/scene-debug-overlay.js';
 import { INVENTORY_ITEM_DEFS } from '../../ui/inventory-items.js';
 import { ScriptedScene } from '../../runtime/script-runtime.js';
+import { WALK_DELTAS, WALK_FRAME_CYCLES } from '../../runtime/walk-tables.js';
 import { GLOBAL_SOUND_MANIFEST } from '../../runtime/global-resources.js';
 import { buildNarrationSoundManifest } from '../../runtime/scx-sound-manifest.js';
 import { AIRPORT_SCRIPT } from './script.js';
@@ -84,20 +86,8 @@ export class AirportScene extends ScriptedScene {
       }))
       .filter((entry) => entry.rect);
     this.familyQueueWaitZone = resolveAirportRegionRect('queue.waitZone');
-    this.walkDeltas = {
-      1: [{dx:0,dy:0},{dx:-4,dy:2},{dx:-4,dy:3},{dx:0,dy:0},{dx:0,dy:0},{dx:-4,dy:2},{dx:-4,dy:3},{dx:0,dy:0},{dx:0,dy:0}],
-      2: [{dx:0,dy:0},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:3},{dx:0,dy:0},{dx:0,dy:0}],
-      3: [{dx:0,dy:0},{dx:4,dy:2},{dx:4,dy:3},{dx:0,dy:0},{dx:0,dy:0},{dx:4,dy:2},{dx:4,dy:3},{dx:0,dy:0},{dx:0,dy:0}],
-      4: [{dx:0,dy:0},{dx:0,dy:0},{dx:0,dy:0},{dx:-12,dy:0},{dx:-12,dy:0},{dx:-12,dy:0},{dx:-12,dy:0},{dx:0,dy:0},{dx:0,dy:0}],
-      6: [{dx:0,dy:0},{dx:0,dy:0},{dx:0,dy:0},{dx:12,dy:0},{dx:12,dy:0},{dx:12,dy:0},{dx:12,dy:0},{dx:0,dy:0},{dx:0,dy:0}],
-      7: [{dx:0,dy:0},{dx:-4,dy:-2},{dx:-4,dy:-3},{dx:0,dy:0},{dx:0,dy:0},{dx:-4,dy:-2},{dx:-4,dy:-3},{dx:0,dy:0},{dx:0,dy:0}],
-      8: [{dx:0,dy:0},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:-3},{dx:0,dy:0},{dx:0,dy:0}],
-      9: [{dx:0,dy:0},{dx:4,dy:-2},{dx:4,dy:-3},{dx:0,dy:0},{dx:0,dy:0},{dx:4,dy:-2},{dx:4,dy:-3},{dx:0,dy:0},{dx:0,dy:0}],
-    };
-    this.walkFrameCycles = {
-      1: [1, 2, 5, 6], 2: [1, 2, 3, 4, 5, 6], 3: [1, 2, 5, 6], 4: [3, 4, 5, 6],
-      6: [3, 4, 5, 6], 7: [1, 2, 5, 6], 8: [1, 2, 3, 4, 5, 6], 9: [1, 2, 5, 6],
-    };
+    this.walkDeltas = WALK_DELTAS;
+    this.walkFrameCycles = WALK_FRAME_CYCLES;
     this._debugObjectKinds = Object.fromEntries(
       Object.values(AIRPORT_ENTITIES)
         .flatMap((entity) => (entity.sceneObjects || []).map((name) => [name, entity.kind]))
@@ -115,14 +105,7 @@ export class AirportScene extends ScriptedScene {
     engine.registerCursorHotspot('PASSPORTICON', { x: 0, y: 0 });
     engine.registerCursorHotspot('LETTERICON', { x: 0, y: 0 });
 
-    const fontImg = new Image();
-    const fontData = await (await fetch('../assets/mainfont.json')).json();
-    await new Promise((resolve, reject) => {
-      fontImg.onload = resolve;
-      fontImg.onerror = reject;
-      fontImg.src = '../assets/mainfont.png';
-    });
-    this.font = new BitmapFont(fontImg, fontData);
+    this.font = await loadBitmapFont();
   }
 
   init() {
@@ -132,7 +115,7 @@ export class AirportScene extends ScriptedScene {
     this.sceneObjects = [...behind, ...front];
     this.objectByName = Object.fromEntries(this.sceneObjects.map((obj) => [obj.name, obj]));
 
-    this.bgWidth = this.engine.getAsset('SCENE_BG')?.width || 320;
+    this.bgWidth = this.engine.getAsset('SCENE_BG')?.width || WIDTH;
     this.scrollX = 0;
     this.alexX = 836;
     this.alexY = 140;
@@ -402,7 +385,7 @@ export class AirportScene extends ScriptedScene {
     if (this.fadeAlpha < 1) {
       ctx.globalAlpha = 1 - this.fadeAlpha;
       ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, 320, 200);
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
       ctx.globalAlpha = 1;
     }
   }
@@ -411,13 +394,21 @@ export class AirportScene extends ScriptedScene {
     this._stopSound();
   }
 
+  applyRoute(route) {
+    this.route = normalizeAirportRoute(route);
+    this._applyRouteStateOverrides();
+    const screen = resolveAirportInitialScreen(this.route);
+    if (screen) this._openInitialRouteScreen(screen);
+    this._publishRoute();
+  }
+
   _afterModalChanged() {
     this._publishRoute();
   }
 
-  _afterStateChanged() {
+  _afterStateChanged(key) {
     this._applyAirportBoardMode();
-    if (arguments[0] === 'palmettoes') {
+    if (key === 'palmettoes') {
       startMeterAmountAnimation(
         this.meterAnimation,
         this.meterAnimation?.amount ?? AIRPORT_SCRIPT.initialState?.palmettoes ?? 100,
@@ -648,7 +639,7 @@ export class AirportScene extends ScriptedScene {
 
   _scrollToAlex() {
     const focusX = this._entrySequence?.focusX ?? this.alexX;
-    const targetScroll = Math.max(0, Math.min(this.bgWidth - 320, focusX - 160));
+    const targetScroll = Math.max(0, Math.min(this.bgWidth - WIDTH, focusX - WIDTH / 2));
     if (Math.abs(this.scrollX - targetScroll) > 1) {
       this.scrollX += Math.sign(targetScroll - this.scrollX) * Math.min(4, Math.abs(targetScroll - this.scrollX));
     } else {
@@ -1157,7 +1148,7 @@ export class AirportScene extends ScriptedScene {
     const x2 = x1 + img.width;
     const y1 = drawY;
     const y2 = y1 + img.height;
-    return x2 > 0 && x1 < 320 && y2 > 0 && y1 < 200;
+    return x2 > 0 && x1 < WIDTH && y2 > 0 && y1 < HEIGHT;
   }
 
   _isInsideRect(x, y, rect) {

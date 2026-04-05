@@ -1,5 +1,7 @@
+import { WIDTH } from '../core/engine.js';
+
 export const STANDARD_NOTE_LAYOUT = Object.freeze({
-  screenWidth: 320,
+  screenWidth: WIDTH,
   y: 24,
   maxWidth: 184,
   textOffsetX: 10,

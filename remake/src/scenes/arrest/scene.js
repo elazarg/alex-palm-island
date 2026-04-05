@@ -1,5 +1,6 @@
 import { AnimationPlayer, parseAnimationCommands, parsePositionData } from '../../runtime/animation-player.js';
 import { CURSOR_HOTSPOTS } from '../../ui/action-modes.js';
+import { makeEdgeTransparent } from '../../ui/sprite-cutout.js';
 
 const COMMANDS = parseAnimationCommands([
   'P 3,0',
@@ -112,39 +113,7 @@ export class ArrestScene {
     cctx.imageSmoothingEnabled = false;
     cctx.drawImage(img, 0, 0);
     const imageData = cctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-    const width = canvas.width;
-    const height = canvas.height;
-    const seen = new Uint8Array(width * height);
-    const queue = [];
-    const push = (x0, y0) => {
-      if (x0 < 0 || y0 < 0 || x0 >= width || y0 >= height) return;
-      const idx = y0 * width + x0;
-      if (seen[idx]) return;
-      const off = idx * 4;
-      if (data[off] !== 0 || data[off + 1] !== 0 || data[off + 2] !== 0 || data[off + 3] !== 255) return;
-      seen[idx] = 1;
-      queue.push(idx);
-    };
-    for (let x0 = 0; x0 < width; x0++) {
-      push(x0, 0);
-      push(x0, height - 1);
-    }
-    for (let y0 = 1; y0 < height - 1; y0++) {
-      push(0, y0);
-      push(width - 1, y0);
-    }
-    while (queue.length) {
-      const idx = queue.pop();
-      const off = idx * 4;
-      data[off + 3] = 0;
-      const x0 = idx % width;
-      const y0 = (idx / width) | 0;
-      push(x0 - 1, y0);
-      push(x0 + 1, y0);
-      push(x0, y0 - 1);
-      push(x0, y0 + 1);
-    }
+    makeEdgeTransparent(imageData);
     cctx.putImageData(imageData, 0, 0);
     this.spriteCache.set(name, canvas);
     return canvas;

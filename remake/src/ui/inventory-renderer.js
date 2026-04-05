@@ -1,3 +1,4 @@
+import { WIDTH, HEIGHT } from '../core/engine.js';
 import { resolveActionButtonSprite } from './action-modes.js';
 
 const GRID_POSITIONS = Object.freeze([
@@ -23,7 +24,7 @@ export function renderInventoryScreen(ctx, { assets, font, modal, selectedItem }
   if (bg) ctx.drawImage(bg, 0, 0);
   else {
     ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, 320, 200);
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
   }
 
   if (modal.inspectItem) {

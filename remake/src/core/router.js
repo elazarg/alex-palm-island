@@ -31,5 +31,5 @@ export function formatRouteHash(route = {}) {
 }
 
 export function routeCacheKey(route = {}) {
-  return formatRouteHash(route);
+  return route.scene || 'logo';
 }

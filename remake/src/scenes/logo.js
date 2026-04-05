@@ -1,3 +1,4 @@
+import { WIDTH, HEIGHT } from '../core/engine.js';
 import { AnimationPlayer, parseAnimationCommands, parsePositionData } from '../runtime/animation-player.js';
 
 const ASSET_BASE = '../assets/logo';
@@ -120,7 +121,7 @@ export class LogoScene {
 
   render(ctx) {
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, 320, 200);
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
     if (this.titleOpacity > 0) {
       ctx.globalAlpha = this.titleOpacity;
       this.engine.drawSprite(ctx, 'LOGOTITLE', TITLE_X, TITLE_Y);
