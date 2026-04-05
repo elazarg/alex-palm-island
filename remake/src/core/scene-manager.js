@@ -64,7 +64,14 @@ export class SceneManager {
 
   async _getScene(route) {
     const key = routeCacheKey(route);
-    if (this.scenes.has(key)) return this.scenes.get(key);
+    if (this.scenes.has(key)) {
+      const scene = this.scenes.get(key);
+      if ('route' in scene) {
+        const descriptor = SCENE_REGISTRY[route.scene] || SCENE_REGISTRY.logo;
+        scene.route = descriptor.normalize(route);
+      }
+      return scene;
+    }
     const descriptor = SCENE_REGISTRY[route.scene] || SCENE_REGISTRY.logo;
     const scene = descriptor.create(route);
     if (!scene) return null;
