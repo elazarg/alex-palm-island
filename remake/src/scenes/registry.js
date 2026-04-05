@@ -5,6 +5,8 @@ import { IntroScene, INTRO_PARTS } from './intro.js';
 import { LogoScene } from './logo.js';
 import { MainMenuScene } from './main-menu.js';
 import { PrisonScene } from './prison/scene.js';
+import { StripAirScene } from './stripair/scene.js';
+import { defaultStripAirRoute, formatStripAirRoute, normalizeStripAirRoute, parseStripAirRoute } from './stripair/route.js';
 
 function defaultSimpleRoute(scene) {
   return { scene };
@@ -69,6 +71,20 @@ export const SCENE_REGISTRY = Object.freeze({
     normalize: normalizeAirportRoute,
     format: formatAirportRoute,
     create: (route = {}) => new AirportScene({ route: normalizeAirportRoute(route) }),
+    wire: (manager, scene) => {
+      scene.onTransition = async (target) => {
+        if (!target?.scene) return;
+        await manager.openRoute(target);
+      };
+      scene.onRouteChange = (nextRoute) => manager.publishRoute(nextRoute);
+    },
+  },
+  stripair: {
+    defaultRoute: defaultStripAirRoute,
+    parse: parseStripAirRoute,
+    normalize: normalizeStripAirRoute,
+    format: formatStripAirRoute,
+    create: (route = {}) => new StripAirScene({ route: normalizeStripAirRoute(route) }),
     wire: (manager, scene) => {
       scene.onTransition = async (target) => {
         if (!target?.scene) return;

@@ -7,8 +7,8 @@ import { STANDARD_PANEL_LAYOUT } from '../../ui/panel-layout.js';
 import { INVENTORY_ITEM_DEFS } from '../../ui/inventory-items.js';
 import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimation } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
-import { renderSceneDebugOverlay } from '../../ui/scene-debug-overlay.js';
-import { findNearestWalkablePoint, findPathAroundRects } from '../../runtime/navigation-graph.js';
+import { renderSceneDebugOverlay, renderSceneDebugText } from '../../ui/scene-debug-overlay.js';
+import { findNearestWalkablePoint, findPathAroundObstacles, pointInPolygon } from '../../runtime/navigation-graph.js';
 import { ScriptedScene } from '../../runtime/script-runtime.js';
 import {
   buildStripAirRouteFromRuntime,
@@ -33,7 +33,7 @@ import {
 } from './content.js';
 import { STRIPAIR_ENTITIES } from './semantics.js';
 import { STRIPAIR_ACTIVE_INTERACTIONS } from './theme-2d.js';
-import { STRIPAIR_STATIC_REGIONS, resolveStripAirRegionRect, resolveStripAirSemanticRect } from './topology.js';
+import { STRIPAIR_STATIC_REGIONS, getStripAirRoadPolygon, resolveStripAirRegionRect, resolveStripAirSemanticRect } from './topology.js';
 
 const DEBUG_ENTITY_COLORS = Object.freeze({
   npc: '#ff4d4d',
@@ -69,6 +69,11 @@ export class StripAirScene extends ScriptedScene {
       .filter((region) => region.kind === 'walkMask')
       .map((region) => region.rect)
       .filter(Boolean);
+    this.walkMaskPolygons = STRIPAIR_STATIC_REGIONS
+      .filter((region) => region.kind === 'walkMaskPolygon')
+      .map((region) => region.polygon)
+      .filter(Boolean);
+    this.roadPolygon = getStripAirRoadPolygon();
     this.walkDeltas = {
       1: [{ dx: 0, dy: 0 }, { dx: -4, dy: 2 }, { dx: -4, dy: 3 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }, { dx: -4, dy: 2 }, { dx: -4, dy: 3 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }],
       2: [{ dx: 0, dy: 0 }, { dx: 0, dy: 3 }, { dx: 0, dy: 3 }, { dx: 0, dy: 3 }, { dx: 0, dy: 3 }, { dx: 0, dy: 3 }, { dx: 0, dy: 3 }, { dx: 0, dy: 0 }, { dx: 0, dy: 0 }],
@@ -345,13 +350,23 @@ export class StripAirScene extends ScriptedScene {
     if (!this.debugOverlayHeld) return;
     const entries = [];
     for (const region of STRIPAIR_STATIC_REGIONS) {
-      if (!region.rect) continue;
-      entries.push({
-        rect: this._projectOverlayRect(region.rect, overlayMetrics),
-        color: DEBUG_REGION_COLORS[region.kind] || '#ffffff',
-        label: region.id,
-        fillAlpha: 0.22,
-      });
+      if (region.rect) {
+        entries.push({
+          rect: this._projectOverlayRect(region.rect, overlayMetrics),
+          color: DEBUG_REGION_COLORS[region.kind] || '#ffffff',
+          label: region.id,
+          fillAlpha: 0.22,
+        });
+        continue;
+      }
+      if (region.polygon) {
+        entries.push({
+          polygon: this._projectOverlayPolygon(region.polygon, overlayMetrics),
+          color: DEBUG_REGION_COLORS[region.kind] || '#ffffff',
+          label: region.id,
+          fillAlpha: 0.22,
+        });
+      }
     }
     for (const interaction of STRIPAIR_ACTIVE_INTERACTIONS) {
       const rect = this._getInteractionRect(interaction);
@@ -365,6 +380,14 @@ export class StripAirScene extends ScriptedScene {
       });
     }
     renderSceneDebugOverlay(ctx, entries);
+    renderSceneDebugText(
+      ctx,
+      [
+        `mouse: (${Math.round(this.engine.mouseX + this.scrollX)}, ${Math.round(this.engine.mouseY)})`,
+        `alex: (${Math.round(this.alexX)}, ${Math.round(this.alexY)})`,
+      ],
+      { x: 8, y: 8 },
+    );
   }
 
   _afterModalChanged() {
@@ -715,10 +738,10 @@ export class StripAirScene extends ScriptedScene {
 
   _walkTo(x, y, options = {}) {
     const goal = { x, y };
-    const path = findPathAroundRects(
+    const path = findPathAroundObstacles(
       { x: this.alexX, y: this.alexY },
       goal,
-      this.walkMasks,
+      { rects: this.walkMasks, polygons: this.walkMaskPolygons },
       { padding: 2 },
     );
     const [first, ...rest] = path.length ? path : [goal];
@@ -745,6 +768,7 @@ export class StripAirScene extends ScriptedScene {
     const inBaseZone = this.walkZones.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2);
     if (!inBaseZone) return false;
     if (this.walkMasks.some(([x1, y1, x2, y2]) => x >= x1 && x <= x2 && y >= y1 && y <= y2)) return false;
+    if (this.walkMaskPolygons.some((polygon) => pointInPolygon({ x, y }, polygon))) return false;
     return true;
   }
 
@@ -807,6 +831,15 @@ export class StripAirScene extends ScriptedScene {
     const scaleX = overlayMetrics?.scaleX ?? 1;
     const scaleY = overlayMetrics?.scaleY ?? 1;
     return [x1 * scaleX, y1 * scaleY, x2 * scaleX, y2 * scaleY];
+  }
+
+  _projectOverlayPolygon(polygon, overlayMetrics) {
+    const scaleX = overlayMetrics?.scaleX ?? 1;
+    const scaleY = overlayMetrics?.scaleY ?? 1;
+    return polygon.map((point) => ({
+      x: point.x * scaleX,
+      y: point.y * scaleY,
+    }));
   }
 
   _requestTransition(target) {

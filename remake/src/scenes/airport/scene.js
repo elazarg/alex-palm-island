@@ -6,6 +6,7 @@ import { STANDARD_PANEL_LAYOUT } from '../../ui/panel-layout.js';
 import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimation } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
 import { renderSceneDebugOverlay } from '../../ui/scene-debug-overlay.js';
+import { INVENTORY_ITEM_DEFS } from '../../ui/inventory-items.js';
 import { ScriptedScene } from '../../runtime/script-runtime.js';
 import { AIRPORT_SCRIPT } from './script.js';
 import {
@@ -16,6 +17,7 @@ import {
 } from './route.js';
 import { AIRPORT_RESOURCES } from './resources.js';
 import { airportHasBag, getAirportLostAndFoundExpectedValues } from './state.js';
+import { buildStripAirCarryState } from '../stripair/state.js';
 import {
   ANIM_TICK_SCALE,
   DIALOG_RESPONSE_DELAY_TICKS,
@@ -23,7 +25,6 @@ import {
   ENTRY_DESCENT_FRAME_TICKS,
   ENTRY_DESCENT_START_FRAME,
   ENTRY_WALK_TARGET,
-  INVENTORY_ITEM_DEFS,
   SOUND_MANIFEST,
   WALK_ZONES,
   buildAssetManifest,
@@ -1156,6 +1157,18 @@ export class AirportScene extends ScriptedScene {
     if (screen.kind === 'resource') {
       this._openTextRefSection(screen.id);
     }
+  }
+
+  _requestTransition(target) {
+    if (!target) return;
+    if (target.scene === 'stripair') {
+      super._requestTransition({
+        ...target,
+        state: buildStripAirCarryState(this.state),
+      });
+      return;
+    }
+    super._requestTransition(target);
   }
 
   _tickEntrySequence() {

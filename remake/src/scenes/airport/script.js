@@ -214,7 +214,7 @@ export const AIRPORT_SCRIPT = {
     'exit.doors': [
       {
         if: { state: 'mayExit', equals: true },
-        then: [{ type: 'message', id: 'doorReady' }],
+        then: [{ type: 'transition', target: { scene: 'stripair', initial: true, entry: 'airport' } }],
         else: [
           {
             if: { state: 'exitWarningLevel', gte: 2 },
@@ -472,11 +472,6 @@ export const AIRPORT_SCRIPT = {
       speaker: 'Narrator',
       presentation: 'note',
       text: 'You can head back once the rest of the airport is implemented.',
-    },
-    doorReady: {
-      speaker: 'Narrator',
-      presentation: 'note',
-      text: 'The automatic doors are ready, but the next airport scene is not wired yet.',
     },
     lookFloor: {
       speaker: 'Narrator',

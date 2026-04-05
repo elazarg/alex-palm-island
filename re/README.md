@@ -74,3 +74,15 @@ python3 re/generate_pseudo_save.py --base stripair --money 250 /tmp/stripair_250
 This preserves the original scene-specific record layout and only patches fields
 that are already understood. It is suitable for "start near this scene with
 modified state", not arbitrary full-game save synthesis.
+
+## Original runtime automation
+
+For repeatable screenshots and click-driving against the original executable
+under DOSBox-X, see:
+
+- [`re/original_runtime/README.md`](./original_runtime/README.md)
+- [`re/original_runtime/capture_scene.py`](./original_runtime/capture_scene.py)
+
+This is the preferred workflow for scene-behavior investigation when the
+original scene can be launched directly, because it avoids long manual play
+sessions and keeps the probing scripts reusable.

@@ -7,15 +7,16 @@ export function createMeterAnimationState(amount = 100) {
 
 export function startMeterAmountAnimation(state, fromAmount, toAmount, layout) {
   if (!state || fromAmount === toAmount) return;
+  const direction = toAmount < fromAmount ? 'out' : 'in';
   state.amount = toAmount;
   state.coin = {
-    direction: toAmount < fromAmount ? 'out' : 'in',
+    direction,
     tick: 0,
     frameIndex: 0,
-    x: layout.money.coinStartX,
+    x: direction === 'out' ? layout.money.coinOutStartX : layout.money.coinInStartX,
     y: layout.money.coinY,
-    startX: layout.money.coinStartX,
-    endX: layout.money.coinEndX,
+    startX: direction === 'out' ? layout.money.coinOutStartX : layout.money.coinInStartX,
+    endX: direction === 'out' ? layout.money.coinOutEndX : layout.money.coinInEndX,
     durationTicks: layout.money.coinDurationTicks || 24,
     frameTicks: layout.money.coinFrameTicks || 3,
   };

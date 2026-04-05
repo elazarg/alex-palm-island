@@ -246,6 +246,86 @@ That is acceptable, but the desired contract is:
 
 without scene-specific repair code scattered through init.
 
+## Lessons From `STRIPAIR`
+
+`STRIPAIR` added several extraction lessons that should be treated as part of
+the standard procedure for future scenes.
+
+### 1. Scene-specific Alex presentation is real
+
+Do not assume Alex has one global presentation across scenes.
+
+`STRIPAIR` requires scene-local tuning for:
+- scale
+- entry start and target
+- idle pose
+- door/entry animation placement
+
+So `content.js` should own explicit scene-level Alex presentation constants
+when needed, rather than inheriting airport defaults by accident.
+
+### 2. Foreground props must be real scene objects
+
+If a static prop visually occludes Alex, it must exist as a foreground object,
+not only as:
+- a hotspot
+- a walk mask
+- a region in topology
+
+Example from `STRIPAIR`:
+- the dead-end sign needs a front-layer object (`NOENTRY`) so Alex can walk
+  behind it
+
+Extraction rule:
+- every visible occluding prop should be classified as `behind`, `front`, or
+  fully baked into the background with no expected depth interaction
+
+### 3. Some dialogs use grouped response records
+
+`STRIPAIR` cat quiz dialogs are not one-choice -> one-response in the simple
+airport sense.
+
+They use:
+- one shared wrong-answer response
+- one correct-answer response
+
+So SCX dialog extraction must allow:
+- direct per-choice responses
+- grouped wrong/correct quiz formats
+
+This logic belongs in resource normalization/parsing, not in ad hoc scene
+patches.
+
+### 4. Reward/cost feedback is generic UI behavior
+
+The cat quiz exposes a reusable game rule:
+- positive money rewards animate into the meter from the left
+- negative amounts animate out to the right
+- rewards may also need a short in-dialog indicator
+
+That should be treated as reusable panel/dialog behavior, not scene-local code.
+
+### 5. Roads need dedicated navigation, not free walking
+
+`STRIPAIR` shows that walk zones alone are not enough for street-like scenes.
+
+If the original behavior is "walk around the road/obstacle", use a scene-local
+navigation graph or equivalent declarative path structure. Do not force this
+through increasingly complicated walk masks unless the scene is actually mask-
+driven.
+
+### 6. Use integer viewport sizing for scaled canvases
+
+When the canvas is displayed with fractional CSS dimensions, the result can look
+like the top or side row of pixels is clipped or softened.
+
+For the remake:
+- the runtime viewport should be sized to integer CSS pixels
+- this is a presentation concern, not a scene concern
+
+This should be part of the default bootstrap, because scenes with visible top
+edge detail make this issue obvious.
+
 ## Extraction Procedure
 
 This is the recommended order for a new scene.

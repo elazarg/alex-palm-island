@@ -7,21 +7,6 @@ export const ENTRY_DESCENT_START_FRAME = 1;
 export const ENTRY_WALK_TARGET = Object.freeze({ x: 836, y: 140 });
 export const ENTRY_ALEX_START = Object.freeze({ x: 868, y: 140 });
 
-export const INVENTORY_ITEM_DEFS = Object.freeze({
-  passport: {
-    id: 'passport',
-    iconAsset: 'PASSPORTICON',
-    pictureAsset: 'PASSPORTPICT',
-    description: 'This is your passport.',
-  },
-  letter: {
-    id: 'letter',
-    iconAsset: 'LETTERICON',
-    pictureAsset: 'LETTERPICT',
-    description: 'This is a letter from the Spy Master to Walter.',
-  },
-});
-
 export const ACHU_SEQUENCE = [
   1, 1, 1, 1, 1, 1, 2, 1,
   1, 1, 1, 1, 1, 2, 1, 1,

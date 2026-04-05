@@ -1,0 +1,183 @@
+{
+  "id": "stripair",
+  "background": "SNSTRIPAIR1",
+  "TODO_background": "Verify background sprite name; check if _FULL composite needed",
+  "objects": [],
+  "walkZones": [],
+  "clickRects": [],
+  "animations": {
+    "5010": [
+      "G  -1,0",
+      "Q"
+    ],
+    "5020": [
+      "D  0,0",
+      "F  1,1",
+      "G  -1,0",
+      "R  0,0",
+      "Q"
+    ]
+  },
+  "spriteGroups": {
+    "CAT": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "CATTLK": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "DOOR": [
+      1,
+      2,
+      3
+    ],
+    "INFOTLK": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "SNSTRIPAIR": [
+      1
+    ]
+  },
+  "allSprites": [
+    "CAT1",
+    "CAT10",
+    "CAT2",
+    "CAT3",
+    "CAT4",
+    "CAT5",
+    "CAT6",
+    "CAT7",
+    "CAT8",
+    "CAT9",
+    "CATTLK0",
+    "CATTLK1",
+    "CATTLK2",
+    "CATTLK3",
+    "CATTLK4",
+    "CATTLK5",
+    "CATTLK6",
+    "DOOR1",
+    "DOOR2",
+    "DOOR3",
+    "GARBAGE",
+    "INFOSIGN",
+    "INFOTLK0",
+    "INFOTLK1",
+    "INFOTLK2",
+    "INFOTLK3",
+    "INFOTLK4",
+    "NOENTRY",
+    "PALMTREE",
+    "SNSTRIPAIR1",
+    "SNSTRIPAIRPAL"
+  ],
+  "dataPositions": {
+    "5030": [
+      [
+        38,
+        144
+      ],
+      [
+        35,
+        144
+      ],
+      [
+        31,
+        144
+      ],
+      [
+        38,
+        144
+      ],
+      [
+        38,
+        144
+      ],
+      [
+        37,
+        144
+      ],
+      [
+        38,
+        144
+      ],
+      [
+        38,
+        144
+      ],
+      [
+        38,
+        144
+      ],
+      [
+        38,
+        144
+      ]
+    ]
+  },
+  "alexPositions": [
+    {
+      "section": "150",
+      "mode": 0,
+      "x": 90,
+      "y": 145
+    },
+    {
+      "section": "161",
+      "mode": 0,
+      "x": 250,
+      "y": 115
+    },
+    {
+      "section": "180",
+      "mode": 0,
+      "x": 150,
+      "y": 65
+    },
+    {
+      "section": "190",
+      "mode": 0,
+      "x": 100,
+      "y": 160
+    },
+    {
+      "section": "210",
+      "mode": 0,
+      "x": 100,
+      "y": 160
+    }
+  ],
+  "alexStart": {
+    "x": 90,
+    "y": 145,
+    "dir": 4,
+    "TODO_dir": "Verify initial facing direction"
+  },
+  "TODO_manual": [
+    "Map objects to sprite prefixes (e.g., Guard \u2192 GUARD)",
+    "Assign animation sections to objects (push 0x13XX in OVR)",
+    "Determine render order (objectsBehind vs objectsFront)",
+    "Find overlay offsets for base+overlay sprites (pixel matching)",
+    "Set initial visibility for each object",
+    "Compute bottomAlign values from sprite heights",
+    "Verify walk zone Y ranges cover actual walk destinations"
+  ]
+}

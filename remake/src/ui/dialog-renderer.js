@@ -232,6 +232,15 @@ export function renderTalkDialog(ctx, { engine, font, modal, uiTick, layout }) {
   }
 
   if (phase === 'alexReply') {
+    if ((modal.rewardDelta || 0) > 0 && layout.rewardIndicator) {
+      font.drawText(
+        ctx,
+        `+${modal.rewardDelta}`,
+        layout.rewardIndicator.x,
+        layout.rewardIndicator.y,
+        layout.rewardIndicator.color || '#0ccc0c'
+      );
+    }
     return { choiceBoxes: [], dialogExitBox: null };
   }
 

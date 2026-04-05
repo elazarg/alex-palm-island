@@ -23,13 +23,18 @@ const EXTRACTED_RECTS = Object.freeze({
   map: findRect((rect) => rect.examine_section === 560),
 });
 
+const ROAD_POLYGON = Object.freeze([
+  Object.freeze({ x: 20, y: 63 }),
+  Object.freeze({ x: 93, y: 63 }),
+  Object.freeze({ x: 320, y: 180 }),
+  Object.freeze({ x: 200, y: 180 }),
+]);
+
 export const STRIPAIR_STATIC_REGIONS = Object.freeze([
   Object.freeze({ id: 'mask.topWall', kind: 'walkMask', rect: EXTRACTED_RECTS.topWall || Object.freeze([0, 0, 320, 40]) }),
   Object.freeze({ id: 'mask.leftBoundary', kind: 'walkMask', rect: EXTRACTED_RECTS.leftBoundary || Object.freeze([0, 0, 10, 200]) }),
   Object.freeze({ id: 'mask.rightBoundary', kind: 'walkMask', rect: Object.freeze([310, 0, 320, 200]) }),
-  Object.freeze({ id: 'mask.roadLeft', kind: 'walkMask', rect: Object.freeze([80, 104, 128, 146]) }),
-  Object.freeze({ id: 'mask.roadMiddle', kind: 'walkMask', rect: Object.freeze([116, 118, 202, 154]) }),
-  Object.freeze({ id: 'mask.roadRight', kind: 'walkMask', rect: Object.freeze([188, 132, 282, 170]) }),
+  Object.freeze({ id: 'mask.road', kind: 'walkMaskPolygon', polygon: ROAD_POLYGON }),
   Object.freeze({ id: 'mask.infoBoothTop', kind: 'walkMask', rect: Object.freeze([154, 0, 231, 58]) }),
   Object.freeze({ id: 'mask.garbageBulk', kind: 'walkMask', rect: Object.freeze([0, 118, 34, 200]) }),
   Object.freeze({ id: 'mask.doorWall', kind: 'walkMask', rect: Object.freeze([286, 0, 320, 122]) }),
@@ -82,4 +87,8 @@ export function getStripAirBackgroundRect() {
 
 export function getStripAirWorld() {
   return STRIPAIR_WORLD;
+}
+
+export function getStripAirRoadPolygon() {
+  return ROAD_POLYGON;
 }

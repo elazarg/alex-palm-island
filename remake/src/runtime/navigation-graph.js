@@ -2,6 +2,20 @@ function distance(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
+export function pointInPolygon(point, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x;
+    const yi = polygon[i].y;
+    const xj = polygon[j].x;
+    const yj = polygon[j].y;
+    const intersects = ((yi > point.y) !== (yj > point.y))
+      && (point.x < ((xj - xi) * (point.y - yi)) / ((yj - yi) || 1e-9) + xi);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
 function buildNodeMap(graph) {
   return Object.fromEntries((graph?.nodes || []).map((node) => [node.id, node]));
 }
@@ -70,12 +84,18 @@ function pointInRect(point, rect) {
   return point.x > x1 && point.x < x2 && point.y > y1 && point.y < y2;
 }
 
-function ccw(a, b, c) {
-  return (c.y - a.y) * (b.x - a.x) > (b.y - a.y) * (c.x - a.x);
-}
-
 function segmentsIntersect(a, b, c, d) {
-  return ccw(a, c, d) !== ccw(b, c, d) && ccw(a, b, c) !== ccw(a, b, d);
+  const o1 = orientation(a, b, c);
+  const o2 = orientation(a, b, d);
+  const o3 = orientation(c, d, a);
+  const o4 = orientation(c, d, b);
+
+  if (o1 !== o2 && o3 !== o4) return true;
+  if (o1 === 0 && pointOnSegment(c, a, b)) return true;
+  if (o2 === 0 && pointOnSegment(d, a, b)) return true;
+  if (o3 === 0 && pointOnSegment(a, c, d)) return true;
+  if (o4 === 0 && pointOnSegment(b, c, d)) return true;
+  return false;
 }
 
 function segmentIntersectsRect(a, b, rect) {
@@ -91,6 +111,63 @@ function segmentIntersectsRect(a, b, rect) {
     const c = corners[i];
     const d = corners[(i + 1) % 4];
     if (segmentsIntersect(a, b, c, d)) return true;
+  }
+  return false;
+}
+
+function pointOnSegment(point, a, b) {
+  const cross = (point.y - a.y) * (b.x - a.x) - (point.x - a.x) * (b.y - a.y);
+  if (Math.abs(cross) > 1e-6) return false;
+  const dot = (point.x - a.x) * (b.x - a.x) + (point.y - a.y) * (b.y - a.y);
+  if (dot < 0) return false;
+  const lenSq = (b.x - a.x) ** 2 + (b.y - a.y) ** 2;
+  return dot <= lenSq;
+}
+
+function orientation(a, b, c) {
+  const value = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y);
+  if (Math.abs(value) < 1e-6) return 0;
+  return value > 0 ? 1 : 2;
+}
+
+function polygonEdges(polygon) {
+  const edges = [];
+  for (let i = 0; i < polygon.length; i++) {
+    edges.push([polygon[i], polygon[(i + 1) % polygon.length]]);
+  }
+  return edges;
+}
+
+function segmentIntersectsPolygon(a, b, polygon) {
+  if (pointInPolygon(a, polygon) || pointInPolygon(b, polygon)) return true;
+  for (const [c, d] of polygonEdges(polygon)) {
+    if (pointOnSegment(a, c, d) || pointOnSegment(b, c, d)) continue;
+    if (segmentsIntersect(a, b, c, d)) return true;
+  }
+  return false;
+}
+
+function samplePointOnSegment(a, b, t) {
+  return {
+    x: a.x + (b.x - a.x) * t,
+    y: a.y + (b.y - a.y) * t,
+  };
+}
+
+function pointBlockedByObstacles(point, rects, polygons) {
+  return rects.some((rect) => pointInRect(point, rect))
+    || polygons.some((polygon) => pointInPolygon(point, polygon));
+}
+
+function segmentBlockedByObstacles(a, b, rects, polygons, step = 2) {
+  if (pointBlockedByObstacles(a, rects, polygons) || pointBlockedByObstacles(b, rects, polygons)) {
+    return true;
+  }
+  const len = distance(a, b);
+  const samples = Math.max(1, Math.ceil(len / step));
+  for (let i = 1; i < samples; i++) {
+    const point = samplePointOnSegment(a, b, i / samples);
+    if (pointBlockedByObstacles(point, rects, polygons)) return true;
   }
   return false;
 }
@@ -117,6 +194,25 @@ function buildVisibilityNodes(start, goal, obstacles, padding) {
   return nodes.filter((node, index, arr) => arr.findIndex((other) => other.id === node.id) === index);
 }
 
+function buildVisibilityNodesWithPolygons(start, goal, rects, polygons, padding) {
+  const nodes = buildVisibilityNodes(start, goal, rects, padding);
+  for (const polygon of polygons) {
+    const centroid = polygon.reduce((acc, point) => ({
+      x: acc.x + point.x / polygon.length,
+      y: acc.y + point.y / polygon.length,
+    }), { x: 0, y: 0 });
+    for (const point of polygon) {
+      const dx = point.x - centroid.x;
+      const dy = point.y - centroid.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const x = point.x + (dx / len) * padding;
+      const y = point.y + (dy / len) * padding;
+      nodes.push({ id: `${x},${y}`, x, y });
+    }
+  }
+  return nodes.filter((node, index, arr) => arr.findIndex((other) => other.id === node.id) === index);
+}
+
 export function findPathAroundRects(start, goal, obstacles = [], { padding = 2 } = {}) {
   if (!obstacles.length) return [goal];
   const blocked = obstacles.map((rect) => expandRect(rect, padding));
@@ -130,6 +226,67 @@ export function findPathAroundRects(start, goal, obstacles = [], { padding = 2 }
       const a = nodes[i];
       const b = nodes[j];
       if (blocked.some((rect) => segmentIntersectsRect(a, b, rect))) continue;
+      adjacency.get(a.id).push(b.id);
+      adjacency.get(b.id).push(a.id);
+    }
+  }
+
+  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+  const frontier = [{ id: 'start', score: 0 }];
+  const cameFrom = new Map([['start', null]]);
+  const costSoFar = new Map([['start', 0]]);
+
+  while (frontier.length) {
+    frontier.sort((a, b) => a.score - b.score);
+    const current = frontier.shift().id;
+    if (current === 'goal') break;
+    for (const next of adjacency.get(current) || []) {
+      const newCost = costSoFar.get(current) + distance(nodeMap.get(current), nodeMap.get(next));
+      if (!costSoFar.has(next) || newCost < costSoFar.get(next)) {
+        costSoFar.set(next, newCost);
+        cameFrom.set(next, current);
+        frontier.push({
+          id: next,
+          score: newCost + distance(nodeMap.get(next), nodeMap.get('goal')),
+        });
+      }
+    }
+  }
+
+  if (!cameFrom.has('goal')) return [goal];
+
+  const path = [];
+  for (let current = 'goal'; current && current !== 'start'; current = cameFrom.get(current)) {
+    const node = nodeMap.get(current);
+    path.push({ x: node.x, y: node.y });
+  }
+  path.reverse();
+  return path.length ? path : [goal];
+}
+
+export function findPathAroundObstacles(
+  start,
+  goal,
+  { rects = [], polygons = [] } = {},
+  { padding = 2 } = {},
+) {
+  if (!rects.length && !polygons.length) return [goal];
+  const blockedRects = rects.map((rect) => expandRect(rect, padding));
+  const directBlocked = segmentBlockedByObstacles(start, goal, blockedRects, polygons)
+    || blockedRects.some((rect) => segmentIntersectsRect(start, goal, rect))
+    || polygons.some((polygon) => segmentIntersectsPolygon(start, goal, polygon));
+  if (!directBlocked) return [goal];
+
+  const nodes = buildVisibilityNodesWithPolygons(start, goal, rects, polygons, padding);
+  const adjacency = new Map(nodes.map((node) => [node.id, []]));
+
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i];
+      const b = nodes[j];
+      if (segmentBlockedByObstacles(a, b, blockedRects, polygons)) continue;
+      if (blockedRects.some((rect) => segmentIntersectsRect(a, b, rect))) continue;
+      if (polygons.some((polygon) => segmentIntersectsPolygon(a, b, polygon))) continue;
       adjacency.get(a.id).push(b.id);
       adjacency.get(b.id).push(a.id);
     }

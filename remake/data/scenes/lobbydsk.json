@@ -1,0 +1,172 @@
+{
+  "id": "lobbydsk",
+  "background": "SNLOBBYDSK1",
+  "TODO_background": "Verify background sprite name; check if _FULL composite needed",
+  "objects": [],
+  "walkZones": [],
+  "clickRects": [],
+  "animations": {
+    "5020": [
+      "P  4,0",
+      "V  1,0",
+      "G -1,0",
+      "P  1,0",
+      "Q"
+    ],
+    "5030": [
+      "F 1,0",
+      "P 20,40",
+      "F 2,0",
+      "P 2,0",
+      "F 1,0",
+      "P 20,40",
+      "F 2,0",
+      "P 1,0",
+      "F 3,0",
+      "P 1,0",
+      "F 2,0",
+      "P 1,0",
+      "F 3,0",
+      "P 1,0",
+      "F 2,0",
+      "P 1,0",
+      "F 3,0",
+      "P 1,0",
+      "F 2,0",
+      "P 1,0",
+      "F 3,0",
+      "P 1,0",
+      "R 0,0",
+      "Q"
+    ],
+    "5040": [
+      "P 4,0",
+      "V 1,0",
+      "P 1,0",
+      "G -1,0",
+      "Q"
+    ]
+  },
+  "spriteGroups": {
+    "BOX": [
+      102
+    ],
+    "DOSIGN": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "FORMOK": [
+      1,
+      2
+    ],
+    "LADYEYE": [
+      1,
+      2,
+      3
+    ],
+    "LADYOUT": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "LADYTLK": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "SNLOBBYDESK": [
+      1
+    ]
+  },
+  "allSprites": [
+    "BOX102",
+    "DOSIGN1",
+    "DOSIGN10",
+    "DOSIGN11",
+    "DOSIGN2",
+    "DOSIGN3",
+    "DOSIGN4",
+    "DOSIGN5",
+    "DOSIGN6",
+    "DOSIGN7",
+    "DOSIGN8",
+    "DOSIGN9",
+    "FORM",
+    "FORMOK1",
+    "FORMOK2",
+    "FORMTICK",
+    "LADYBG",
+    "LADYEYE1",
+    "LADYEYE2",
+    "LADYEYE3",
+    "LADYOUT1",
+    "LADYOUT2",
+    "LADYOUT3",
+    "LADYOUT4",
+    "LADYOUT5",
+    "LADYTLK0",
+    "LADYTLK1",
+    "LADYTLK2",
+    "LADYTLK3",
+    "LADYTLK4",
+    "LADYTLK5",
+    "LADYTLK6",
+    "LADYTLK7",
+    "OUTSIGN",
+    "RINGSIGN",
+    "SMLBELL",
+    "SMLPAPER",
+    "SNLOBBYDESK1"
+  ],
+  "dataPositions": {
+    "5010": [
+      [
+        0,
+        38
+      ],
+      [
+        0,
+        38
+      ],
+      [
+        10,
+        42
+      ],
+      [
+        81,
+        48
+      ],
+      [
+        94,
+        42
+      ]
+    ]
+  },
+  "alexPositions": [],
+  "entrySection": 110,
+  "TODO_manual": [
+    "Map objects to sprite prefixes (e.g., Guard \u2192 GUARD)",
+    "Assign animation sections to objects (push 0x13XX in OVR)",
+    "Determine render order (objectsBehind vs objectsFront)",
+    "Find overlay offsets for base+overlay sprites (pixel matching)",
+    "Set initial visibility for each object",
+    "Compute bottomAlign values from sprite heights",
+    "Verify walk zone Y ranges cover actual walk destinations"
+  ]
+}

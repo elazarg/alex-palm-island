@@ -24,6 +24,9 @@
       transform: translateX(var(--canvas-offset-x));
     }
     #screen {
+      display: block;
+      position: absolute;
+      inset: 0;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
       width: 100%;
@@ -31,6 +34,7 @@
       cursor: none;
     }
     #overlay {
+      display: block;
       position: absolute;
       inset: 0;
       width: 100%;

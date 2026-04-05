@@ -316,7 +316,12 @@ export class ScriptedScene {
     if (!this.modal || this.modal.type !== 'dialog') return;
     const choice = this.modal.choices[choiceIdx];
     if (!choice) return;
+    if (choice.result === 2) {
+      this.modal.selectedChoice = choiceIdx;
+      return;
+    }
     this.modal.selectedChoice = choiceIdx;
+    this.modal.rewardDelta = choice.rewardDelta || 0;
     this.modal.phase = 'alexReply';
     this.modal.speakerTalking = false;
     this.modal.alexTalking = true;

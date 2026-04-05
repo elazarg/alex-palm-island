@@ -1056,17 +1056,22 @@ that marshal parameters and call `FUN_2000_7747` (the actual blitter, corrupted 
 
 ### Walk animation
 
-ALEXWALK.DAT contains numbered animation frames for 8 directions:
+ALEXWALK.DAT contains numbered animation frames for the **numpad directions**
+used by the engine (`5` is the unused center, so there is no `ALEX5-*` family):
 - ALEX1-0 through ALEX1-7: Direction 1 = SW (down-left)
 - ALEX2-0 through ALEX2-6: Direction 2 = S (down)
 - ALEX3-0+: Direction 3 = SE (down-right)
 - ALEX4-0+: Direction 4 = W (left)
-- ALEX5-0+: Direction 5 = E (right)
-- ALEX6-0+: Direction 6 = NW (up-left)
-- ALEX7-0+: Direction 7 = N (up)
-- ALEX8-0+: Direction 8 = NE (up-right)
+- ALEX6-0+: Direction 6 = E (right)
+- ALEX7-0+: Direction 7 = NW (up-left)
+- ALEX8-0+: Direction 8 = N (up)
+- ALEX9-0+: Direction 9 = NE (up-right)
 
-Frame sizes vary slightly between directions (49×97, 53×96, 53×98, etc.).
+Frame sizes vary significantly between directions. In particular, the side-facing
+families are much wider than the back-facing family (for example, `ALEX6-0` is
+`51x95` while `ALEX8-0` is `32x95`). This is important for street scenes:
+some of the apparent "scaling" is actually native sprite-family choice, not
+proven runtime geometric resizing.
 
 **ALEX1.SCX** is NOT a scene — it's a walk delta table: 8 rows × 9 entries of (dx,dy) pairs
 defining per-frame position deltas for each direction. Frames 0 and 8 are (0,0) = idle.

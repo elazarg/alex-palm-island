@@ -32,6 +32,11 @@ export const STANDARD_DIALOG_LAYOUT = Object.freeze({
     x: 210,
     y: 65,
   },
+  rewardIndicator: {
+    x: 226,
+    y: 152,
+    color: '#0ccc0c',
+  },
   prompt: {
     x: 169,
     y: 12,
