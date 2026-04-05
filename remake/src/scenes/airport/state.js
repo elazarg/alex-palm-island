@@ -2,6 +2,7 @@ export const AIRPORT_DEFAULT_STATE = Object.freeze({
   palmettoes: 100,
   bag: null,
   map: null,
+  airportBoardMode: 'arrivals',
   familyQueue: 'not-arrived',
   familyQueuePendingClear: false,
   mayExit: false,
@@ -16,6 +17,7 @@ export const AIRPORT_STATE_KEYS = Object.freeze([
   'palmettoes',
   'bag',
   'map',
+  'airportBoardMode',
   'familyQueue',
   'familyQueuePendingClear',
   'mayExit',
@@ -27,6 +29,7 @@ export const AIRPORT_STATE_KEYS = Object.freeze([
 ]);
 
 const BAG_ITEM_VALUES = Object.freeze(['passport', 'letter']);
+const AIRPORT_BOARD_MODE_VALUES = Object.freeze(['arrivals', 'departures']);
 const FAMILY_QUEUE_VALUES = Object.freeze(['not-arrived', 'queued', 'cleared']);
 
 function parseBooleanFlag(value) {
@@ -53,6 +56,7 @@ export function normalizeAirportState(state = {}) {
   const normalized = { ...AIRPORT_DEFAULT_STATE };
   if (Array.isArray(state.bag)) normalized.bag = normalizeBagItems(state.bag);
   if (state.map === null || typeof state.map === 'boolean') normalized.map = state.map;
+  if (state.airportBoardMode && AIRPORT_BOARD_MODE_VALUES.includes(state.airportBoardMode)) normalized.airportBoardMode = state.airportBoardMode;
   if (state.claimSize && ['big', 'medium', 'small'].includes(state.claimSize)) normalized.claimSize = state.claimSize;
   if (state.claimColor && ['grey', 'purple', 'pink'].includes(state.claimColor)) normalized.claimColor = state.claimColor;
   if (state.familyQueue && FAMILY_QUEUE_VALUES.includes(state.familyQueue)) normalized.familyQueue = state.familyQueue;
@@ -71,6 +75,8 @@ export function parseAirportStateParams(params) {
   const bag = params.get('bag');
   if (bag) state.bag = bag.split(',').map((item) => item.trim()).filter(Boolean);
   if (params.has('map')) state.map = parseTriStateFlag(params.get('map'));
+  const airportBoardMode = params.get('airportBoardMode');
+  if (airportBoardMode && AIRPORT_BOARD_MODE_VALUES.includes(airportBoardMode)) state.airportBoardMode = airportBoardMode;
   const familyQueue = params.get('familyQueue');
   if (familyQueue && FAMILY_QUEUE_VALUES.includes(familyQueue)) state.familyQueue = familyQueue;
   const claimSize = params.get('claimSize');
@@ -97,6 +103,7 @@ export function serializeAirportStateParams(state = {}) {
   if (normalized.bag?.length) params.set('bag', normalized.bag.join(','));
   if (normalized.map === true) params.set('map', 'true');
   else if (normalized.map === false) params.set('map', 'false');
+  if (normalized.airportBoardMode !== AIRPORT_DEFAULT_STATE.airportBoardMode) params.set('airportBoardMode', normalized.airportBoardMode);
   if (normalized.familyQueue !== AIRPORT_DEFAULT_STATE.familyQueue) params.set('familyQueue', normalized.familyQueue);
   if (normalized.familyQueuePendingClear) params.set('familyQueuePendingClear', '1');
   if (normalized.mayExit) params.set('mayExit', '1');

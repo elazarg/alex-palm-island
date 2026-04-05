@@ -111,6 +111,7 @@ No physical rectangles here.
 - click rects
 - walk targets
 - trigger strips
+- front-layer named objects when they have their own interaction/occlusion role
 - occlusion or depth markers if needed
 - semantic-to-physical bindings
 
@@ -122,6 +123,17 @@ No gameplay branching here.
 
 This is where a different visual theme could diverge while reusing scene
 semantics and script.
+
+Important extraction rule:
+
+- do not flatten all interaction into click rects if the original scene also has
+  front-layer named objects
+- a visible named object may sit in front of a larger generic click rect and
+  intercept interaction for look/touch/talk
+- the airport arrivals/departures sign is exactly this case:
+  - the broad escalator rect behind it yields ordinary escalator note text
+  - the front sign objects (`Arrive` / `Depart`) own the toggle behavior
+  - both need to coexist in the extracted scene model
 
 ### `script.js`
 - scene-local logic only

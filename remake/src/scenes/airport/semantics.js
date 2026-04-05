@@ -74,6 +74,18 @@ export const AIRPORT_ENTITIES = Object.freeze({
     textRefs: Object.freeze({ look: 640, touch: 645 }),
     flows: Object.freeze(['upstairs.block']),
   }),
+  arrivalsBoard: Object.freeze({
+    kind: 'sign',
+    label: 'Arrivals Board',
+    sceneObjects: Object.freeze(['Arrive']),
+    flows: Object.freeze(['airport.board.toggle']),
+  }),
+  departuresBoard: Object.freeze({
+    kind: 'sign',
+    label: 'Departures Board',
+    sceneObjects: Object.freeze(['Depart']),
+    flows: Object.freeze(['airport.board.toggle']),
+  }),
   lostAndFoundForm: Object.freeze({
     kind: 'uiForm',
     label: 'Lost and Found Form',
@@ -215,6 +227,24 @@ export const AIRPORT_SEMANTIC_HOTSPOTS = Object.freeze([
       look: Object.freeze({ kind: 'textRef', sectionId: 640 }),
       touch: Object.freeze({ kind: 'textRef', sectionId: 645 }),
       walk: Object.freeze({ kind: 'flow', id: 'upstairs.block' }),
+    }),
+  }),
+  Object.freeze({
+    id: 'arrivalsBoard',
+    entity: 'arrivalsBoard',
+    scope: 'world',
+    affordances: Object.freeze({
+      look: Object.freeze({ kind: 'flow', id: 'airport.board.toggle' }),
+      touch: Object.freeze({ kind: 'flow', id: 'airport.board.toggle' }),
+    }),
+  }),
+  Object.freeze({
+    id: 'departuresBoard',
+    entity: 'departuresBoard',
+    scope: 'world',
+    affordances: Object.freeze({
+      look: Object.freeze({ kind: 'flow', id: 'airport.board.toggle' }),
+      touch: Object.freeze({ kind: 'flow', id: 'airport.board.toggle' }),
     }),
   }),
   Object.freeze({

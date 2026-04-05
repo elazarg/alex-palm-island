@@ -20,6 +20,8 @@ export const AIRPORT_2D_OBJECT_LAYOUT = Object.freeze({
   familyQueue: Object.freeze({ runtimeId: 'familyQueue', object: 'Family', sprite: 'FAMILY1', pad: [0, 0, -76, 0], status: 'mapped' }),
   womanGuard: Object.freeze({ runtimeId: 'womanGuard', object: 'FemGrd', sprite: 'FEMGRD1', pad: [8, -6, -4, 0], status: 'mapped' }),
   queueSign: Object.freeze({ runtimeId: 'queueSign', object: 'LineSign', sprite: 'LINESIGN', pad: [0, 0, 0, 0], status: 'mapped' }),
+  arrivalsBoard: Object.freeze({ runtimeId: 'arrivalsBoard', object: 'Arrive', sprite: 'ARRIVE', pad: [0, 0, 0, 0], status: 'mapped' }),
+  departuresBoard: Object.freeze({ runtimeId: 'departuresBoard', object: 'Depart', sprite: 'DEPART', pad: [0, 0, 0, 0], status: 'mapped' }),
   lostAndFoundForm: Object.freeze({ status: 'unmapped' }),
   namedBag: Object.freeze({ status: 'unmapped' }),
 });

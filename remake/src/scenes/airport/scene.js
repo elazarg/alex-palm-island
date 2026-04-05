@@ -374,8 +374,9 @@ export class AirportScene extends ScriptedScene {
     if (bg) ctx.drawImage(bg, -this.scrollX, 0);
 
     for (const obj of this.objectsBehind) this._renderObject(ctx, obj);
-    this._renderSceneAnimation(ctx);
+    this._renderSceneAnimation(ctx, 'behindAlex');
     this._renderAlex(ctx);
+    this._renderSceneAnimation(ctx, 'beforeFront');
     for (const obj of this.objectsFront) this._renderObject(ctx, obj);
 
     this.renderScriptModal(ctx, this.font, this.uiTick);
@@ -415,6 +416,7 @@ export class AirportScene extends ScriptedScene {
   }
 
   _afterStateChanged() {
+    this._applyAirportBoardMode();
     if (arguments[0] === 'palmettoes') {
       startMeterAmountAnimation(
         this.meterAnimation,
@@ -460,8 +462,9 @@ export class AirportScene extends ScriptedScene {
     ctx.drawImage(img, Math.round(screenX), Math.round(screenY));
   }
 
-  _renderSceneAnimation(ctx) {
+  _renderSceneAnimation(ctx, layer = 'behindAlex') {
     if (!this._sceneAnimation) return;
+    if ((this._sceneAnimation.layer || 'behindAlex') !== layer) return;
     const frame = this._sceneAnimation.sequence[this._sceneAnimation.index];
     const img = this.engine.getAsset(`${this._sceneAnimation.prefix}${frame}`);
     if (img) ctx.drawImage(img, this._sceneAnimation.x - this.scrollX, this._sceneAnimation.y);
@@ -627,6 +630,13 @@ export class AirportScene extends ScriptedScene {
       anim.tick++;
       if (anim.tick >= anim.rate) {
         anim.tick = 0;
+        if (Array.isArray(anim.positions)) {
+          const nextPos = anim.positions[Math.min(anim.index + 1, anim.positions.length - 1)];
+          if (nextPos) {
+            anim.x = nextPos[0];
+            anim.y = nextPos[1];
+          }
+        }
         anim.index++;
         if (anim.index >= anim.sequence.length) {
           this._sceneAnimation = null;
@@ -949,12 +959,35 @@ export class AirportScene extends ScriptedScene {
   }
 
   _playSceneAnimation(step) {
+    if (step.id === 'airportBoardArrivals') {
+      this._sceneAnimation = this._createAirportBoardPass({
+        prefix: 'TRUP',
+        startX: 960,
+        y: 50,
+        deltas: [-60, -40, -40, -40],
+        exitDirection: 'left',
+        layer: 'beforeFront',
+      });
+      return;
+    }
+    if (step.id === 'airportBoardDepartures') {
+      this._sceneAnimation = this._createAirportBoardPass({
+        prefix: 'STAFFB',
+        startX: 400,
+        y: 50,
+        deltas: [60, 40, 40, 40],
+        exitDirection: 'right',
+        layer: 'beforeFront',
+      });
+      return;
+    }
     if (step.id === 'familyQueueLeave') {
       this._sceneAnimation = {
         prefix: 'FAMGO',
         sequence: [1, 2, 3, 4, 5, 6, 7, 8],
         x: 500,
         y: 40,
+        layer: 'behindAlex',
         rate: 3,
         tick: 0,
         index: 0,
@@ -980,6 +1013,38 @@ export class AirportScene extends ScriptedScene {
       sequence: chosen.sequence,
       x: 104,
       y: 16,
+      layer: 'behindAlex',
+      rate: 2,
+      tick: 0,
+      index: 0,
+    };
+  }
+
+  _createAirportBoardPass({ prefix, startX, y, deltas, exitDirection, layer }) {
+    const baseSequence = [1, 2, 3, 4];
+    const sequence = [];
+    const positions = [];
+    let x = startX;
+    let guard = 0;
+    while (guard < 64) {
+      const frame = baseSequence[guard % baseSequence.length];
+      const img = this.engine.getAsset(`${prefix}${frame}`);
+      sequence.push(frame);
+      positions.push([x, y]);
+      if (img) {
+        if (exitDirection === 'left' && x + img.width <= 0) break;
+        if (exitDirection === 'right' && x >= this.bgWidth) break;
+      }
+      x += deltas[guard % deltas.length];
+      guard++;
+    }
+    return {
+      prefix,
+      sequence,
+      positions,
+      x: positions[0]?.[0] ?? startX,
+      y,
+      layer: layer || 'behindAlex',
       rate: 2,
       tick: 0,
       index: 0,
@@ -1004,6 +1069,7 @@ export class AirportScene extends ScriptedScene {
       this.state[key] = value;
     }
     this._applyBindings();
+    this._applyAirportBoardMode();
   }
 
   _applyDebugRouteOverrides() {
@@ -1035,6 +1101,7 @@ export class AirportScene extends ScriptedScene {
   _getInteractionRect(interaction) {
     if (interaction.object) {
       const obj = this.objectByName?.[interaction.object];
+      if (!obj?.visible) return null;
       const spriteName = interaction.sprite || obj?.sprite;
       const img = spriteName ? this.engine.getAsset(spriteName) : null;
       if (obj && img) {
@@ -1198,5 +1265,20 @@ export class AirportScene extends ScriptedScene {
     if (!this.alexWalking) {
       this._entrySequence = null;
     }
+  }
+
+  _applyAirportBoardMode() {
+    const mode = this.state?.airportBoardMode === 'departures' ? 'departures' : 'arrivals';
+    const arrive = this.objectByName?.Arrive;
+    const depart = this.objectByName?.Depart;
+    const trup = this.objectByName?.Trup;
+    const staffB = this.objectByName?.StaffB;
+    const stairs = this.objectByName?.Stairs;
+    if (arrive) arrive.visible = mode === 'arrivals';
+    if (depart) depart.visible = mode === 'departures';
+    if (trup) trup.visible = false;
+    if (staffB) staffB.visible = false;
+    this.stairsFrame = mode === 'departures' ? 6 : 1;
+    if (stairs) stairs.sprite = `STAIRS${this.stairsFrame}`;
   }
 }

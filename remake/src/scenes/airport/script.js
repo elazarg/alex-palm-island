@@ -116,6 +116,10 @@ export const AIRPORT_SCRIPT = {
   bindings: [
     { type: 'objectVisible', object: 'Family', when: { state: 'familyQueue', equals: 'queued' } },
     { type: 'interactionEnabled', interaction: 'familyQueue', when: { state: 'familyQueue', equals: 'queued' } },
+    { type: 'objectVisible', object: 'Arrive', when: { state: 'airportBoardMode', equals: 'arrivals' } },
+    { type: 'interactionEnabled', interaction: 'arrivalsBoard', when: { state: 'airportBoardMode', equals: 'arrivals' } },
+    { type: 'objectVisible', object: 'Depart', when: { state: 'airportBoardMode', equals: 'departures' } },
+    { type: 'interactionEnabled', interaction: 'departuresBoard', when: { state: 'airportBoardMode', equals: 'departures' } },
   ],
 
   fallbacks: {
@@ -205,6 +209,19 @@ export const AIRPORT_SCRIPT = {
       { type: 'walkTo', x: 330, y: 130 },
       { type: 'face', dir: 7 },
       { type: 'message', id: 'womanGuardTouch' },
+    ],
+    'airport.board.toggle': [
+      {
+        if: { state: 'airportBoardMode', equals: 'arrivals' },
+        then: [
+          { type: 'setState', key: 'airportBoardMode', value: 'departures' },
+          { type: 'sceneAnimation', id: 'airportBoardDepartures' },
+        ],
+        else: [
+          { type: 'setState', key: 'airportBoardMode', value: 'arrivals' },
+          { type: 'sceneAnimation', id: 'airportBoardArrivals' },
+        ],
+      },
     ],
     lookFloor: [{ type: 'message', id: 'lookFloor' }],
     touchFloor: [{ type: 'message', id: 'touchFloor' }],

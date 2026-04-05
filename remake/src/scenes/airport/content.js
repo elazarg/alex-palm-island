@@ -62,7 +62,6 @@ export function createAirportObjects() {
     { name: 'Maake', sprite: 'MAAKE', x: 776, y: 120, visible: true },
     { name: 'Arrive', sprite: 'ARRIVE', x: 811, y: 0, visible: true },
     { name: 'WallB', sprite: 'WALL_B', x: 0, y: 0, visible: true },
-    { name: 'WallK', sprite: 'WALL_K', x: 920, y: 100, visible: true },
   ];
   return { behind, front };
 }
@@ -95,8 +94,12 @@ export function buildAssetManifest() {
   for (let i = 0; i <= 19; i++) images[`P-LOST${i}`] = `${base}/P-LOST${i}.png`;
   for (let i = 1; i <= 19; i++) images[`L-LOST${i}`] = `${base}/L-LOST${i}.png`;
   for (let i = 1; i <= 6; i++) images[`BORDER${i}`] = `${base}/BORDER${i}.png`;
-  for (const name of ['TRUP1','STAFFB1','DOOR1','DOOR2','FEMGRD1','WALL_B','WALL_K','MAAKE','ARRIVE','DEPART','LINESIGN','DALPAK','HOTELAD','ORANGEAD','FORM']) {
+  for (const name of ['DOOR1','DOOR2','FEMGRD1','WALL_B','MAAKE','ARRIVE','DEPART','LINESIGN','DALPAK','HOTELAD','ORANGEAD','FORM']) {
     images[name] = `${base}/${name}.png`;
+  }
+  for (let i = 1; i <= 4; i++) {
+    images[`TRUP${i}`] = `${base}/TRUP${i}.png`;
+    images[`STAFFB${i}`] = `${base}/STAFFB${i}.png`;
   }
   for (let i = 1; i <= 18; i++) images[`ALEXDN${i}`] = `${base}/ALEXDN${i}.png`;
   images.SUITCASE = `../assets/ui/SUITCASE.png?v=${UI_VERSION}`;
