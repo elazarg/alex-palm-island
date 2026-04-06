@@ -3,9 +3,10 @@ import { STANDARD_DIALOG_LAYOUT } from '../ui/dialog-layout.js';
 import { STANDARD_NOTE_LAYOUT } from '../ui/note-layout.js';
 import { STANDARD_PANEL_LAYOUT } from '../ui/panel-layout.js';
 import { INVENTORY_ITEM_DEFS } from '../ui/inventory-items.js';
+import { startMeterAmountAnimation, tickMeterAnimation } from '../ui/meter-animation.js';
 import { renderSceneDebugOverlay, renderSceneDebugText } from '../ui/scene-debug-overlay.js';
 import { loadBitmapFont } from '../ui/font-loader.js';
-import { WIDTH, HEIGHT } from '../core/engine.js';
+import { computeLinearDepthScale, WIDTH, HEIGHT } from '../core/engine.js';
 import { findNearestWalkablePoint, findPathOnGrid, pointInPolygon } from './navigation-graph.js';
 import { ScriptedScene } from './script-runtime.js';
 import { WALK_DELTAS, WALK_FRAME_CYCLES } from './walk-tables.js';
@@ -18,13 +19,14 @@ import { WALK_DELTAS, WALK_FRAME_CYCLES } from './walk-tables.js';
  * concrete scenes keep those.
  */
 export class GameScene extends ScriptedScene {
-  constructor({ sceneScript, dialogResponseDelayTicks = 0 } = {}) {
+  constructor({ definition = null, sceneScript, dialogResponseDelayTicks = 0 } = {}) {
     super({
-      sceneScript,
+      sceneScript: sceneScript || definition?.script,
       dialogLayout: STANDARD_DIALOG_LAYOUT,
       noteLayout: STANDARD_NOTE_LAYOUT,
-      dialogResponseDelayTicks,
+      dialogResponseDelayTicks: dialogResponseDelayTicks || definition?.dialogResponseDelayTicks || 0,
     });
+    this.definition = definition;
     this.walkDeltas = WALK_DELTAS;
     this.walkFrameCycles = WALK_FRAME_CYCLES;
     this.panelLayout = STANDARD_PANEL_LAYOUT;
@@ -48,6 +50,7 @@ export class GameScene extends ScriptedScene {
     this.alexWalkCycleIdx = 0;
     this.alexIdleTick = 0;
     this.alexPath = [];
+    this.idleUsesFacingDirection = false;
 
     this.scrollX = 0;
     this.walkZones = [];
@@ -80,11 +83,28 @@ export class GameScene extends ScriptedScene {
 
   // --- Abstract methods (concrete scenes must provide) ---
 
-  _buildAssetManifest() { throw new Error('_buildAssetManifest not implemented'); }
-  _buildSoundManifest() { throw new Error('_buildSoundManifest not implemented'); }
-  _getResources() { throw new Error('_getResources not implemented'); }
+  _buildAssetManifest() {
+    if (typeof this.definition?.buildAssetManifest === 'function') return this.definition.buildAssetManifest();
+    throw new Error('_buildAssetManifest not implemented');
+  }
+
+  _buildSoundManifest() {
+    if (typeof this.definition?.buildSoundManifest === 'function') return this.definition.buildSoundManifest();
+    throw new Error('_buildSoundManifest not implemented');
+  }
+
+  _getResources() {
+    if (this.definition?.resources) return this.definition.resources;
+    throw new Error('_getResources not implemented');
+  }
+
   _getInteractionRect(/* interaction */) { throw new Error('_getInteractionRect not implemented'); }
-  _buildCurrentRoute() { throw new Error('_buildCurrentRoute not implemented'); }
+  _buildCurrentRoute() {
+    if (typeof this.definition?.route?.buildFromRuntime === 'function') {
+      return this.definition.route.buildFromRuntime({ modal: this.modal, state: this.state, initial: false });
+    }
+    throw new Error('_buildCurrentRoute not implemented');
+  }
 
   // --- Abstract: debug overlay data (scenes override to provide entries) ---
 
@@ -191,6 +211,18 @@ export class GameScene extends ScriptedScene {
         return;
       }
       return;
+    }
+    if (key === 'Escape') {
+      if (this.modal.type === 'dialog') {
+        this._dismissDialogModal?.();
+        originalEvent.preventDefault();
+        return;
+      }
+      if (this.modal.type === 'message') {
+        this._dismissMessageModal?.();
+        originalEvent.preventDefault();
+        return;
+      }
     }
     if (this.modal.type === 'dialog' && (key === 'ArrowDown' || key === 'ArrowUp')) {
       if (this.modal.phase !== 'choice') return;
@@ -326,7 +358,7 @@ export class GameScene extends ScriptedScene {
     if (this.modal || this.engine.mouseY < this.panelLayout.panel.revealY) return null;
     return this.uiButtons.find((button) => {
       if (!(mx >= button.x && mx <= button.x + button.w && my >= button.y && my <= button.y + button.h)) return false;
-      if (button.mode === 'map') return this.state?.map !== null;
+      if (button.mode === 'map') return this._getMapButtonState() !== 'hidden';
       return true;
     }) || null;
   }
@@ -449,9 +481,32 @@ export class GameScene extends ScriptedScene {
     this._publishRoute();
   }
 
+  _afterStateChanged(key) {
+    if (key === 'palmettoes' && this.meterAnimation) {
+      startMeterAmountAnimation(
+        this.meterAnimation,
+        this.meterAnimation?.amount ?? this.sceneScript?.initialState?.palmettoes ?? 100,
+        this.state?.palmettoes ?? 100,
+        this.panelLayout,
+      );
+    }
+    this._publishRoute();
+  }
+
   _publishRoute() {
     if (typeof this.onRouteChange !== 'function') return;
     this.onRouteChange(this._buildCurrentRoute());
+  }
+
+  _getStateLayers(state = this.state) {
+    if (typeof this.definition?.state?.splitLayers === 'function') {
+      return this.definition.state.splitLayers(state);
+    }
+    return {
+      alexState: state || {},
+      globalState: {},
+      sceneState: {},
+    };
   }
 
   // --- Geometry helpers ---
@@ -626,10 +681,213 @@ export class GameScene extends ScriptedScene {
   }
 
   _canOpenInventory() {
-    return Array.isArray(this.state?.bag) && this.state.bag.length > 0;
+    const layers = this._getStateLayers();
+    if (typeof this.definition?.state?.canOpenInventory === 'function') {
+      return this.definition.state.canOpenInventory(layers.alexState, layers.globalState, layers.sceneState);
+    }
+    return Array.isArray(layers.alexState?.bag) && layers.alexState.bag.length > 0;
   }
 
   _canOpenMap() {
-    return this.state?.map === true;
+    const layers = this._getStateLayers();
+    if (typeof this.definition?.state?.canOpenMap === 'function') {
+      return this.definition.state.canOpenMap(layers);
+    }
+    return layers.globalState?.map === true;
+  }
+
+  _getBagButtonState() {
+    const layers = this._getStateLayers();
+    if (typeof this.definition?.state?.getBagButtonState === 'function') {
+      return this.definition.state.getBagButtonState(layers);
+    }
+    return this._canOpenInventory() ? 'active' : 'covered';
+  }
+
+  _getMapButtonState() {
+    const layers = this._getStateLayers();
+    if (typeof this.definition?.state?.getMapButtonState === 'function') {
+      return this.definition.state.getMapButtonState(layers);
+    }
+    return this._canOpenMap() ? 'active' : 'covered';
+  }
+
+  _applyRouteStateOverrides() {
+    const overrides = this.route?.state || {};
+    for (const [key, value] of Object.entries(overrides)) {
+      this.state[key] = value;
+    }
+    this._applyBindings?.();
+    this._afterApplyRouteStateOverrides?.();
+  }
+
+  _afterApplyRouteStateOverrides() {}
+
+  _openInitialRouteScreen() {
+    const screen = this.definition?.route?.resolveInitialScreen?.(this.route);
+    if (!screen || screen.kind === 'scene') return;
+    if (screen.kind === 'dialog') {
+      this._openDialog(screen.id, { deferPromptSound: true });
+      return;
+    }
+    if (screen.kind === 'message') {
+      this._openMessage(screen.id);
+      return;
+    }
+    if (screen.kind === 'form') {
+      this._openForm(screen.id);
+      return;
+    }
+    if (screen.kind === 'inventory') {
+      this._openInventory(screen.id);
+      return;
+    }
+    if (screen.kind === 'resource') {
+      this._openTextRefSection(screen.id);
+    }
+  }
+
+  applyRoute(route) {
+    if (typeof this.definition?.route?.normalize === 'function') {
+      this.route = this.definition.route.normalize(route);
+    } else {
+      this.route = route;
+    }
+    this._applyRouteStateOverrides();
+    this._openInitialRouteScreen();
+    this._publishRoute();
+  }
+
+  // --- Shared interaction dispatch ---
+
+  _handleInteractionAction(action) {
+    if (!action) return;
+    if (this.inputMode === 'item') {
+      if (this._handleItemInteractionAction?.(action)) return;
+      this._queueEvent('bagDefault');
+      return;
+    }
+    if (action.kind === 'flow') {
+      this._queueEvent(action.id);
+      return;
+    }
+    if (action.kind === 'textRef') {
+      this._openTextRefSection(action.sectionId);
+    }
+  }
+
+  // --- Shared object/render helpers ---
+
+  _afterSceneAnimationAdvanced(/* anim */) {}
+
+  _onObjectFrameAdvanced(/* obj, frameNum */) {}
+
+  _tickObjects() {
+    tickMeterAnimation(this.meterAnimation);
+    for (const obj of this.sceneObjects) {
+      if (obj.anim === 'stairs') continue;
+      if (obj.overlay?.sequence) {
+        if (obj._oTick == null) obj._oTick = 0;
+        if (obj._oIdx == null) obj._oIdx = 0;
+        obj._oTick++;
+        if (obj._oTick >= obj.overlay.rate) {
+          obj._oTick = 0;
+          obj._oIdx = (obj._oIdx + 1) % obj.overlay.sequence.length;
+        }
+        continue;
+      }
+      if (!obj.anim?.sequence) continue;
+      if (obj._animTick == null) obj._animTick = 0;
+      if (obj._animIdx == null) obj._animIdx = 0;
+      obj._animTick++;
+      const frameRate = obj.anim.frameDurations?.[obj._animIdx] ?? obj.anim.rate;
+      if (obj._animTick >= frameRate) {
+        obj._animTick = 0;
+        obj._animIdx = (obj._animIdx + 1) % obj.anim.sequence.length;
+        const frameNum = obj.anim.sequence[obj._animIdx];
+        obj.sprite = `${obj.anim.prefix}${frameNum}`;
+        if (obj.anim.framePos?.[frameNum]) {
+          obj.x = obj.anim.framePos[frameNum][0];
+          obj.y = obj.anim.framePos[frameNum][1];
+        }
+        this._onObjectFrameAdvanced(obj, frameNum);
+      }
+    }
+    if (this._sceneAnimation) {
+      const anim = this._sceneAnimation;
+      anim.tick++;
+      if (anim.tick >= anim.rate) {
+        anim.tick = 0;
+        if (Array.isArray(anim.positions)) {
+          const nextPos = anim.positions[Math.min(anim.index + 1, anim.positions.length - 1)];
+          if (nextPos) {
+            anim.x = nextPos[0];
+            anim.y = nextPos[1];
+          }
+        }
+        anim.index++;
+        if (anim.index >= anim.sequence.length) {
+          this._sceneAnimation = null;
+          this._processActionQueue();
+        } else {
+          this._afterSceneAnimationAdvanced(anim);
+        }
+      }
+    }
+  }
+
+  _renderObject(ctx, obj) {
+    if (!obj.visible) return;
+    const o2Active = obj.overlay2?.sequence && obj._o2Idx != null && obj.overlay2.sequence[obj._o2Idx] > 0;
+    if (o2Active) {
+      const frameNum = obj.overlay2.sequence[obj._o2Idx];
+      const overlayImg = this.engine.getAsset(`${obj.overlay2.prefix}${frameNum}`);
+      if (overlayImg) {
+        ctx.drawImage(overlayImg, obj.x + obj.overlay2.ox - this.scrollX, obj.y + obj.overlay2.oy);
+      }
+      return;
+    }
+    const img = this.engine.getAsset(obj.sprite);
+    if (!img) return;
+    const drawX = obj.x - this.scrollX;
+    const drawY = (obj.anim && obj.anim.bottomAlign) ? obj.anim.bottomAlign - img.height : obj.y;
+    if (obj.sourceRect) {
+      const { x, y, w, h } = obj.sourceRect;
+      ctx.drawImage(img, x, y, w, h, drawX, drawY, w, h);
+    } else {
+      ctx.drawImage(img, drawX, drawY);
+    }
+    if (obj.overlay?.sequence && obj._oIdx != null) {
+      const frameNum = obj.overlay.sequence[obj._oIdx];
+      if (frameNum > 0) {
+        const overlayImg = this.engine.getAsset(`${obj.overlay.prefix}${frameNum}`);
+        if (overlayImg) ctx.drawImage(overlayImg, obj.x + obj.overlay.ox - this.scrollX, obj.y + obj.overlay.oy);
+      }
+    }
+  }
+
+  _renderAlex(ctx) {
+    if (this._entrySequence?.renderDescendingOnly) return;
+    const spriteDir = (this.alexWalking || this.idleUsesFacingDirection) ? this.alexDir : 1;
+    const spriteName = `ALEX${spriteDir}-${this.alexFrame}`;
+    const img = this.engine.getAsset(spriteName);
+    if (!img) return;
+    const scale = this.alexDepthScale
+      ? computeLinearDepthScale(this.alexY, this.alexDepthScale)
+      : null;
+    const effectiveScale = Number.isFinite(scale) ? scale : 1;
+    const dw = Math.round(img.width * effectiveScale);
+    const dh = Math.round(img.height * effectiveScale);
+    const screenX = this.alexX - this.scrollX - dw / 2;
+    const screenY = this.alexY - dh;
+    ctx.drawImage(img, Math.round(screenX), Math.round(screenY), dw, dh);
+  }
+
+  _renderSceneAnimation(ctx, layer = 'behindAlex') {
+    if (!this._sceneAnimation) return;
+    if ((this._sceneAnimation.layer || 'behindAlex') !== layer) return;
+    const frame = this._sceneAnimation.sequence[this._sceneAnimation.index];
+    const img = this.engine.getAsset(`${this._sceneAnimation.prefix}${frame}`);
+    if (img) ctx.drawImage(img, this._sceneAnimation.x - this.scrollX, this._sceneAnimation.y);
   }
 }

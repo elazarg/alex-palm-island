@@ -1,3 +1,4 @@
+import { splitStateLayers } from '../../runtime/state-model.js';
 import { parseBooleanFlag, parseTriStateFlag, normalizeBagItems, buildCarryState } from '../../runtime/state-utils.js';
 
 export { buildCarryState };
@@ -14,6 +15,20 @@ export const STRIPAIR_STATE_KEYS = Object.freeze([
   'palmettoes',
   'bag',
   'map',
+  'infoStandVisited',
+  'catConversationStage',
+]);
+
+export const STRIPAIR_ALEX_STATE_KEYS = Object.freeze([
+  'palmettoes',
+  'bag',
+]);
+
+export const STRIPAIR_GLOBAL_STATE_KEYS = Object.freeze([
+  'map',
+]);
+
+export const STRIPAIR_SCENE_STATE_KEYS = Object.freeze([
   'infoStandVisited',
   'catConversationStage',
 ]);
@@ -70,6 +85,15 @@ export function pickStripAirRouteState(state = {}) {
         .map((key) => [key, state[key]])
     )
   );
+}
+
+export function splitStripAirStateLayers(state = {}) {
+  const normalized = normalizeStripAirState(state);
+  return splitStateLayers(normalized, {
+    alexKeys: STRIPAIR_ALEX_STATE_KEYS,
+    globalKeys: STRIPAIR_GLOBAL_STATE_KEYS,
+    sceneKeys: STRIPAIR_SCENE_STATE_KEYS,
+  });
 }
 
 export function stripAirHasBag(state = {}) {

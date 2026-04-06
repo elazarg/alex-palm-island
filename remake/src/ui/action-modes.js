@@ -14,7 +14,7 @@ export const ACTION_BUTTONS = Object.freeze([
 
 export const CURSOR_HOTSPOTS = Object.freeze({
   ARROWCURSOR: { x: 0, y: 7 },
-  WALKCURSOR: { x: 0, y: 0 },
+  WALKCURSOR: { x: 0, y: 5 },
   LOOKCURSOR: { x: 0, y: 0 },
   TALKCURSOR: { x: 0, y: 0 },
   TOUCHCURSOR: { x: 0, y: 0 },

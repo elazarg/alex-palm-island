@@ -1,27 +1,13 @@
-import { computeLinearDepthScale } from '../../core/engine.js';
 import { resolveInteractionMode } from '../../ui/action-modes.js';
-import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimation } from '../../ui/meter-animation.js';
+import { createMeterAnimationState } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
-import { GLOBAL_SOUND_MANIFEST } from '../../runtime/global-resources.js';
 import { GameScene } from '../../runtime/game-scene.js';
-import { buildNarrationSoundManifest } from '../../runtime/scx-sound-manifest.js';
-import {
-  buildStripAirRouteFromRuntime,
-  normalizeStripAirRoute,
-  resolveStripAirInitialScreen,
-} from './route.js';
-import { STRIPAIR_RESOURCES } from './resources.js';
-import { STRIPAIR_SCRIPT } from './script.js';
 import { buildStripAirCarryState, stripAirHasBag } from './state.js';
+import { STRIPAIR_SCENE_DEFINITION } from './definition.js';
 import {
   STRIPAIR_ALEX_DEPTH_SCALE,
-  STRIPAIR_DIALOG_RESPONSE_DELAY_TICKS,
   STRIPAIR_ENTRY_TARGET,
   STRIPAIR_NAVIGATION_GRAPH,
-  STRIPAIR_SOUND_MANIFEST,
-  STRIPAIR_WALK_ZONES,
-  buildAssetManifest,
-  createStripAirObjects,
 } from './content.js';
 import { STRIPAIR_ENTITIES } from './semantics.js';
 import { STRIPAIR_ACTIVE_INTERACTIONS } from './theme-2d.js';
@@ -40,36 +26,24 @@ const DEBUG_REGION_COLORS = Object.freeze({
   walkTarget: '#00d084',
   unclassified: '#999999',
 });
-const STRIPAIR_NARRATION_SOUND_MANIFEST = buildNarrationSoundManifest(STRIPAIR_RESOURCES);
 
 export class StripAirScene extends GameScene {
   constructor(options = {}) {
     super({
-      sceneScript: STRIPAIR_SCRIPT,
-      dialogResponseDelayTicks: STRIPAIR_DIALOG_RESPONSE_DELAY_TICKS,
+      definition: STRIPAIR_SCENE_DEFINITION,
     });
-    this.route = normalizeStripAirRoute(options.route || {});
+    this.route = STRIPAIR_SCENE_DEFINITION.route.normalize(options.route || {});
     this.alexDepthScale = STRIPAIR_ALEX_DEPTH_SCALE;
+    this.idleUsesFacingDirection = true;
     this.navigationGraph = STRIPAIR_NAVIGATION_GRAPH;
-    this.walkZones = STRIPAIR_WALK_ZONES;
-    this.walkMasks = STRIPAIR_STATIC_REGIONS
-      .filter((region) => region.kind === 'walkMask')
-      .map((region) => region.rect)
-      .filter(Boolean);
-    this.walkMaskPolygons = STRIPAIR_STATIC_REGIONS
-      .filter((region) => region.kind === 'walkMaskPolygon')
-      .map((region) => region.polygon)
-      .filter(Boolean);
+    this.walkZones = STRIPAIR_SCENE_DEFINITION.topology.walkZones;
+    this.walkMasks = STRIPAIR_SCENE_DEFINITION.topology.walkMasks;
+    this.walkMaskPolygons = STRIPAIR_SCENE_DEFINITION.topology.walkMaskPolygons;
     this.roadPolygon = getStripAirRoadPolygon();
   }
 
-  _buildAssetManifest() { return buildAssetManifest(); }
-  _buildSoundManifest() { return { ...STRIPAIR_SOUND_MANIFEST, ...STRIPAIR_NARRATION_SOUND_MANIFEST, ...GLOBAL_SOUND_MANIFEST }; }
-  _getResources() { return STRIPAIR_RESOURCES; }
-  _buildCurrentRoute() { return buildStripAirRouteFromRuntime({ modal: this.modal, state: this.state, initial: false }); }
-
   init() {
-    const { behind, front } = createStripAirObjects();
+    const { behind, front } = STRIPAIR_SCENE_DEFINITION.createObjects();
     this.objectsBehind = [...behind];
     this.objectsFront = [...front];
     this.sceneObjects = [...this.objectsBehind, ...this.objectsFront];
@@ -178,8 +152,8 @@ export class StripAirScene extends GameScene {
         pressedMode: this._pressedButtonMode,
         amount: this.state?.palmettoes ?? 100,
         buttonStates: {
-          bag: stripAirHasBag(this.state) ? 'active' : 'covered',
-          map: this.state?.map === true ? 'active' : 'covered',
+          bag: this._getBagButtonState(),
+          map: this._getMapButtonState(),
         },
         inputMode: this.inputMode,
         layout: this.panelLayout,
@@ -214,128 +188,16 @@ export class StripAirScene extends GameScene {
   }
 
   _afterStateChanged(key) {
-    if (key === 'palmettoes') {
-      startMeterAmountAnimation(
-        this.meterAnimation,
-        this.meterAnimation?.amount ?? STRIPAIR_SCRIPT.initialState?.palmettoes ?? 100,
-        this.state?.palmettoes ?? 100,
-        this.panelLayout,
-      );
-    }
-    this._publishRoute();
-  }
-
-  _renderObject(ctx, obj) {
-    if (!obj.visible) return;
-    const img = this.engine.getAsset(obj.sprite);
-    if (!img) return;
-    if (obj.sourceRect) {
-      const { x, y, w, h } = obj.sourceRect;
-      ctx.drawImage(img, x, y, w, h, obj.x, obj.y, w, h);
-      return;
-    }
-    ctx.drawImage(img, obj.x, obj.y);
-  }
-
-  _renderAlex(ctx) {
-    const spriteDir = this.alexDir;
-    const spriteName = `ALEX${spriteDir}-${this.alexFrame}`;
-    const img = this.engine.getAsset(spriteName);
-    if (!img) return;
-    // Empirical approximation from original StripAir captures. We recovered
-    // the scene's Y-range bounds from the original code, but not the exact
-    // runtime scaling implementation, so keep this scene-local and explicit.
-    const scale = computeLinearDepthScale(this.alexY, this.alexDepthScale);
-    const dw = Math.round(img.width * scale);
-    const dh = Math.round(img.height * scale);
-    const screenX = this.alexX - dw / 2;
-    const screenY = this.alexY - dh;
-    ctx.drawImage(img, Math.round(screenX), Math.round(screenY), dw, dh);
-  }
-
-  _renderSceneAnimation(ctx) {
-    if (!this._sceneAnimation) return;
-    const frame = this._sceneAnimation.sequence[this._sceneAnimation.index];
-    const img = this.engine.getAsset(`${this._sceneAnimation.prefix}${frame}`);
-    if (img) ctx.drawImage(img, this._sceneAnimation.x, this._sceneAnimation.y);
+    super._afterStateChanged(key);
   }
 
   _tickObjects() {
-    tickMeterAnimation(this.meterAnimation);
-    for (const obj of this.sceneObjects) {
-      if (!obj.anim?.sequence) continue;
-      if (obj._animTick == null) obj._animTick = 0;
-      if (obj._animIdx == null) obj._animIdx = 0;
-      obj._animTick++;
-      if (obj._animTick >= obj.anim.rate) {
-        obj._animTick = 0;
-        obj._animIdx = (obj._animIdx + 1) % obj.anim.sequence.length;
-        const frameNum = obj.anim.sequence[obj._animIdx];
-        obj.sprite = `${obj.anim.prefix}${frameNum}`;
-        if (obj.anim.framePos?.[frameNum]) {
-          obj.x = obj.anim.framePos[frameNum][0];
-          obj.y = obj.anim.framePos[frameNum][1];
-        }
-      }
-    }
-    if (this._sceneAnimation) {
-      const anim = this._sceneAnimation;
-      anim.tick++;
-      if (anim.tick >= anim.rate) {
-        anim.tick = 0;
-        anim.index++;
-        if (anim.index >= anim.sequence.length) {
-          this._sceneAnimation = null;
-        }
-      }
-    }
-  }
-
-  _handleInteractionAction(action) {
-    if (!action) return;
-    if (this.inputMode === 'item') {
-      this._queueEvent('bagDefault');
-      return;
-    }
-    if (action.kind === 'flow') {
-      this._queueEvent(action.id);
-      return;
-    }
-    if (action.kind === 'textRef') {
-      this._openTextRefSection(action.sectionId);
-    }
-  }
-
-  _applyRouteStateOverrides() {
-    const overrides = this.route.state || {};
-    for (const [key, value] of Object.entries(overrides)) {
-      this.state[key] = value;
-    }
+    super._tickObjects();
   }
 
   _getInteractionRect(interaction) {
     return interaction.rect || resolveStripAirSemanticRect(interaction.id);
   }
-
-  _openInitialRouteScreen() {
-    const screen = resolveStripAirInitialScreen(this.route);
-    if (screen.kind === 'dialog') {
-      this._openDialog(screen.id, { deferPromptSound: true });
-      return;
-    }
-    if (screen.kind === 'message') {
-      this._openMessage(screen.id);
-      return;
-    }
-    if (screen.kind === 'inventory') {
-      this._openInventory(screen.id);
-      return;
-    }
-    if (screen.kind === 'resource') {
-      this._openTextRefSection(screen.id);
-    }
-  }
-
   _requestTransition(target) {
     if (!target) return;
     if (target.scene === 'strip0') {

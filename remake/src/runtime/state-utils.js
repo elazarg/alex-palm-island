@@ -26,6 +26,6 @@ export function buildCarryState(state = {}) {
   return {
     palmettoes: state.palmettoes,
     bag: state.bag,
-    map: state.map === true,
+    map: state.map === true ? true : (state.map === false ? false : null),
   };
 }

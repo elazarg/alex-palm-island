@@ -408,13 +408,7 @@ export class ScriptedScene {
   _handleModalClick(mx, my) {
     if (!this.modal) return;
     if (this.modal.type === 'message') {
-      if (this.modal.locked) return;
-      this._stopSound();
-      const resumeModal = this.modal.returnModal || null;
-      this.modal = resumeModal;
-      this._afterModalChanged?.();
-      this._refreshCursor?.();
-      if (!resumeModal) this._processActionQueue();
+      this._dismissMessageModal();
       return;
     }
     if (this.modal.type === 'inventory') {
@@ -445,13 +439,7 @@ export class ScriptedScene {
     }
     if (this.modal.type !== 'dialog' || this.modal.phase !== 'choice') return;
     if (this._dialogExitBox && mx >= this._dialogExitBox.x1 && mx <= this._dialogExitBox.x2 && my >= this._dialogExitBox.y1 && my <= this._dialogExitBox.y2) {
-      this._stopSound();
-      this.modal = null;
-      this._choiceBoxes = [];
-      this._dialogExitBox = null;
-      this.actionQueue = [];
-      this._afterModalChanged?.();
-      this._refreshCursor?.();
+      this._dismissDialogModal();
       return;
     }
     for (let i = 0; i < this._choiceBoxes.length; i++) {
@@ -461,6 +449,27 @@ export class ScriptedScene {
         return;
       }
     }
+  }
+
+  _dismissMessageModal() {
+    if (!this.modal || this.modal.type !== 'message' || this.modal.locked) return;
+    this._stopSound();
+    const resumeModal = this.modal.returnModal || null;
+    this.modal = resumeModal;
+    this._afterModalChanged?.();
+    this._refreshCursor?.();
+    if (!resumeModal) this._processActionQueue();
+  }
+
+  _dismissDialogModal() {
+    if (!this.modal || this.modal.type !== 'dialog') return;
+    this._stopSound();
+    this.modal = null;
+    this._choiceBoxes = [];
+    this._dialogExitBox = null;
+    this.actionQueue = [];
+    this._afterModalChanged?.();
+    this._refreshCursor?.();
   }
 
   _evaluateCondition(condition) {

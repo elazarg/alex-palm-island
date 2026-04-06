@@ -1,30 +1,16 @@
 import { WIDTH, HEIGHT } from '../../core/engine.js';
 import { resolveInteractionMode } from '../../ui/action-modes.js';
-import { createMeterAnimationState, startMeterAmountAnimation, tickMeterAnimation } from '../../ui/meter-animation.js';
+import { createMeterAnimationState, tickMeterAnimation } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
 import { GameScene } from '../../runtime/game-scene.js';
-import { GLOBAL_SOUND_MANIFEST } from '../../runtime/global-resources.js';
-import { buildNarrationSoundManifest } from '../../runtime/scx-sound-manifest.js';
-import { AIRPORT_SCRIPT } from './script.js';
-import {
-  buildAirportRouteFromRuntime,
-  normalizeAirportRoute,
-  resolveAirportInitialScreen,
-  shouldRunAirportEntrySequence,
-} from './route.js';
-import { AIRPORT_RESOURCES } from './resources.js';
-import { airportHasBag, getAirportLostAndFoundExpectedValues } from './state.js';
+import { AIRPORT_SCENE_DEFINITION } from './definition.js';
+import { getAirportLostAndFoundExpectedValues } from './state.js';
 import { buildStripAirCarryState } from '../stripair/state.js';
 import {
-  DIALOG_RESPONSE_DELAY_TICKS,
   ENTRY_ALEX_START,
   ENTRY_DESCENT_FRAME_TICKS,
   ENTRY_DESCENT_START_FRAME,
   ENTRY_WALK_TARGET,
-  SOUND_MANIFEST,
-  WALK_ZONES,
-  buildAssetManifest,
-  createAirportObjects,
 } from './content.js';
 import { AIRPORT_ENTITIES } from './semantics.js';
 import { AIRPORT_ACTIVE_INTERACTIONS } from './theme-2d.js';
@@ -50,27 +36,16 @@ const DEBUG_REGION_COLORS = Object.freeze({
   marker: '#ffffff',
   unclassified: '#999999',
 });
-const AIRPORT_NARRATION_SOUND_MANIFEST = buildNarrationSoundManifest(AIRPORT_RESOURCES);
 
 export class AirportScene extends GameScene {
   constructor(options = {}) {
     super({
-      sceneScript: AIRPORT_SCRIPT,
-      dialogResponseDelayTicks: DIALOG_RESPONSE_DELAY_TICKS,
+      definition: AIRPORT_SCENE_DEFINITION,
     });
-    this.route = normalizeAirportRoute(options.route || {});
-    this.walkZones = WALK_ZONES;
-    this.walkMasks = AIRPORT_STATIC_REGIONS
-      .filter((region) => region.kind === 'walkMask' && !region.activeWhen)
-      .map((region) => resolveAirportRegionRect(region.id) || resolveAirportSelectorRect(region.selector))
-      .filter(Boolean);
-    this.conditionalWalkMasks = AIRPORT_STATIC_REGIONS
-      .filter((region) => region.kind === 'walkMask' && region.activeWhen)
-      .map((region) => ({
-        rect: resolveAirportRegionRect(region.id) || resolveAirportSelectorRect(region.selector),
-        when: region.activeWhen,
-      }))
-      .filter((entry) => entry.rect);
+    this.route = AIRPORT_SCENE_DEFINITION.route.normalize(options.route || {});
+    this.walkZones = AIRPORT_SCENE_DEFINITION.topology.walkZones;
+    this.walkMasks = AIRPORT_SCENE_DEFINITION.topology.walkMasks;
+    this.conditionalWalkMasks = AIRPORT_SCENE_DEFINITION.topology.conditionalWalkMasks;
     this.familyQueueWaitZone = resolveAirportRegionRect('queue.waitZone');
     this._debugObjectKinds = Object.fromEntries(
       Object.values(AIRPORT_ENTITIES)
@@ -78,13 +53,8 @@ export class AirportScene extends GameScene {
     );
   }
 
-  _buildAssetManifest() { return buildAssetManifest(); }
-  _buildSoundManifest() { return { ...SOUND_MANIFEST, ...AIRPORT_NARRATION_SOUND_MANIFEST, ...GLOBAL_SOUND_MANIFEST }; }
-  _getResources() { return AIRPORT_RESOURCES; }
-  _buildCurrentRoute() { return buildAirportRouteFromRuntime({ modal: this.modal, state: this.state, initial: false }); }
-
   init() {
-    const { behind, front } = createAirportObjects();
+    const { behind, front } = AIRPORT_SCENE_DEFINITION.createObjects();
     this.objectsBehind = behind;
     this.objectsFront = front;
     this.sceneObjects = [...behind, ...front];
@@ -229,8 +199,8 @@ export class AirportScene extends GameScene {
         pressedMode: this._pressedButtonMode,
         amount: this.state?.palmettoes ?? 100,
         buttonStates: {
-          bag: airportHasBag(this.state) ? 'active' : 'covered',
-          map: this.state?.map === null ? 'hidden' : (this.state?.map === true ? 'active' : 'covered'),
+          bag: this._getBagButtonState(),
+          map: this._getMapButtonState(),
         },
         inputMode: this.inputMode,
         layout: this.panelLayout,
@@ -246,67 +216,9 @@ export class AirportScene extends GameScene {
     }
   }
 
-  applyRoute(route) {
-    this.route = normalizeAirportRoute(route);
-    this._applyRouteStateOverrides();
-    const screen = resolveAirportInitialScreen(this.route);
-    if (screen) this._openInitialRouteScreen(screen);
-    this._publishRoute();
-  }
-
   _afterStateChanged(key) {
     this._applyAirportBoardMode();
-    if (key === 'palmettoes') {
-      startMeterAmountAnimation(
-        this.meterAnimation,
-        this.meterAnimation?.amount ?? AIRPORT_SCRIPT.initialState?.palmettoes ?? 100,
-        this.state?.palmettoes ?? 100,
-        this.panelLayout,
-      );
-    }
-    this._publishRoute();
-  }
-
-  _renderObject(ctx, obj) {
-    if (!obj.visible) return;
-    const o2Active = obj.overlay2 && obj.overlay2.sequence && obj._o2Idx != null && obj.overlay2.sequence[obj._o2Idx] > 0;
-    if (o2Active) {
-      const frameNum = obj.overlay2.sequence[obj._o2Idx];
-      const overlayImg = this.engine.getAsset(`${obj.overlay2.prefix}${frameNum}`);
-      if (overlayImg) ctx.drawImage(overlayImg, obj.x + obj.overlay2.ox - this.scrollX, obj.y + obj.overlay2.oy);
-      return;
-    }
-    const img = this.engine.getAsset(obj.sprite);
-    if (img) {
-      const drawY = (obj.anim && obj.anim.bottomAlign) ? obj.anim.bottomAlign - img.height : obj.y;
-      ctx.drawImage(img, obj.x - this.scrollX, drawY);
-    }
-    if (obj.overlay && obj.overlay.sequence && obj._oIdx != null) {
-      const frameNum = obj.overlay.sequence[obj._oIdx];
-      if (frameNum > 0) {
-        const overlayImg = this.engine.getAsset(`${obj.overlay.prefix}${frameNum}`);
-        if (overlayImg) ctx.drawImage(overlayImg, obj.x + obj.overlay.ox - this.scrollX, obj.y + obj.overlay.oy);
-      }
-    }
-  }
-
-  _renderAlex(ctx) {
-    if (this._entrySequence?.renderDescendingOnly) return;
-    const spriteDir = this.alexWalking ? this.alexDir : 1;
-    const spriteName = `ALEX${spriteDir}-${this.alexFrame}`;
-    const img = this.engine.getAsset(spriteName);
-    if (!img) return;
-    const screenX = this.alexX - this.scrollX - img.width / 2;
-    const screenY = this.alexY - img.height;
-    ctx.drawImage(img, Math.round(screenX), Math.round(screenY));
-  }
-
-  _renderSceneAnimation(ctx, layer = 'behindAlex') {
-    if (!this._sceneAnimation) return;
-    if ((this._sceneAnimation.layer || 'behindAlex') !== layer) return;
-    const frame = this._sceneAnimation.sequence[this._sceneAnimation.index];
-    const img = this.engine.getAsset(`${this._sceneAnimation.prefix}${frame}`);
-    if (img) ctx.drawImage(img, this._sceneAnimation.x - this.scrollX, this._sceneAnimation.y);
+    super._afterStateChanged(key);
   }
 
   _getDebugStaticRegions() {
@@ -337,62 +249,15 @@ export class AirportScene extends GameScene {
 
 
   _tickObjects() {
-    tickMeterAnimation(this.meterAnimation);
     this.stairsTick++;
     if (this.stairsTick >= 3) {
       this.stairsTick = 0;
       this.stairsFrame = (this.stairsFrame % 6) + 1;
     }
     for (const obj of this.sceneObjects) {
-      if (obj.anim === 'stairs') {
-        obj.sprite = `STAIRS${this.stairsFrame}`;
-      } else if (obj.overlay?.sequence) {
-        if (obj._oTick == null) obj._oTick = 0;
-        if (obj._oIdx == null) obj._oIdx = 0;
-        obj._oTick++;
-        if (obj._oTick >= obj.overlay.rate) {
-          obj._oTick = 0;
-          obj._oIdx = (obj._oIdx + 1) % obj.overlay.sequence.length;
-        }
-      } else if (obj.anim?.sequence) {
-        if (obj._animTick == null) obj._animTick = 0;
-        if (obj._animIdx == null) obj._animIdx = 0;
-        obj._animTick++;
-        const frameRate = obj.anim.frameDurations?.[obj._animIdx] ?? obj.anim.rate;
-        if (obj._animTick >= frameRate) {
-          obj._animTick = 0;
-          obj._animIdx = (obj._animIdx + 1) % obj.anim.sequence.length;
-          const frameNum = obj.anim.sequence[obj._animIdx];
-          obj.sprite = `${obj.anim.prefix}${frameNum}`;
-          if (obj.name === 'Achu' && frameNum === 3 && this._isObjectVisibleOnScreen(obj, obj.sprite)) {
-            this._playOneShotSound('SDACHU1');
-          }
-          if (obj.anim.framePos?.[frameNum]) {
-            obj.x = obj.anim.framePos[frameNum][0];
-            obj.y = obj.anim.framePos[frameNum][1];
-          }
-        }
-      }
+      if (obj.anim === 'stairs') obj.sprite = `STAIRS${this.stairsFrame}`;
     }
-    if (this._sceneAnimation) {
-      const anim = this._sceneAnimation;
-      anim.tick++;
-      if (anim.tick >= anim.rate) {
-        anim.tick = 0;
-        if (Array.isArray(anim.positions)) {
-          const nextPos = anim.positions[Math.min(anim.index + 1, anim.positions.length - 1)];
-          if (nextPos) {
-            anim.x = nextPos[0];
-            anim.y = nextPos[1];
-          }
-        }
-        anim.index++;
-        if (anim.index >= anim.sequence.length) {
-          this._sceneAnimation = null;
-          this._processActionQueue();
-        }
-      }
-    }
+    super._tickObjects();
   }
 
   _scrollToAlex() {
@@ -426,14 +291,7 @@ export class AirportScene extends GameScene {
       this._processActionQueue();
       return;
     }
-    if (action.kind === 'flow') {
-      this._queueEvent(action.id);
-      return;
-    }
-    if (action.kind === 'textRef') {
-      this._openTextRefSection(action.sectionId);
-      return;
-    }
+    super._handleInteractionAction(action);
   }
 
   _handleFormMouseDown(mx, my) {
@@ -667,12 +525,7 @@ export class AirportScene extends GameScene {
     this._openTextRefRecord(textRef, { sectionId, returnModal });
   }
 
-  _applyRouteStateOverrides() {
-    const overrides = this.route.state || {};
-    for (const [key, value] of Object.entries(overrides)) {
-      this.state[key] = value;
-    }
-    this._applyBindings();
+  _afterApplyRouteStateOverrides() {
     this._applyAirportBoardMode();
   }
 
@@ -730,9 +583,15 @@ export class AirportScene extends GameScene {
     return x2 > 0 && x1 < WIDTH && y2 > 0 && y1 < HEIGHT;
   }
 
+  _onObjectFrameAdvanced(obj, frameNum) {
+    if (obj.name === 'Achu' && frameNum === 3 && this._isObjectVisibleOnScreen(obj, obj.sprite)) {
+      this._playOneShotSound('SDACHU1');
+    }
+  }
+
 
   _startEntrySequenceIfNeeded() {
-    const shouldRun = shouldRunAirportEntrySequence(this.route);
+    const shouldRun = AIRPORT_SCENE_DEFINITION.route.shouldRunEntrySequence?.(this.route);
     if (!shouldRun) return;
     const descending = this.objectByName?.ALEXDN;
     if (!descending) return;
@@ -746,29 +605,6 @@ export class AirportScene extends GameScene {
       renderDescendingOnly: true,
       focusX: 838,
     };
-  }
-
-  _openInitialRouteScreen() {
-    const screen = resolveAirportInitialScreen(this.route);
-    if (screen.kind === 'dialog') {
-      this._openDialog(screen.id, { deferPromptSound: true });
-      return;
-    }
-    if (screen.kind === 'message') {
-      this._openMessage(screen.id);
-      return;
-    }
-    if (screen.kind === 'form') {
-      this._openForm(screen.id);
-      return;
-    }
-    if (screen.kind === 'inventory') {
-      this._openInventory(screen.id);
-      return;
-    }
-    if (screen.kind === 'resource') {
-      this._openTextRefSection(screen.id);
-    }
   }
 
   _requestTransition(target) {

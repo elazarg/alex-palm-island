@@ -50,6 +50,25 @@ The engine should not know scene facts like "guard", "passport officer", or
 - delay
 - transition
 
+State ownership must also be explicit:
+
+1. `alexState`
+- actor-owned portable state
+- money
+- carried items/inventory
+
+2. `globalState`
+- cross-scene semantic facts
+- map possession
+- later plot flags and remembered answers
+
+3. `sceneState`
+- local scene-only facts
+- blockers, local toggles, local NPC progress, local form state
+
+Routes may serialize projections of all three, but ownership should stay
+explicit.
+
 ## Target Files Per Scene
 
 For a scene `foo`, the target structure should be:
@@ -63,6 +82,7 @@ For a scene `foo`, the target structure should be:
 - `remake/src/scenes/foo/theme-layout.js`
 - `remake/src/scenes/foo/script.js`
 - `remake/src/scenes/foo/scene.js`
+- `remake/src/scenes/foo/definition.js`
 - `remake/src/scenes/foo/generated/...`
 
 Responsibilities:
@@ -87,6 +107,11 @@ This file should not hand-transcribe prose if extraction is possible.
 - minimal durable semantic state for the scene
 - normalization/parsing/serialization
 - defaults
+
+This module should also expose how flat runtime state splits into:
+- `alexState`
+- `globalState`
+- `sceneState`
 
 Keep only state that affects behavior. Do not store transient rendering state.
 
@@ -145,19 +170,25 @@ Important extraction rule:
 This is the declarative runtime description.
 
 ### `scene.js`
-- concrete composition root for the current theme
-- rendering orchestration
-- movement implementation
-- object ticking
-- theme-specific hit-testing glue
+- thin adapter between the reusable game runtime and `definition.js`
+- only residual callbacks that are not yet expressible as data
 
 This should not contain scene story logic if it can live in `script.js`.
 
+### `definition.js`
+- assembles the scene-local declarative modules into one runtime-facing scene definition object
+- route contract
+- state ownership helpers
+- resources
+- content/topology/semantics/theme bindings
+- optional callbacks for true scene-specific escape hatches
+
 ## Runtime Contract
 
-The current reusable runtime is `ScriptedScene`:
+The reusable runtime should interpret scene definitions. The current path is:
 
-- [`scripted-scene.js`](/home/elazarg/workspace/alex/remake/src/runtime/scripted-scene.js)
+- [`script-runtime.js`](/home/elazarg/workspace/alex/remake/src/runtime/script-runtime.js)
+- [`game-scene.js`](/home/elazarg/workspace/alex/remake/src/runtime/game-scene.js)
 
 It already supports a useful subset:
 
@@ -176,6 +207,12 @@ It already supports a useful subset:
 - `sceneAnimation`
 
 This is the right level of abstraction for scene scripts.
+
+The intended control flow is:
+
+- engine/runtime owns tick, render, input, route application, utilities, and generic movement
+- scene definition supplies data
+- callbacks are only escape hatches
 
 What should remain outside the runtime:
 

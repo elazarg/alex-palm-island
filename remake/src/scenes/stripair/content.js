@@ -1,7 +1,6 @@
 import { ALEX_DIALOG_ASSET_NAMES, CURSOR_ASSET_NAMES, UI_ASSET_NAMES, UI_VERSION } from '../../ui/assets.js';
 
 export const STRIPAIR_DIALOG_RESPONSE_DELAY_TICKS = 3;
-export const STRIPAIR_ENTRY_START = Object.freeze({ x: 276, y: 106, dir: 4 });
 export const STRIPAIR_ENTRY_TARGET = Object.freeze({ x: 236, y: 106, dir: 4 });
 export const STRIPAIR_ALEX_DEPTH_SCALE = Object.freeze({
   yMin: 37,

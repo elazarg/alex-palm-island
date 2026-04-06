@@ -1,3 +1,4 @@
+import { splitStateLayers } from '../../runtime/state-model.js';
 import { parseBooleanFlag, parseTriStateFlag, normalizeBagItems, buildCarryState } from '../../runtime/state-utils.js';
 
 export { buildCarryState };
@@ -21,6 +22,27 @@ export const AIRPORT_STATE_KEYS = Object.freeze([
   'palmettoes',
   'bag',
   'map',
+  'airportBoardMode',
+  'familyQueue',
+  'familyQueuePendingClear',
+  'mayExit',
+  'exitWarningLevel',
+  'clerkAnnoyanceLevel',
+  'claimSize',
+  'claimColor',
+  'claimMatchesBag',
+]);
+
+export const AIRPORT_ALEX_STATE_KEYS = Object.freeze([
+  'palmettoes',
+  'bag',
+]);
+
+export const AIRPORT_GLOBAL_STATE_KEYS = Object.freeze([
+  'map',
+]);
+
+export const AIRPORT_SCENE_STATE_KEYS = Object.freeze([
   'airportBoardMode',
   'familyQueue',
   'familyQueuePendingClear',
@@ -106,6 +128,15 @@ export function pickAirportRouteState(state = {}) {
         .map((key) => [key, state[key]])
     )
   );
+}
+
+export function splitAirportStateLayers(state = {}) {
+  const normalized = normalizeAirportState(state);
+  return splitStateLayers(normalized, {
+    alexKeys: AIRPORT_ALEX_STATE_KEYS,
+    globalKeys: AIRPORT_GLOBAL_STATE_KEYS,
+    sceneKeys: AIRPORT_SCENE_STATE_KEYS,
+  });
 }
 
 export function airportHasBag(state = {}) {

@@ -30,11 +30,20 @@ const ROAD_POLYGON = Object.freeze([
   Object.freeze({ x: 200, y: 180 }),
 ]);
 
+const UPPER_RIGHT_BLOCK_POLYGON = Object.freeze([
+  Object.freeze({ x: 119, y: 37 }),
+  Object.freeze({ x: 317, y: 120 }),
+  Object.freeze({ x: 320, y: 120 }),
+  Object.freeze({ x: 320, y: 0 }),
+  Object.freeze({ x: 119, y: 0 }),
+]);
+
 export const STRIPAIR_STATIC_REGIONS = Object.freeze([
   Object.freeze({ id: 'mask.topWall', kind: 'walkMask', rect: EXTRACTED_RECTS.topWall || Object.freeze([0, 0, 320, 40]) }),
   Object.freeze({ id: 'mask.leftBoundary', kind: 'walkMask', rect: EXTRACTED_RECTS.leftBoundary || Object.freeze([0, 0, 10, 200]) }),
   Object.freeze({ id: 'mask.rightBoundary', kind: 'walkMask', rect: Object.freeze([310, 0, 320, 200]) }),
   Object.freeze({ id: 'mask.road', kind: 'walkMaskPolygon', polygon: ROAD_POLYGON }),
+  Object.freeze({ id: 'mask.upperRightFacade', kind: 'walkMaskPolygon', polygon: UPPER_RIGHT_BLOCK_POLYGON }),
   Object.freeze({ id: 'mask.infoBoothTop', kind: 'walkMask', rect: Object.freeze([154, 0, 231, 58]) }),
   Object.freeze({ id: 'mask.garbageBulk', kind: 'walkMask', rect: Object.freeze([0, 118, 34, 200]) }),
   Object.freeze({ id: 'mask.doorWall', kind: 'walkMask', rect: Object.freeze([286, 0, 320, 122]) }),
