@@ -19,7 +19,9 @@ function resolveEntry(textModule, kind, sectionId, sceneName) {
 }
 
 function parseDialogSection(textModule, sectionId, sceneName) {
-  const { lines } = resolveEntry(textModule, 'dialogs', sectionId, sceneName);
+  const { header, lines } = resolveEntry(textModule, 'dialogs', sectionId, sceneName);
+  const headerParts = String(header || '').split(',').map((part) => part.trim());
+  const completionFlag = Number(headerParts[1] || 0) || 0;
 
   const speaker = parseSpeakerLine(lines[0]);
   const prompt = lines[1];
@@ -46,6 +48,7 @@ function parseDialogSection(textModule, sectionId, sceneName) {
 
   return Object.freeze({
     sectionId,
+    completionFlag,
     speaker,
     prompt,
     question,

@@ -194,6 +194,14 @@ export class ScriptedScene {
         this._openMessage(step.id);
         return;
       }
+      if (step.type === 'textRef') {
+        this._openTextRefSection?.(step.sectionId);
+        return;
+      }
+      if (step.type === 'interactiveSection') {
+        this._expandInteractiveSection?.(step.sectionId);
+        continue;
+      }
       if (step.type === 'dialog') {
         this._openDialog(step.id);
         return;
@@ -212,6 +220,32 @@ export class ScriptedScene {
         this.state[step.key] = (this.state[step.key] || 0) + (step.amount ?? 1);
         this._applyBindings();
         this._afterStateChanged?.(step.key);
+        continue;
+      }
+      if (step.type === 'setFlag') {
+        const flagId = Number(step.flagId);
+        if (!Number.isInteger(flagId) || flagId <= 0) continue;
+        const flags = new Set(Array.isArray(this.state.flags) ? this.state.flags.map((value) => Number(value)).filter(Number.isFinite) : []);
+        if (step.value === false || step.value === 0) flags.delete(flagId);
+        else flags.add(flagId);
+        this.state.flags = [...flags].sort((a, b) => a - b);
+        this._applyBindings();
+        this._afterStateChanged?.('flags');
+        continue;
+      }
+      if (step.type === 'setItem') {
+        const itemId = String(step.itemId ?? '').trim();
+        if (!itemId) continue;
+        const items = new Set(Array.isArray(this.state.items) ? this.state.items.map((value) => String(value)) : []);
+        if (step.value === false || step.value === 0) items.delete(itemId);
+        else items.add(itemId);
+        this.state.items = [...items];
+        if (!items.has(this.selectedItem) && this.inputMode === 'item') {
+          this.selectedItem = null;
+          this._setInputMode?.('walk');
+        }
+        this._applyBindings();
+        this._afterStateChanged?.('items');
         continue;
       }
       if (step.type === 'transition') {
@@ -408,6 +442,12 @@ export class ScriptedScene {
   _handleModalClick(mx, my) {
     if (!this.modal) return;
     if (this.modal.type === 'message') {
+      if (this.modal.presentation === 'resource' && Array.isArray(this.modal.hotspots)) {
+        const hotspot = this.modal.hotspots.find((entry) => (
+          mx >= entry.rect[0] && mx <= entry.rect[2] && my >= entry.rect[1] && my <= entry.rect[3]
+        ));
+        if (hotspot && this._handleResourceHotspot?.(hotspot)) return;
+      }
       this._dismissMessageModal();
       return;
     }
@@ -474,7 +514,17 @@ export class ScriptedScene {
 
   _evaluateCondition(condition) {
     if (!condition) return true;
-    const value = this.state[condition.state];
+    let value;
+    if (condition.state) value = this.state[condition.state];
+    else if (condition.flag != null) {
+      const flagId = String(condition.flag);
+      value = Array.isArray(this.state.flags) && this.state.flags.map((entry) => String(entry)).includes(flagId) ? 1 : 0;
+    } else if (condition.item != null) {
+      const itemId = String(condition.item);
+      value = Array.isArray(this.state.items) && this.state.items.map((entry) => String(entry)).includes(itemId);
+    } else if (condition.selectedItem != null) {
+      value = this.selectedItem === condition.selectedItem;
+    }
     if (Object.prototype.hasOwnProperty.call(condition, 'equals')) return value === condition.equals;
     if (Object.prototype.hasOwnProperty.call(condition, 'gte')) return value >= condition.gte;
     if (Object.prototype.hasOwnProperty.call(condition, 'lte')) return value <= condition.lte;

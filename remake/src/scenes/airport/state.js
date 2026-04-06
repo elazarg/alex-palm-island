@@ -1,5 +1,5 @@
 import { splitStateLayers } from '../../runtime/state-model.js';
-import { parseBooleanFlag, parseTriStateFlag, normalizeBagItems, buildCarryState } from '../../runtime/state-utils.js';
+import { parseBooleanFlag, parseTriStateFlag, normalizeBagItems, buildCarryState, normalizeReasonForComing } from '../../runtime/state-utils.js';
 
 export { buildCarryState };
 
@@ -7,6 +7,7 @@ export const AIRPORT_DEFAULT_STATE = Object.freeze({
   palmettoes: 100,
   bag: null,
   map: null,
+  reasonForComing: null,
   airportBoardMode: 'arrivals',
   familyQueue: 'not-arrived',
   familyQueuePendingClear: false,
@@ -22,6 +23,7 @@ export const AIRPORT_STATE_KEYS = Object.freeze([
   'palmettoes',
   'bag',
   'map',
+  'reasonForComing',
   'airportBoardMode',
   'familyQueue',
   'familyQueuePendingClear',
@@ -40,6 +42,7 @@ export const AIRPORT_ALEX_STATE_KEYS = Object.freeze([
 
 export const AIRPORT_GLOBAL_STATE_KEYS = Object.freeze([
   'map',
+  'reasonForComing',
 ]);
 
 export const AIRPORT_SCENE_STATE_KEYS = Object.freeze([
@@ -61,6 +64,7 @@ export function normalizeAirportState(state = {}) {
   const normalized = { ...AIRPORT_DEFAULT_STATE };
   if (Array.isArray(state.bag)) normalized.bag = normalizeBagItems(state.bag);
   if (state.map === null || typeof state.map === 'boolean') normalized.map = state.map;
+  normalized.reasonForComing = normalizeReasonForComing(state.reasonForComing);
   if (state.airportBoardMode && AIRPORT_BOARD_MODE_VALUES.includes(state.airportBoardMode)) normalized.airportBoardMode = state.airportBoardMode;
   if (state.claimSize && ['big', 'medium', 'small'].includes(state.claimSize)) normalized.claimSize = state.claimSize;
   if (state.claimColor && ['grey', 'purple', 'pink'].includes(state.claimColor)) normalized.claimColor = state.claimColor;
@@ -80,6 +84,8 @@ export function parseAirportStateParams(params) {
   const bag = params.get('bag');
   if (bag) state.bag = bag.split(',').map((item) => item.trim()).filter(Boolean);
   if (params.has('map')) state.map = parseTriStateFlag(params.get('map'));
+  const reasonForComing = params.get('reasonForComing');
+  if (reasonForComing) state.reasonForComing = reasonForComing;
   const airportBoardMode = params.get('airportBoardMode');
   if (airportBoardMode && AIRPORT_BOARD_MODE_VALUES.includes(airportBoardMode)) state.airportBoardMode = airportBoardMode;
   const familyQueue = params.get('familyQueue');
@@ -108,6 +114,7 @@ export function serializeAirportStateParams(state = {}) {
   if (normalized.bag?.length) params.set('bag', normalized.bag.join(','));
   if (normalized.map === true) params.set('map', 'true');
   else if (normalized.map === false) params.set('map', 'false');
+  if (normalized.reasonForComing) params.set('reasonForComing', normalized.reasonForComing);
   if (normalized.airportBoardMode !== AIRPORT_DEFAULT_STATE.airportBoardMode) params.set('airportBoardMode', normalized.airportBoardMode);
   if (normalized.familyQueue !== AIRPORT_DEFAULT_STATE.familyQueue) params.set('familyQueue', normalized.familyQueue);
   if (normalized.familyQueuePendingClear) params.set('familyQueuePendingClear', '1');

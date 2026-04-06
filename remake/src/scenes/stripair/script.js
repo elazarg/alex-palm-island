@@ -227,7 +227,7 @@ export const STRIPAIR_SCRIPT = {
 
     'town.exit': [
       { type: 'walkTo', x: 90, y: 145 },
-      { type: 'face', dir: 8 },
+      { type: 'transition', target: { scene: 'strip0', initial: true, entry: 'stripair' } },
     ],
 
     bagMissing: [{ type: 'message', id: 'bagMissing' }],

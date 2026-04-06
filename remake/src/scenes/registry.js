@@ -7,6 +7,8 @@ import { MainMenuScene } from './main-menu.js';
 import { PrisonScene } from './prison/scene.js';
 import { StripAirScene } from './stripair/scene.js';
 import { defaultStripAirRoute, formatStripAirRoute, normalizeStripAirRoute, parseStripAirRoute } from './stripair/route.js';
+import { createStreetRouteFns } from './streets/route.js';
+import { StreetScene } from './streets/scene.js';
 
 function defaultSimpleRoute(scene) {
   return { scene };
@@ -45,6 +47,29 @@ function simpleDescriptor(scene, create, wire) {
     create,
     wire,
   };
+}
+
+const STREET_SCENE_IDS = Object.freeze([
+  'strip0',
+  'stapart',
+  'stburger',
+  'stbutcher',
+  'stchoco',
+  'sthosp',
+  'sthotel',
+  'stsuper',
+  'stzoo',
+]);
+
+function buildStreetDescriptors() {
+  return Object.fromEntries(STREET_SCENE_IDS.map((scene) => {
+    const routeFns = createStreetRouteFns(scene);
+    return [scene, gameSceneDescriptor(scene, class extends StreetScene {
+      constructor({ route } = {}) {
+        super({ sceneId: scene, route });
+      }
+    }, routeFns)];
+  }));
 }
 
 export const SCENE_REGISTRY = Object.freeze({
@@ -94,6 +119,7 @@ export const SCENE_REGISTRY = Object.freeze({
     normalize: normalizeStripAirRoute,
     format: formatStripAirRoute,
   }),
+  ...buildStreetDescriptors(),
   arrest: {
     defaultRoute: () => ({ scene: 'arrest', reasonCode: 503 }),
     parse: (segments) => {

@@ -396,6 +396,7 @@ export const AIRPORT_SCRIPT = {
     passportHoliday: [
       { type: 'message', id: 'passportHolidayFee' },
       { type: 'incState', key: 'palmettoes', amount: -15 },
+      { type: 'setState', key: 'reasonForComing', value: 'holiday' },
       { type: 'setState', key: 'mayExit', value: true },
       { type: 'setState', key: 'familyQueuePendingClear', value: false },
       { type: 'setState', key: 'familyQueue', value: 'cleared' },
@@ -404,6 +405,7 @@ export const AIRPORT_SCRIPT = {
     passportBusiness: [
       { type: 'message', id: 'passportBusinessFee' },
       { type: 'incState', key: 'palmettoes', amount: -15 },
+      { type: 'setState', key: 'reasonForComing', value: 'business' },
       { type: 'setState', key: 'mayExit', value: true },
       { type: 'setState', key: 'familyQueuePendingClear', value: false },
       { type: 'setState', key: 'familyQueue', value: 'cleared' },

@@ -1,8 +1,9 @@
 import { ACTION_BUTTONS, CURSOR_HOTSPOTS, WHEEL_INPUT_MODES, resolveInteractionMode } from '../ui/action-modes.js';
+import { UI_VERSION } from '../ui/assets.js';
 import { STANDARD_DIALOG_LAYOUT } from '../ui/dialog-layout.js';
 import { STANDARD_NOTE_LAYOUT } from '../ui/note-layout.js';
 import { STANDARD_PANEL_LAYOUT } from '../ui/panel-layout.js';
-import { INVENTORY_ITEM_DEFS } from '../ui/inventory-items.js';
+import { INVENTORY_ITEM_DEFS, INVENTORY_ITEM_ID_TO_ICON_NAME } from '../ui/inventory-items.js';
 import { startMeterAmountAnimation, tickMeterAnimation } from '../ui/meter-animation.js';
 import { renderSceneDebugOverlay, renderSceneDebugText } from '../ui/scene-debug-overlay.js';
 import { loadBitmapFont } from '../ui/font-loader.js';
@@ -70,14 +71,19 @@ export class GameScene extends ScriptedScene {
 
   async load(engine) {
     const { images, frameCounts } = this._buildAssetManifest();
+    for (const item of Object.values(INVENTORY_ITEM_DEFS)) {
+      images[item.iconAsset] = `../assets/icons/${item.iconAsset}.png?v=${UI_VERSION}`;
+      images[item.pictureAsset] = `../assets/icons/${item.pictureAsset}.png?v=${UI_VERSION}`;
+    }
     this._frameCounts = frameCounts;
     await engine.loadImages(images);
     await engine.loadSounds(this._buildSoundManifest());
     for (const [name, hotspot] of Object.entries(CURSOR_HOTSPOTS)) {
       engine.registerCursorHotspot(name, hotspot);
     }
-    engine.registerCursorHotspot('PASSPORTICON', { x: 0, y: 0 });
-    engine.registerCursorHotspot('LETTERICON', { x: 0, y: 0 });
+    for (const iconName of Object.values(INVENTORY_ITEM_ID_TO_ICON_NAME)) {
+      engine.registerCursorHotspot(iconName.toUpperCase(), { x: 0, y: 0 });
+    }
     this.font = await loadBitmapFont();
   }
 
@@ -412,13 +418,16 @@ export class GameScene extends ScriptedScene {
 
   _openInventory(inventoryId = 'bag') {
     this._stopSound();
+    const rawItems = Array.isArray(this.state?.items) && this.state.items.length
+      ? this.state.items
+      : (this.state?.bag || []);
     this.modal = {
       id: inventoryId,
       type: 'inventory',
       mode: 'take',
       pressedControlMode: null,
       inspectItem: null,
-      items: (this.state?.bag || [])
+      items: rawItems
         .map((itemId) => INVENTORY_ITEM_DEFS[itemId])
         .filter(Boolean)
         .map((item) => ({
@@ -447,6 +456,7 @@ export class GameScene extends ScriptedScene {
       presentation: 'resource',
       asset: 'MAP',
       locked: false,
+      hotspots: this._getMapHotspots?.() || [],
     };
     this._afterModalChanged();
     this._refreshCursor();
@@ -547,12 +557,13 @@ export class GameScene extends ScriptedScene {
 
   _walkTo(x, y) {
     const goal = { x, y };
+    const worldWidth = Math.max(WIDTH, this.bgWidth || WIDTH);
     const path = findPathOnGrid(
       { x: this.alexX, y: this.alexY },
       goal,
       (px, py) => this._inWalkZone(px, py),
       {
-        width: WIDTH,
+        width: worldWidth,
         height: HEIGHT,
         cellSize: 8,
         canTraverseSegment: (from, to) => this._canWalkSegment(from, to),
@@ -630,10 +641,11 @@ export class GameScene extends ScriptedScene {
   }
 
   _closestWalkablePoint(x, y) {
+    const worldWidth = Math.max(WIDTH, this.bgWidth || WIDTH);
     const point = findNearestWalkablePoint(
       { x, y },
       (px, py) => this._inWalkZone(px, py),
-      { width: WIDTH, height: HEIGHT, step: 2, maxRadius: 220 },
+      { width: worldWidth, height: HEIGHT, step: 2, maxRadius: 220 },
     );
     return this._inWalkZone(point.x, point.y) ? point : null;
   }
@@ -712,6 +724,10 @@ export class GameScene extends ScriptedScene {
     return this._canOpenMap() ? 'active' : 'covered';
   }
 
+  _handleResourceHotspot(/* hotspot */) {
+    return false;
+  }
+
   _applyRouteStateOverrides() {
     const overrides = this.route?.state || {};
     for (const [key, value] of Object.entries(overrides)) {
@@ -769,6 +785,11 @@ export class GameScene extends ScriptedScene {
     }
     if (action.kind === 'flow') {
       this._queueEvent(action.id);
+      return;
+    }
+    if (action.kind === 'interactiveSection') {
+      this._enqueueSteps([{ type: 'interactiveSection', sectionId: action.sectionId }]);
+      this._processActionQueue();
       return;
     }
     if (action.kind === 'textRef') {

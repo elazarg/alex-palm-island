@@ -2,6 +2,8 @@ import { resolveInteractionMode } from '../../ui/action-modes.js';
 import { createMeterAnimationState } from '../../ui/meter-animation.js';
 import { renderPanel } from '../../ui/panel-renderer.js';
 import { GameScene } from '../../runtime/game-scene.js';
+import { WORLD_MAP_HOTSPOTS } from '../streets/catalog.js';
+import { buildStreetCarryState } from '../streets/state.js';
 import { buildStripAirCarryState, stripAirHasBag } from './state.js';
 import { STRIPAIR_SCENE_DEFINITION } from './definition.js';
 import {
@@ -207,6 +209,27 @@ export class StripAirScene extends GameScene {
       });
       return;
     }
+    if (target.scene && target.scene !== 'airport' && target.scene !== 'arrest' && target.scene !== 'prison') {
+      super._requestTransition({
+        ...target,
+        state: buildStreetCarryState(this.state),
+      });
+      return;
+    }
     super._requestTransition(target);
+  }
+
+  _getMapHotspots() {
+    return WORLD_MAP_HOTSPOTS;
+  }
+
+  _handleResourceHotspot(hotspot) {
+    if (!hotspot?.scene) return false;
+    this._stopSound();
+    this.modal = null;
+    this._afterModalChanged();
+    this._refreshCursor();
+    this._requestTransition({ scene: hotspot.scene, initial: true, entry: 'map' });
+    return true;
   }
 }

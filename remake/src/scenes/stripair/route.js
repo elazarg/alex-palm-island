@@ -1,6 +1,6 @@
 import { parseStripAirStateParams, pickStripAirRouteState, serializeStripAirStateParams } from './state.js';
 
-const ENTRY_VALUES = Object.freeze(['airport', 'strip0']);
+const ENTRY_VALUES = Object.freeze(['airport', 'strip0', 'map']);
 
 export function defaultStripAirRoute() {
   return {
